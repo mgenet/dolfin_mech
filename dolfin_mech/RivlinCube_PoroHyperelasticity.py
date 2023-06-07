@@ -46,7 +46,7 @@ def RivlinCube_PoroHyperelasticity(
     if mesh_from_file:
         mesh = dolfin.Mesh()
         dolfin.XDMFFile("/Users/peyrault/Documents/Gravity/Tests/Meshes_and_poro_files/Zygot.xdmf").read(mesh)
-        mesh = dolfin.refine(mesh)
+        # mesh = dolfin.refine(mesh)
         # mesh = dolfin.refine(mesh)
         boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
         boundaries_mf.set_all(0)
@@ -906,9 +906,9 @@ def RivlinCube_PoroHyperelasticity(
                 file.close()
             if get_invariants:
                 U_inspi = problem.get_displacement_subsol().func
-                Uexpi = get_invariants["Uexpi"]
+                U_expi = get_invariants["Uexpi"]
                 Utot = U_inspi.copy(deepcopy=True)
-                Utot.vector()[:] -= Uexpi.vector()[:]
+                Utot.vector()[:] -= U_expi.vector()[:]
                 kinematics_new = dmech.Kinematics(U=Utot, U_old=None, Q_expr=None)
 
                 # sfoi_fe = dolfin.TensorElement(
@@ -919,6 +919,11 @@ def RivlinCube_PoroHyperelasticity(
                 #     mesh,
                 #     sfoi_fe)
 
+
+                
+                dolfin.ALE.move(mesh, U_inspi)
+                # dolfin.ALE.move(mesh, Utot)
+                
                 sfoi_fe = dolfin.FiniteElement(
                     family="DG",
                     cell=mesh.ufl_cell(),
@@ -926,20 +931,29 @@ def RivlinCube_PoroHyperelasticity(
                 sfoi_fs = dolfin.FunctionSpace(
                     mesh,
                     sfoi_fe)
+                
+
+                xdmf_file_mesh = dolfin.XDMFFile("./J_tot.xdmf")
+                xdmf_file_mesh.write(mesh)
+                
+
             
 
                 J_tot = kinematics_new.J
                 J_tot_proj = dolfin.project(J_tot, sfoi_fs)
-                J_tot_proj = J_tot_proj.vector().get_local()
+                xdmf_file_mesh.write(J_tot_proj, 1)
+                xdmf_file_mesh.close()
+                
+                J_tot = J_tot_proj.vector().get_local()
 
                 Ic_tot = kinematics_new.IC
                 Ic_tot_proj = dolfin.project(Ic_tot, sfoi_fs)
-                Ic_tot_proj = Ic_tot_proj.vector().get_local()
+                Ic_tot = Ic_tot_proj.vector().get_local()
 
 
                 IIc_tot = kinematics_new.IIC
                 IIc_tot_proj = dolfin.project(IIc_tot, sfoi_fs)
-                IIc_tot_proj = IIc_tot_proj.vector().get_local()
+                IIc_tot = IIc_tot_proj.vector().get_local()
                 
 
 
@@ -952,39 +966,42 @@ def RivlinCube_PoroHyperelasticity(
                 # print("Ic", IIc_tot_proj.vector()[:])
                 # print("IIC", IIc_tot_proj.vector()[:])
 
-                print("len", len(J_tot_proj), len(Ic_tot_proj), len(IIc_tot_proj))
+                # print("len", len(J_tot_proj), len(Ic_tot_proj), len(IIc_tot_proj))
 
-                mu_J, mu_Ic, mu_IIc = 0, 0, 0
-                sigma_J, sigma_Ic, sigma_IIc = 0, 0, 0
+                mu_J_tot, mu_Ic_tot, mu_IIc_tot = 0, 0, 0
+                sigma_J_tot, sigma_Ic_tot, sigma_IIc_tot = 0, 0, 0
                 number_cells = 0
 
                 for cell in range(mesh.num_cells()):
                     number_cells += 1
-                    mu_J += numpy.log(J_tot_proj[cell])
-                    mu_Ic += numpy.log(Ic_tot_proj[cell])
-                    mu_IIc += numpy.log(IIc_tot_proj[cell])
+                    mu_J_tot += numpy.log(J_tot[cell])
+                    mu_Ic_tot += numpy.log(Ic_tot[cell])
+                    mu_IIc_tot += numpy.log(IIc_tot[cell])
 
-                mu_J /= number_cells
-                mu_Ic /= number_cells
-                mu_IIc /= number_cells
+                mu_J_tot /= number_cells
+                mu_Ic_tot /= number_cells
+                mu_IIc_tot /= number_cells
 
                 for cell in range(mesh.num_cells()):
-                    sigma_J += (numpy.log(J_tot_proj[cell])-mu_J)*(numpy.log(J_tot_proj[cell])-mu_J)
-                    sigma_Ic += (numpy.log(Ic_tot_proj[cell])-mu_Ic)*(numpy.log(Ic_tot_proj[cell])-mu_Ic)
-                    sigma_IIc += (numpy.log(IIc_tot_proj[cell])-mu_IIc)*(numpy.log(IIc_tot_proj[cell])-mu_IIc)
+                    sigma_J_tot += (numpy.log(J_tot[cell])-mu_J_tot)*(numpy.log(J_tot[cell])-mu_J_tot)
+                    sigma_Ic_tot += (numpy.log(Ic_tot[cell])-mu_Ic_tot)*(numpy.log(Ic_tot[cell])-mu_Ic_tot)
+                    sigma_IIc_tot += (numpy.log(IIc_tot[cell])-mu_IIc_tot)*(numpy.log(IIc_tot[cell])-mu_IIc_tot)
 
-                sigma_J /= number_cells
-                sigma_J = sigma_J**(1/2)
-                sigma_Ic /= number_cells
-                sigma_Ic = sigma_Ic**(1/2)
-                sigma_IIc /= number_cells
-                sigma_IIc = sigma_IIc**(1/2)
+                sigma_J_tot /= number_cells
+                sigma_J_tot = sigma_J_tot**(1/2)
+                sigma_Ic_tot /= number_cells
+                sigma_Ic_tot = sigma_Ic_tot**(1/2)
+                sigma_IIc_tot /= number_cells
+                sigma_IIc_tot = sigma_IIc_tot**(1/2)
 
-                print(" J_tot_proj.vector()[:]",  J_tot_proj)
-                print("sigma, mu J", sigma_J, mu_J)
-                print("sigma, mu Ic", sigma_Ic, mu_Ic)
-                print("sigma, mu IIc", sigma_IIc, mu_IIc)
+                print(" J_tot",  J_tot)
+                print("IC_tot", Ic_tot)
+                print("IIc_tot", IIc_tot)
+                print("sigma, mu J", sigma_J_tot, mu_J_tot)
+                print("sigma, mu Ic", sigma_Ic_tot, mu_Ic_tot)
+                print("sigma, mu IIc", sigma_IIc_tot, mu_IIc_tot)
 
+                
 
                 results_zones = {}
                 results_zones["zone"] = []
@@ -1008,7 +1025,6 @@ def RivlinCube_PoroHyperelasticity(
                 for i in range(0, zones):
                     results_zones["zone"].append(i)
                     marked_cells = dolfin.SubsetIterator(domains_mf, i)
-                    phi_lst = []
                     J_lst = []
                     I1_lst = []
                     I2_lst = []
@@ -1021,10 +1037,10 @@ def RivlinCube_PoroHyperelasticity(
                         # print("type(cell index)", cell.index())
                         # print("J(cell index)", Jfun[cell.index])
                         # cell_index = int(cell.index())
-                        phi_lst.append(phis[cell.index()])
-                        J_lst.append(J[cell.index()])
-                        I1_lst.append(IC[cell.index()])
-                        I2_lst.append(IIC[cell.index()])
+                        # phi_lst.append(phis[cell.index()])
+                        J_lst.append(J_tot[cell.index()])
+                        I1_lst.append(Ic_tot[cell.index()])
+                        I2_lst.append(IIc_tot[cell.index()])
                     # phi_average = numpy.average(phi_lst)
                     # phi_std =numpy.std(phi_lst)
                     # results_zones["average_phi"].append(phi_average)
@@ -1032,19 +1048,19 @@ def RivlinCube_PoroHyperelasticity(
                     # results_zones["std-_phi"].append(phi_average - phi_std)
                     J_average = numpy.average(J_lst)
                     print("J_average", J_average)
-                    J_chapeau = ((numpy.log(J_average)-mu_J)/sigma_J)
+                    J_chapeau = ((numpy.log(J_average)-mu_J_tot)/sigma_J_tot)
                     J_std =numpy.std(J_lst)
                     results_zones["average_J"].append(J_average)
                     results_zones["std+_J"].append(J_average + J_std)
                     results_zones["std-_J"].append(J_average - J_std)
                     I1_average = numpy.average(I1_lst)
-                    I1_chapeau = ((numpy.log(I1_average)-mu_Ic)/sigma_Ic)
+                    I1_chapeau = ((numpy.log(I1_average)-mu_Ic_tot)/sigma_Ic_tot)
                     I1_std =numpy.std(I1_lst)
                     results_zones["average_I1"].append(I1_average)
                     results_zones["std+_I1"].append(I1_average + I1_std)
                     results_zones["std-_I1"].append(I1_average - I1_std)
                     I2_average = numpy.average(I2_lst)
-                    I2_chapeau = ((numpy.log(I2_average)-mu_IIc)/sigma_IIc)
+                    I2_chapeau = ((numpy.log(I2_average)-mu_IIc_tot)/sigma_IIc_tot)
                     I2_std =numpy.std(I2_lst)
                     results_zones["average_I2"].append(I2_average)
                     results_zones["std+_I2"].append(I2_average + I2_std)
