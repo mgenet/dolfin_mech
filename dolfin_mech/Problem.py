@@ -40,7 +40,7 @@ class Problem():
 
     def set_mesh(self,
             mesh,
-            define_spatial_coordinates=False,
+            define_spatial_coordinates=True,
             define_facet_normals=False,
             compute_bbox=False,
             compute_local_cylindrical_basis=False):
@@ -54,7 +54,10 @@ class Problem():
         self.mesh_V0 = dolfin.assemble(dolfin.Constant(1) * self.dV)
 
         if (define_spatial_coordinates):
-            self.X = dolfin.SpatialCoordinate(self.mesh)
+            if "Inverse" in str(self):
+                self.x = dolfin.SpatialCoordinate(self.mesh)
+            else:
+                self.X = dolfin.SpatialCoordinate(self.mesh)
 
         if (define_facet_normals):
             self.mesh_normals = dolfin.FacetNormal(mesh)
@@ -552,7 +555,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfacePressureGradient0LoadingOperator(
-            X=dolfin.SpatialCoordinate(self.mesh),
+            x=dolfin.SpatialCoordinate(self.mesh),
             U_test=self.get_displacement_subsol().dsubtest,
             N=self.mesh_normals,
             **kwargs)

@@ -65,7 +65,7 @@ class SurfacePressureGradientLoadingOperator(Operator):
 class SurfacePressureGradient0LoadingOperator(Operator):
 
     def __init__(self,
-            X,
+            x,
             U_test,
             N,
             measure,
@@ -89,7 +89,7 @@ class SurfacePressureGradient0LoadingOperator(Operator):
             val=DP_val, val_ini=DP_ini, val_fin=DP_fin)
         DP = self.tv_DP.val
 
-        P = P0 + DP * dolfin.inner(X - X0, N0)
+        P = P0 + DP * dolfin.inner(x - X0, N0)
 
         self.res_form = - dolfin.inner(-P * N, U_test) * self.measure
 
