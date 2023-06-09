@@ -18,6 +18,7 @@ from .Material_Elastic import *
 from .Material_Elastic_CiarletGeymonat import *
 from .Material_Elastic_CiarletGeymonatNeoHookean import *
 from .Material_Elastic_CiarletGeymonatNeoHookeanMooneyRivlin import *
+from .Material_Elastic_CiarletGeymonatNeoHookean_Poro import *
 from .Material_Elastic_ExponentialCiarletGeymonat import *
 from .Material_Elastic_Hooke import *
 from .Material_Elastic_Kirchhoff import *

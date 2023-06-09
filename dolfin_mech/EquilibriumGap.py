@@ -78,38 +78,39 @@ def J(x, problem, kinematics, material_parameters, material_model, V0, initialis
     # print("material model is", material_model)
     porous = False
     if material_model==None:
-        porous = True
+        # porous = True
         
-        solid_material_skel = dmech.WskelLungElasticMaterial(
-                kinematics=kinematics,
-                parameters=material_parameters)
-        material_skel = dmech.PorousElasticMaterial(
-                solid_material= solid_material_skel,
-                scaling="linear",
-                Phis0=kinematics.J*problem.get_porosity_subsol().subfunc)   
+        # solid_material_skel = dmech.WskelLungElasticMaterial(
+        #         kinematics=kinematics,
+        #         parameters=material_parameters)
+        # material_skel = dmech.PorousElasticMaterial(
+        #         solid_material= solid_material_skel,
+        #         scaling="linear",
+        #         Phis0=kinematics.J*problem.get_porosity_subsol().subfunc)   
         
 
 
-        solid_material_bulk = dmech.WbulkLungElasticMaterial(
-            Phis=kinematics.J * problem.phis, 
-            Phis0=kinematics.J * problem.get_porosity_subsol().subfunc, 
-            parameters={"kappa":1e2}, 
-            kinematics=kinematics)
-        material_bulk = dmech.PorousElasticMaterial(
-                solid_material= solid_material_bulk,
-                scaling="linear",
-                Phis0= kinematics.J * problem.get_porosity_subsol().subfunc)  
+        # solid_material_bulk = dmech.WbulkLungElasticMaterial(
+        #     Phis=kinematics.J * problem.phis, 
+        #     Phis0=kinematics.J * problem.get_porosity_subsol().subfunc, 
+        #     parameters={"kappa":1e2}, 
+        #     kinematics=kinematics)
+        # material_bulk = dmech.PorousElasticMaterial(
+        #         solid_material= solid_material_bulk,
+        #         scaling="linear",
+        #         Phis0= kinematics.J * problem.get_porosity_subsol().subfunc)  
          
-        solid_material_pores = dmech.WporeLungElasticMaterial(
-                Phif = kinematics.J - problem.get_porosity_subsol().subfunc/kinematics.J,
-                Phif0= 1 - problem.get_porosity_subsol().subfunc,
-                kinematics=kinematics,
-                parameters={"eta":1e-5})
-        material_pores = dmech.PorousElasticMaterial(
-                solid_material= solid_material_pores,
-                scaling="linear",
-                Phis0=problem.get_porosity_subsol().subfunc)   
+        # solid_material_pores = dmech.WporeLungElasticMaterial(
+        #         Phif = kinematics.J - problem.get_porosity_subsol().subfunc/kinematics.J,
+        #         Phif0= 1 - problem.get_porosity_subsol().subfunc,
+        #         kinematics=kinematics,
+        #         parameters={"eta":1e-5})
+        # material_pores = dmech.PorousElasticMaterial(
+        #         solid_material= solid_material_pores,
+        #         scaling="linear",
+        #         Phis0=problem.get_porosity_subsol().subfunc)   
         # material = dmech.WskelLungElasticMaterial(kinematics=kinematics, parameters=material_parameters)
+        material   = dmech.material_factory(kinematics, "CGNHMR_poro", material_parameters, problem)
     else:
         material   = dmech.material_factory(kinematics, material_model, material_parameters)
     
@@ -121,18 +122,19 @@ def J(x, problem, kinematics, material_parameters, material_model, V0, initialis
     
     # print(material_parameters)
     if porous:
-        operator_skel = problem.add_Wskel_operator(
-                material_parameters=material_parameters,
-                material_scaling="linear",
-                subdomain_id=None)
+        # operator_skel = problem.add_Wskel_operator(
+        #         material_parameters=material_parameters,
+        #         material_scaling="linear",
+        #         subdomain_id=None)
         
-        operator_bulk = problem.add_Wbulk_operator(
-                material_parameters={"kappa":1e2},
-                material_scaling="linear",
-                subdomain_id= None)
+        # operator_bulk = problem.add_Wbulk_operator(
+        #         material_parameters={"kappa":1e2},
+        #         material_scaling="linear",
+        #         subdomain_id= None)
         
-        sigma = operator_skel.material.sigma + operator_bulk.material.sigma
+        # sigma = operator_skel.material.sigma + operator_bulk.material.sigma
         # sigma = material_skel.sigma + material_bulk.sigma #  + material_pores.sigma
+        sigma = material.sigma 
     else:
         sigma = material.sigma 
 
@@ -145,7 +147,7 @@ def J(x, problem, kinematics, material_parameters, material_model, V0, initialis
     if volume_forces != []:
         # print("volume_force", volume_forces[0][0])
         # div_sigma = dwarp.VolumeRegularizationDiscreteEnergy(problem=problem, b=volume_forces[0][0], model=material_model, young=x[0], poisson=x[1])
-        div_sigma = dwarp.VolumeRegularizationDiscreteEnergy(problem=problem, b=volume_forces[0][0], model=material_model, parameters_to_identify=parameters_to_identify)
+        div_sigma = dwarp.VolumeRegularizationDiscreteEnergy(problem=problem, b=[volume_forces[0][0][0]*1e-6*problem.phis,volume_forces[0][0][1]*1e-6*problem.phis,volume_forces[0][0][2]*1e-6*problem.phis], model=material_model, parameters_to_identify=parameters_to_identify)
         div_sigma_value = div_sigma.assemble_ener()  # / abs(norm_params) 
         print("div_sigma", div_sigma_value)
         # div_sigma = dolfin.div(sigma)+dolfin.Constant(volume_forces[0][0])

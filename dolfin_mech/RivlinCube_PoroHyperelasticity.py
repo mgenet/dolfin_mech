@@ -12,9 +12,10 @@ import dolfin
 import matplotlib.pyplot as mpl
 import pandas 
 import numpy
-import copy
 
 import dolfin_mech as dmech
+import dolfin_warp as dwarp
+import subprocess
 
 ################################################################################
 
@@ -907,9 +908,9 @@ def RivlinCube_PoroHyperelasticity(
             if get_invariants:
                 U_inspi = problem.get_displacement_subsol().func
                 U_expi = get_invariants["Uexpi"]
-                Utot = U_inspi.copy(deepcopy=True)
-                Utot.vector()[:] -= U_expi.vector()[:]
-                kinematics_new = dmech.Kinematics(U=Utot, U_old=None, Q_expr=None)
+                U_tot = U_inspi.copy(deepcopy=True)
+                U_tot.vector()[:] -= U_expi.vector()[:]
+                kinematics_new = dmech.Kinematics(U=U_tot, U_old=None, Q_expr=None)
 
                 # sfoi_fe = dolfin.TensorElement(
                 #     family="DG",
@@ -919,10 +920,15 @@ def RivlinCube_PoroHyperelasticity(
                 #     mesh,
                 #     sfoi_fe)
 
+                xdmf_file_mesh_vtk_0 = dolfin.XDMFFile("./mesh_tot_0.xdmf")
+                xdmf_file_mesh_vtk_0.write(mesh)
+                xdmf_file_mesh_vtk_0.close()
 
+                process=subprocess.Popen(["meshio", "convert", "mesh_tot_0.xdmf", "mesh_tot_0.vtk"])
                 
-                dolfin.ALE.move(mesh, U_inspi)
-                # dolfin.ALE.move(mesh, Utot)
+                # dolfin.ALE.move(mesh, U_inspi)
+                dolfin.ALE.move(mesh, U_expi)
+                # dolfin.ALE.move(mesh, U_tot)
                 
                 sfoi_fe = dolfin.FiniteElement(
                     family="DG",
@@ -933,15 +939,21 @@ def RivlinCube_PoroHyperelasticity(
                     sfoi_fe)
                 
 
-                xdmf_file_mesh = dolfin.XDMFFile("./J_tot.xdmf")
+                xdmf_file_mesh = dolfin.XDMFFile("./mesh_tot.xdmf")
                 xdmf_file_mesh.write(mesh)
+                xdmf_file_mesh_vtk_1 = dolfin.XDMFFile("./mesh_tot_1.xdmf")
+                xdmf_file_mesh_vtk_1.write(mesh)
+                xdmf_file_mesh_vtk_1.close()
+
+                process=subprocess.Popen(["meshio", "convert", "mesh_tot_1.xdmf", "mesh_tot_1.vtk"])
                 
 
             
 
                 J_tot = kinematics_new.J
                 J_tot_proj = dolfin.project(J_tot, sfoi_fs)
-                xdmf_file_mesh.write(J_tot_proj, 1)
+                # xdmf_file_mesh.write(J_tot_proj, 1)
+                xdmf_file_mesh.write(U_tot, 1)
                 xdmf_file_mesh.close()
                 
                 J_tot = J_tot_proj.vector().get_local()
@@ -1073,6 +1085,17 @@ def RivlinCube_PoroHyperelasticity(
                 myfile= open("/Users/peyrault/Documents/Gravity/Tests/Article/distribution_zones"+str(load_params)+".dat", 'w')
                 myfile.write(df.to_string(index=False))
                 myfile.close()
+
+
+                devia_operators = dwarp.compute_strains(working_folder="/Users/peyrault/Documents/Gravity/Tests", working_basename="mesh_tot", working_ext="vtk", ref_mesh_ext="vtk", verbose=1)
+                deviatoric_c = devia_operators.farray_equiv_Cdev
+                print(deviatoric_c)
+                deviatoric_e = devia_operators.farray_equiv_Edev
+                print(deviatoric_e)
+                deviatoric_c2 = devia_operators.farray_equiv_Cdev
+                print(deviatoric_c2)
+                deviatoric_e2 = devia_operators.farray_equiv_Edev
+                print(deviatoric_e2)
         # print("get_J", get_J)
         if get_J:
             return(problem.get_displacement_subsol().func,  phi, V, problem.get_deformed_volume_subsol().func.vector()[0])
