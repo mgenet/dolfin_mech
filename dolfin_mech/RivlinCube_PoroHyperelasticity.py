@@ -67,42 +67,27 @@ def RivlinCube_PoroHyperelasticity(
     # print("coord xmin", coord_ref)
 
     if get_subsdomains:
-        domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
-        domains_mf.set_all(0)
+        domains_zones = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
+        domains_zones.set_all(10)
         tol =1e-14
         # print("mesh.coordinates()[:].min()", mesh.coordinates())
-        xmin = mesh.coordinates()[:, 0].min()
-        xmax = mesh.coordinates()[:, 0].max()
+        # xmin = mesh.coordinates()[:, 0].min()
+        # xmax = mesh.coordinates()[:, 0].max()
+        zmin = mesh.coordinates()[:, 2].min()
+        zmax = mesh.coordinates()[:, 2].max()
+        # print("zmin, zmax", zmin, zmax)
         zones = 10
-        delta_x = (xmax-xmin)/(zones+1)
-        # print(xmin, xmax, delta_x)
-        # test1 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+9*delta_x, tol=tol)
-        # test1.mark(domains_mf, 10)
-        # test2 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+8*delta_x, tol=tol)
-        # test2.mark(domains_mf, 9)
-        # test3 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+7*delta_x, tol=tol)
-        # test3.mark(domains_mf, 8)
-        # test4 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+6*delta_x, tol=tol)
-        # test4.mark(domains_mf, 7)
-        # test5 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+5*delta_x, tol=tol)
-        # test5.mark(domains_mf, 6)
-        # test6 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+4*delta_x, tol=tol)
-        # test6.mark(domains_mf, 5)
-        # test7 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+3*delta_x, tol=tol)
-        # test7.mark(domains_mf, 4)
-        # test8 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+2*delta_x, tol=tol)
-        # test8.mark(domains_mf, 3)
-        # test9 = dolfin.CompiledSubDomain("x[0] <= x1 - tol",  x1=xmin+1*delta_x, tol=tol)
-        # test9.mark(domains_mf, 2)
-        # print("xmin, xmax, deltax", xmin, xmax, delta_x)
+        delta_z = (zmax-zmin)/(zones+1)
         subdomain_lst = []
         # xmin += delta_x/2
-        subdomain_lst.append(dolfin.CompiledSubDomain("x[0] <= x1 + tol",  x1=xmin+delta_x, tol=tol))
-        subdomain_lst[0].mark(domains_mf, 0)
+        # subdomain_lst.append(dolfin.CompiledSubDomain("x[0] <= x1 + tol",  x1=xmin+delta_x, tol=tol))
+        subdomain_lst.append(dolfin.CompiledSubDomain("x[2] <= z1 + tol",  z1=zmin+delta_z, tol=tol))
+        subdomain_lst[0].mark(domains_zones, 10)
         for zone_ in range(0, zones-1):
-            subdomain_lst.append(dolfin.CompiledSubDomain(" x[0] >= x1 - tol",  x1=xmin+delta_x*(zone_+1), tol=tol))
+            # subdomain_lst.append(dolfin.CompiledSubDomain(" x[0] >= x1 - tol",  x1=xmin+delta_x*(zone_+1), tol=tol))
+            subdomain_lst.append(dolfin.CompiledSubDomain(" x[2] >= z1 - tol",  z1=zmin+delta_z*(zone_+1), tol=tol))
             # print("x1=xmin+delta_x*(zone_+1)", xmin+delta_x*(zone_+1))
-            subdomain_lst[zone_+1].mark(domains_mf, zone_+1)  
+            subdomain_lst[zone_+1].mark(domains_zones, 10-(zone_+1))
             # print("id", zone_+1)
         # for i in range(0, zones): 
             # marked_cells = dolfin.SubsetIterator(domains_mf, i)
@@ -111,11 +96,12 @@ def RivlinCube_PoroHyperelasticity(
                 # compteur += 1
             # print("compteur", compteur, "for i=", i)
     boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Tests/Article/boundaries.pvd") 
-    boundary_file << domains_mf
+    boundary_file << domains_zones
 
 
 
     if mesh_from_file:
+        domains_mf=None
         if multimaterial :
             ymin = mesh.coordinates()[:, 1].min()
             ymax = mesh.coordinates()[:, 1].max()
@@ -136,6 +122,7 @@ def RivlinCube_PoroHyperelasticity(
             # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
             # boundary_file << domains_mf
     else:
+        domains_mf=None
         if multimaterial :
             domains_mf = None
             # print(len(mat_params))
@@ -713,13 +700,13 @@ def RivlinCube_PoroHyperelasticity(
             dS=problem.dS,
             f_ini=[0.]*dim,
             # f_fin=[0., f, 0.],
-            f_fin=[f, 0., 0.],
+            f_fin=[0., 0., f],
             rho_solid=rho_solid,
             phis=problem.phis,
             P0_ini=0.,
             P0_fin=P0,
             k_step=k_step)
-        volume_forces.append([[f, 0., 0.], problem.dV])
+        volume_forces.append([[0., 0., problem.phis*rho_solid*f], problem.dV])
     elif (load_type == "pgra"):
         problem.add_pf_operator(
             measure=problem.dV,
@@ -732,13 +719,13 @@ def RivlinCube_PoroHyperelasticity(
             dV=problem.dV,
             dS=problem.dS,
             f_ini=[0.]*dim,
-            f_fin=[f, 0., 0.],
+            f_fin=[0., 0., f],
             # f_fin=[0., f, 0.],
             rho_solid=rho_solid,
             P0_ini=0.,
             P0_fin=P0,
             k_step=k_step)
-        volume_forces.append([[f, 0., 0.], problem.dV])
+        # volume_forces.append([[0, 0., problem.phis*rho_solid*f], problem.dV])
 
     ################################################# Quantities of Interest ###
 
@@ -823,15 +810,6 @@ def RivlinCube_PoroHyperelasticity(
 
     for foi in problem.fois:
         # print(foi.name)
-        if foi.name == "Ic":
-            ICfun = foi
-            IC = foi.func.vector().get_local()
-        if foi.name == "IIc":
-            IIC = foi.func.vector().get_local()
-            IICfun = foi
-        if foi.name == "J":
-            J = foi.func.vector().get_local()
-            Jfun = foi
         if foi.name == "Phis0":
             phi = foi.func.vector().get_local()
             Phis0 = foi.func.vector().get_local()
@@ -905,198 +883,243 @@ def RivlinCube_PoroHyperelasticity(
                 file.write('  </mesh_function>\n')
                 file.write('</dolfin>\n')
                 file.close()
-            if get_invariants:
-                U_inspi = problem.get_displacement_subsol().func
-                U_expi = get_invariants["Uexpi"]
-                U_tot = U_inspi.copy(deepcopy=True)
-                U_tot.vector()[:] -= U_expi.vector()[:]
-                kinematics_new = dmech.Kinematics(U=U_tot, U_old=None, Q_expr=None)
+        if get_invariants:
+            U_inspi = problem.get_displacement_subsol().func
+            U_expi = get_invariants["Uexpi"]
+            U_tot = U_inspi.copy(deepcopy=True)
+            U_tot.vector().set_local(U_inspi.vector()[:] - U_expi.vector()[:])
+            # print("U_inspi", U_inspi.vector()[:])
+            # print("U_expi", U_expi.vector()[:])
+            # print("U_tot", U_tot.vector()[:])
 
-                # sfoi_fe = dolfin.TensorElement(
-                #     family="DG",
-                #     cell=mesh.ufl_cell(),
-                #     degree=0)
-                # sfoi_fs = dolfin.FunctionSpace(
-                #     mesh,
-                #     sfoi_fe)
+            sfoi_fe = dolfin.FiniteElement(
+                family="DG",
+                cell=mesh.ufl_cell(),
+                degree=0)
+            sfoi_fs = dolfin.FunctionSpace(
+                mesh,
+                sfoi_fe)
 
-                xdmf_file_mesh_vtk_0 = dolfin.XDMFFile("./mesh_tot_0.xdmf")
-                xdmf_file_mesh_vtk_0.write(mesh)
-                xdmf_file_mesh_vtk_0.close()
+            
+            dolfin.ALE.move(mesh, U_expi)
 
-                process=subprocess.Popen(["meshio", "convert", "mesh_tot_0.xdmf", "mesh_tot_0.vtk"])
-                
-                # dolfin.ALE.move(mesh, U_inspi)
-                dolfin.ALE.move(mesh, U_expi)
-                # dolfin.ALE.move(mesh, U_tot)
-                
-                sfoi_fe = dolfin.FiniteElement(
-                    family="DG",
-                    cell=mesh.ufl_cell(),
-                    degree=0)
-                sfoi_fs = dolfin.FunctionSpace(
-                    mesh,
-                    sfoi_fe)
-                
+            fe_u = dolfin.VectorElement(
+                family="CG",
+                cell=mesh.ufl_cell(),
+                degree=1)
+            
+            U_fs = dolfin.FunctionSpace(mesh, fe_u)
+            U_tot_expi=dolfin.Function(U_fs)
+            
+            U_tot_expi.vector().set_local(U_tot.vector()[:])
 
-                xdmf_file_mesh = dolfin.XDMFFile("./mesh_tot.xdmf")
-                xdmf_file_mesh.write(mesh)
-                xdmf_file_mesh_vtk_1 = dolfin.XDMFFile("./mesh_tot_1.xdmf")
-                xdmf_file_mesh_vtk_1.write(mesh)
-                xdmf_file_mesh_vtk_1.close()
 
-                process=subprocess.Popen(["meshio", "convert", "mesh_tot_1.xdmf", "mesh_tot_1.vtk"])
-                
+            kinematics_new = dmech.Kinematics(U=U_tot_expi, U_old=None, Q_expr=None)
 
             
 
-                J_tot = kinematics_new.J
-                J_tot_proj = dolfin.project(J_tot, sfoi_fs)
-                # xdmf_file_mesh.write(J_tot_proj, 1)
-                xdmf_file_mesh.write(U_tot, 1)
-                xdmf_file_mesh.close()
-                
-                J_tot = J_tot_proj.vector().get_local()
+            # sfoi_fe = dolfin.TensorElement(
+            #     family="DG",
+            #     cell=mesh.ufl_cell(),
+            #     degree=0)
+            # sfoi_fs = dolfin.FunctionSpace(
+            #     mesh,
+            #     sfoi_fe)
 
-                Ic_tot = kinematics_new.IC
-                Ic_tot_proj = dolfin.project(Ic_tot, sfoi_fs)
-                Ic_tot = Ic_tot_proj.vector().get_local()
+            # xdmf_file_mesh_vtk_0 = dolfin.XDMFFile("./mesh_tot_0.xdmf")
+            # xdmf_file_mesh_vtk_0.write(mesh)
+            # xdmf_file_mesh_vtk_0.close()
 
+            
+            # dolfin.ALE.move(mesh, U_inspi)
+            
+            # dolfin.ALE.move(mesh, U_tot)
+            
+            sfoi_fe = dolfin.FiniteElement(
+                family="DG",
+                cell=mesh.ufl_cell(),
+                degree=0)
+            sfoi_fs = dolfin.FunctionSpace(
+                mesh,
+                sfoi_fe)
+            
 
-                IIc_tot = kinematics_new.IIC
-                IIc_tot_proj = dolfin.project(IIc_tot, sfoi_fs)
-                IIc_tot = IIc_tot_proj.vector().get_local()
-                
+            # xdmf_file_mesh = dolfin.XDMFFile("./mesh_tot.xdmf")
+            # xdmf_file_mesh.write(mesh)
+            # xdmf_file_mesh_vtk_1 = dolfin.XDMFFile("./mesh_tot_1.xdmf")
+            # xdmf_file_mesh_vtk_1.write(mesh)
+            # xdmf_file_mesh_vtk_1.close()
 
-
-                # Jnew = kinematics_new.F
-                # J_projected = dolfin.project(Jnew, V)
-                # print("interpolation=success")
-                # print("Jnew", J_tot_proj.vector()[:])
-                # print("IC", Ic_tot_proj)
-                # print("IC", Ic_tot_proj.vector())
-                # print("Ic", IIc_tot_proj.vector()[:])
-                # print("IIC", IIc_tot_proj.vector()[:])
-
-                # print("len", len(J_tot_proj), len(Ic_tot_proj), len(IIc_tot_proj))
-
-                mu_J_tot, mu_Ic_tot, mu_IIc_tot = 0, 0, 0
-                sigma_J_tot, sigma_Ic_tot, sigma_IIc_tot = 0, 0, 0
-                number_cells = 0
-
-                for cell in range(mesh.num_cells()):
-                    number_cells += 1
-                    mu_J_tot += numpy.log(J_tot[cell])
-                    mu_Ic_tot += numpy.log(Ic_tot[cell])
-                    mu_IIc_tot += numpy.log(IIc_tot[cell])
-
-                mu_J_tot /= number_cells
-                mu_Ic_tot /= number_cells
-                mu_IIc_tot /= number_cells
-
-                for cell in range(mesh.num_cells()):
-                    sigma_J_tot += (numpy.log(J_tot[cell])-mu_J_tot)*(numpy.log(J_tot[cell])-mu_J_tot)
-                    sigma_Ic_tot += (numpy.log(Ic_tot[cell])-mu_Ic_tot)*(numpy.log(Ic_tot[cell])-mu_Ic_tot)
-                    sigma_IIc_tot += (numpy.log(IIc_tot[cell])-mu_IIc_tot)*(numpy.log(IIc_tot[cell])-mu_IIc_tot)
-
-                sigma_J_tot /= number_cells
-                sigma_J_tot = sigma_J_tot**(1/2)
-                sigma_Ic_tot /= number_cells
-                sigma_Ic_tot = sigma_Ic_tot**(1/2)
-                sigma_IIc_tot /= number_cells
-                sigma_IIc_tot = sigma_IIc_tot**(1/2)
-
-                print(" J_tot",  J_tot)
-                print("IC_tot", Ic_tot)
-                print("IIc_tot", IIc_tot)
-                print("sigma, mu J", sigma_J_tot, mu_J_tot)
-                print("sigma, mu Ic", sigma_Ic_tot, mu_Ic_tot)
-                print("sigma, mu IIc", sigma_IIc_tot, mu_IIc_tot)
-
-                
-
-                results_zones = {}
-                results_zones["zone"] = []
-                # results_zones["average_phi"] = []
-                # results_zones["std+_phi"] = []
-                # results_zones["std-_phi"] = []
-                
-
-                results_zones["average_J"] = []
-                results_zones["std+_J"] = []
-                results_zones["std-_J"] = []
-                results_zones["J^"] = []
-                results_zones["average_I1"] = []
-                results_zones["std+_I1"] = []
-                results_zones["std-_I1"] = []
-                results_zones["I1^"] = []
-                results_zones["average_I2"] = []
-                results_zones["std+_I2"] = []
-                results_zones["std-_I2"] = []
-                results_zones["I2^"] = []
-                for i in range(0, zones):
-                    results_zones["zone"].append(i)
-                    marked_cells = dolfin.SubsetIterator(domains_mf, i)
-                    J_lst = []
-                    I1_lst = []
-                    I2_lst = []
-                    J_chapeau = []
-                    I1_chapeau = []
-                    I2_chapeau = []
-                    # print("phis=", phis)
-                    for cell in marked_cells:
-                        # print("cell index", cell.index())
-                        # print("type(cell index)", cell.index())
-                        # print("J(cell index)", Jfun[cell.index])
-                        # cell_index = int(cell.index())
-                        # phi_lst.append(phis[cell.index()])
-                        J_lst.append(J_tot[cell.index()])
-                        I1_lst.append(Ic_tot[cell.index()])
-                        I2_lst.append(IIc_tot[cell.index()])
-                    # phi_average = numpy.average(phi_lst)
-                    # phi_std =numpy.std(phi_lst)
-                    # results_zones["average_phi"].append(phi_average)
-                    # results_zones["std+_phi"].append(phi_average + phi_std)
-                    # results_zones["std-_phi"].append(phi_average - phi_std)
-                    J_average = numpy.average(J_lst)
-                    print("J_average", J_average)
-                    J_chapeau = ((numpy.log(J_average)-mu_J_tot)/sigma_J_tot)
-                    J_std =numpy.std(J_lst)
-                    results_zones["average_J"].append(J_average)
-                    results_zones["std+_J"].append(J_average + J_std)
-                    results_zones["std-_J"].append(J_average - J_std)
-                    I1_average = numpy.average(I1_lst)
-                    I1_chapeau = ((numpy.log(I1_average)-mu_Ic_tot)/sigma_Ic_tot)
-                    I1_std =numpy.std(I1_lst)
-                    results_zones["average_I1"].append(I1_average)
-                    results_zones["std+_I1"].append(I1_average + I1_std)
-                    results_zones["std-_I1"].append(I1_average - I1_std)
-                    I2_average = numpy.average(I2_lst)
-                    I2_chapeau = ((numpy.log(I2_average)-mu_IIc_tot)/sigma_IIc_tot)
-                    I2_std =numpy.std(I2_lst)
-                    results_zones["average_I2"].append(I2_average)
-                    results_zones["std+_I2"].append(I2_average + I2_std)
-                    results_zones["std-_I2"].append(I2_average - I2_std)
-                    results_zones["J^"].append(J_chapeau)
-                    results_zones["I1^"].append(I1_chapeau)
-                    results_zones["I2^"].append(I2_chapeau)
-                print("results", results_zones)
-                df = pandas.DataFrame(results_zones)
-                myfile= open("/Users/peyrault/Documents/Gravity/Tests/Article/distribution_zones"+str(load_params)+".dat", 'w')
-                myfile.write(df.to_string(index=False))
-                myfile.close()
+            # process=subprocess.Popen(["meshio", "convert", "mesh_tot_1.xdmf", "mesh_tot_1.vtk"])
+            
 
 
-                devia_operators = dwarp.compute_strains(working_folder="/Users/peyrault/Documents/Gravity/Tests", working_basename="mesh_tot", working_ext="vtk", ref_mesh_ext="vtk", verbose=1)
-                deviatoric_c = devia_operators.farray_equiv_Cdev
-                print(deviatoric_c)
-                deviatoric_e = devia_operators.farray_equiv_Edev
-                print(deviatoric_e)
-                deviatoric_c2 = devia_operators.farray_equiv_Cdev
-                print(deviatoric_c2)
-                deviatoric_e2 = devia_operators.farray_equiv_Edev
-                print(deviatoric_e2)
-        # print("get_J", get_J)
+            J_tot_field = kinematics_new.J
+            J_tot_proj = dolfin.project(J_tot_field, sfoi_fs)
+            # xdmf_file_mesh.write(J_tot_proj, 1)
+            # xdmf_file_mesh.write(U_tot, 1)
+            # xdmf_file_mesh.close()
+
+            J_tot = J_tot_proj.vector().get_local()
+
+            Ic_tot_field = kinematics_new.IC
+            Ic_tot_proj = dolfin.project(Ic_tot_field, sfoi_fs)
+            Ic_tot = Ic_tot_proj.vector().get_local()
+
+
+            IIc_tot_field = kinematics_new.IIC
+            IIc_tot_proj = dolfin.project(IIc_tot_field, sfoi_fs)
+            IIc_tot = IIc_tot_proj.vector().get_local()
+
+            U_tot_expi.rename("U","")
+            J_tot_proj.rename("J", "")
+            Ic_tot_proj.rename("I1", "")
+            IIc_tot_proj.rename("I2", "")
+
+            with dolfin.XDMFFile('final_fields.xdmf') as file:
+                file.parameters.update(
+                {
+                    "functions_share_mesh": True,
+                    "rewrite_function_mesh": False
+                })
+                file.write(U_tot_expi, 0.)
+                file.write(J_tot_proj, 0.)
+                file.write(Ic_tot_proj, 0.)
+                file.write(IIc_tot_proj, 0.)
+
+            # with dolfin.XDMFFile('mesh_disp_0.xdmf') as file_mesh_disp:
+            #     file_mesh_disp.write(U_tot_expi, 0.)
+
+            # process=subprocess.Popen(["meshio", "convert", "mesh_disp_0.xdmf", "mesh_disp_0.vtk"])
+
+            # print("mesh written from xdmf to vtk")
+
+            dmech.write_VTU_file("mesh_disp", U_tot_expi, 0)
+
+            # Jnew = kinematics_new.F
+            # J_projected = dolfin.project(Jnew, V)
+            # print("interpolation=success")
+            # print("Jnew", J_tot_proj.vector()[:])
+            # print("IC", Ic_tot_proj)
+            # print("IC", Ic_tot_proj.vector())
+            # print("Ic", IIc_tot_proj.vector()[:])
+            # print("IIC", IIc_tot_proj.vector()[:])
+
+            # print("len", len(J_tot_proj), len(Ic_tot_proj), len(IIc_tot_proj))
+
+            mu_J_tot, mu_Ic_tot, mu_IIc_tot = 0, 0, 0
+            sigma_J_tot, sigma_Ic_tot, sigma_IIc_tot = 0, 0, 0
+            number_cells = 0
+
+            for cell in range(mesh.num_cells()):
+                number_cells += 1
+                mu_J_tot += numpy.log(J_tot[cell])
+                mu_Ic_tot += numpy.log(Ic_tot[cell])
+                mu_IIc_tot += numpy.log(IIc_tot[cell])
+
+            mu_J_tot /= number_cells
+            mu_Ic_tot /= number_cells
+            mu_IIc_tot /= number_cells
+
+            for cell in range(mesh.num_cells()):
+                sigma_J_tot += (numpy.log(J_tot[cell])-mu_J_tot)*(numpy.log(J_tot[cell])-mu_J_tot)
+                sigma_Ic_tot += (numpy.log(Ic_tot[cell])-mu_Ic_tot)*(numpy.log(Ic_tot[cell])-mu_Ic_tot)
+                sigma_IIc_tot += (numpy.log(IIc_tot[cell])-mu_IIc_tot)*(numpy.log(IIc_tot[cell])-mu_IIc_tot)
+
+            sigma_J_tot /= number_cells
+            sigma_J_tot = sigma_J_tot**(1/2)
+            sigma_Ic_tot /= number_cells
+            sigma_Ic_tot = sigma_Ic_tot**(1/2)
+            sigma_IIc_tot /= number_cells
+            sigma_IIc_tot = sigma_IIc_tot**(1/2)
+
+            print(" J_tot",  J_tot)
+            print("IC_tot", Ic_tot)
+            print("IIc_tot", IIc_tot)
+            print("sigma, mu J", sigma_J_tot, mu_J_tot)
+            print("sigma, mu Ic", sigma_Ic_tot, mu_Ic_tot)
+            print("sigma, mu IIc", sigma_IIc_tot, mu_IIc_tot)
+
+            
+
+            results_zones = {}
+            results_zones["zone"] = []
+            # results_zones["average_phi"] = []
+            # results_zones["std+_phi"] = []
+            # results_zones["std-_phi"] = []
+            
+
+            results_zones["average_J"] = []
+            results_zones["std+_J"] = []
+            results_zones["std-_J"] = []
+            results_zones["J^"] = []
+            results_zones["average_I1"] = []
+            results_zones["std+_I1"] = []
+            results_zones["std-_I1"] = []
+            results_zones["I1^"] = []
+            results_zones["average_I2"] = []
+            results_zones["std+_I2"] = []
+            results_zones["std-_I2"] = []
+            results_zones["I2^"] = []
+            c_cells=0
+            for i in range(1, zones+1):
+                results_zones["zone"].append(i)
+                marked_cells = dolfin.SubsetIterator(domains_zones, i)
+                J_lst = []
+                I1_lst = []
+                I2_lst = []
+                J_chapeau = []
+                I1_chapeau = []
+                I2_chapeau = []
+                # print("phis=", phis)
+                for cell in marked_cells:
+                    c_cells+=1
+                    # print("cell index", cell.index())
+                    # print("type(cell index)", cell.index())
+                    # print("J(cell index)", Jfun[cell.index])
+                    # cell_index = int(cell.index())
+                    # phi_lst.append(phis[cell.index()])
+                    J_lst.append(J_tot[cell.index()])
+                    I1_lst.append(Ic_tot[cell.index()])
+                    I2_lst.append(IIc_tot[cell.index()])
+                # phi_average = numpy.average(phi_lst)
+                # phi_std =numpy.std(phi_lst)
+                # results_zones["average_phi"].append(phi_average)
+                # results_zones["std+_phi"].append(phi_average + phi_std)
+                # results_zones["std-_phi"].append(phi_average - phi_std)
+                J_average = numpy.average(J_lst)
+                print("J_average", J_average)
+                J_chapeau = ((numpy.log(J_average)-mu_J_tot)/sigma_J_tot)
+                J_std =numpy.std(J_lst)
+                results_zones["average_J"].append(J_average)
+                results_zones["std+_J"].append(J_average + J_std)
+                results_zones["std-_J"].append(J_average - J_std)
+                I1_average = numpy.average(I1_lst)
+                I1_chapeau = ((numpy.log(I1_average)-mu_Ic_tot)/sigma_Ic_tot)
+                I1_std =numpy.std(I1_lst)
+                results_zones["average_I1"].append(I1_average)
+                results_zones["std+_I1"].append(I1_average + I1_std)
+                results_zones["std-_I1"].append(I1_average - I1_std)
+                I2_average = numpy.average(I2_lst)
+                I2_chapeau = ((numpy.log(I2_average)-mu_IIc_tot)/sigma_IIc_tot)
+                I2_std =numpy.std(I2_lst)
+                results_zones["average_I2"].append(I2_average)
+                results_zones["std+_I2"].append(I2_average + I2_std)
+                results_zones["std-_I2"].append(I2_average - I2_std)
+                results_zones["J^"].append(J_chapeau)
+                results_zones["I1^"].append(I1_chapeau)
+                results_zones["I2^"].append(I2_chapeau)
+            print("nb cells", c_cells)
+            print("results", results_zones)
+            df = pandas.DataFrame(results_zones)
+            myfile= open("/Users/peyrault/Documents/Gravity/Tests/Article/distribution_zones"+str(load_params)+".dat", 'w')
+            myfile.write(df.to_string(index=False))
+            myfile.close()
+
+
+            dwarp.compute_strains(working_folder="/Users/peyrault/Documents/Gravity/Tests", working_basename="mesh_disp", working_ext="vtu",  verbose=1)
+
+            # print("get_J", get_J)
         if get_J:
             return(problem.get_displacement_subsol().func,  phi, V, problem.get_deformed_volume_subsol().func.vector()[0])
         else:
