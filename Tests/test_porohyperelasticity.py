@@ -60,6 +60,8 @@ for dim in dim_lst:
                 load_lst  = []
                 load_lst += ["internal"]
                 load_lst += ["external0"] if (inverse) else ["external"]
+                if dim==3:
+                    load_lst += ["p_boundary_condition0"] if (inverse) else ["p_boundary_condition"]
                 for load in load_lst:
 
                     print("dim =",dim)
@@ -67,6 +69,11 @@ for dim in dim_lst:
                     print("porosity =",porosity)
                     print("scaling =",scaling)
                     print("load =",load)
+
+                    if dim==3 and load=="p_boundary_condition" or dim==3 and load=="p_boundary_condition0":
+                        cube_params={"X1":1, "Y1":1, "Z1":1, "l": 0.1} #### AP2023 - necessary for convergence
+                    else:
+                        cube_params={}
 
                     res_basename  = sys.argv[0][:-3]
                     res_basename += "-dim="+str(dim)
@@ -79,8 +86,9 @@ for dim in dim_lst:
                         dim=dim,
                         inverse=inverse,
                         porosity_params={"type":porosity},
+                        cube_params=cube_params,
                         mat_params={"scaling":scaling, "parameters":mat_params},
-                        step_params={"dt_min":0.1},
+                        step_params={"dt_min":1e-4},
                         load_params={"type":load},
                         res_basename=res_folder+"/"+res_basename,
                         plot_curves=0,

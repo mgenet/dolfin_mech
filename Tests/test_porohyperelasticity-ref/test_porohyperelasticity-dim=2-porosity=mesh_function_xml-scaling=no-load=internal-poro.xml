@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<dolfin xmlns:dolfin="http://fenicsproject.org">
-  <mesh_function type="double" dim="2" size="4">
-    <entity index="0" value="0.5"/>
-    <entity index="1" value="0.5"/>
-    <entity index="2" value="0.5"/>
-    <entity index="3" value="0.5"/>
-  </mesh_function>
-</dolfin>

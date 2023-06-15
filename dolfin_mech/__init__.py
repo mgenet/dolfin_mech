@@ -38,6 +38,7 @@ from .Operator_Inertia import *
 from .Operator_LinearizedElasticity import *
 from .Operator_LinearizedHydrostaticPressure import *
 from .Operator_LinearizedIncompressibility import *
+from .Operator_Loading_PressureBalancingGravity import *
 from .Operator_Loading_SurfaceForce import *
 from .Operator_Loading_SurfacePressure import *
 from .Operator_Loading_SurfacePressureGradient import *

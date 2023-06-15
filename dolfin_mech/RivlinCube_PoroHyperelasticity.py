@@ -118,6 +118,14 @@ def RivlinCube_PoroHyperelasticity(
         porosity_val = None
 
     ################################################################ Problem ###
+    load_type = load_params.get("type", "internal")
+
+    if load_type=="p_boundary_condition0":
+        gradient_operators="inverse"
+    elif load_type=="p_boundary_condition":
+        gradient_operators="direct"
+    else:
+        gradient_operators=None
 
     if (inverse):
         problem = dmech.InversePoroHyperelasticityProblem(
@@ -129,7 +137,8 @@ def RivlinCube_PoroHyperelasticity(
             porosity_init_fun=porosity_fun,
             skel_behavior=mat_params,
             bulk_behavior=mat_params,
-            pore_behavior=mat_params)
+            pore_behavior=mat_params,
+            gradient_operators=gradient_operators)
     else:
         problem = dmech.PoroHyperelasticityProblem(
             mesh=mesh,
@@ -140,7 +149,8 @@ def RivlinCube_PoroHyperelasticity(
             porosity_init_fun=porosity_fun,
             skel_behavior=mat_params,
             bulk_behavior=mat_params,
-            pore_behavior=mat_params)
+            pore_behavior=mat_params,
+            gradient_operators=gradient_operators)
 
     ########################################## Boundary conditions & Loading ###
     Deltat = step_params.get("Deltat", 1.)
@@ -206,6 +216,43 @@ def RivlinCube_PoroHyperelasticity(
         if (dim==3): problem.add_surface_pressure0_loading_operator(
             measure=problem.dS(zmax_id),
             P_ini=0., P_fin=P,
+            k_step=k_step)
+    elif (load_type == "p_boundary_condition0"):
+        problem.add_pf_operator(
+            measure=problem.dV,
+            pf_ini=0.,
+            pf_fin=0.,
+            k_step=k_step)
+        f = load_params.get("f", 1e4)
+        P0 = load_params.get("P0", -0.5)
+        rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+        problem.add_pressure_balancing_gravity0_loading_operator(
+            dV=problem.dV,
+            dS=problem.dS,
+            f_ini=[0.]*dim,
+            f_fin=[f, 0., 0.],
+            rho_solid=rho_solid,
+            phis=problem.phis,
+            P0_ini=0.,
+            P0_fin=P0,
+            k_step=k_step)
+    elif (load_type == "p_boundary_condition"):
+        problem.add_pf_operator(
+            measure=problem.dV,
+            pf_ini=0.,
+            pf_fin=0.,
+            k_step=k_step)
+        f = load_params.get("f", 1e4)
+        P0 = load_params.get("P0", -0.5)
+        rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+        problem.add_pressure_balancing_gravity_loading_operator(
+            dV=problem.dV,
+            dS=problem.dS,
+            f_ini=[0.]*dim,
+            f_fin=[f, 0., 0.],
+            rho_solid=rho_solid,
+            P0_ini=0.,
+            P0_fin=P0,
             k_step=k_step)
 
     ################################################# Quantities of Interest ###
