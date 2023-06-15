@@ -24,6 +24,8 @@ def RivlinCube_Hyperelasticity(
         mat_params={},
         step_params={},
         load_params={},
+        move={},
+        get_results=0,
         res_basename="RivlinCube_Hyperelasticity",
         verbose=0):
 
@@ -33,6 +35,10 @@ def RivlinCube_Hyperelasticity(
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
     elif (dim==3):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+
+    if move.get("move", False) == True :
+        Umove = move.get("U")
+        dolfin.ALE.move(mesh, Umove)
 
     if (multimaterial):
         mat1_sd = dolfin.CompiledSubDomain("x[0] <= x0", x0=0.5)
@@ -132,7 +138,7 @@ def RivlinCube_Hyperelasticity(
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
             k_step=k_step)
     elif (load_type == "volu"):
-        f = load_params.get("f", 1.)
+        f = load_params.get("f", 0.5)
         problem.add_volume_force_loading_operator(
             measure=problem.dV,
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
@@ -272,3 +278,6 @@ def RivlinCube_Hyperelasticity(
         "Integration failed. Aborting."
 
     integrator.close()
+
+    if get_results:
+        return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
