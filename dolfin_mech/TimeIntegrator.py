@@ -81,6 +81,7 @@ class TimeIntegrator():
             self.problem.update_qois(dt=1)
             self.qoi_printer.write_line([0.]+[qoi.value for qoi in self.problem.qois])
 
+        self.problem.update_fois()
         self.write_sol = bool(write_sol)
         if (self.write_sol):
             self.write_sol_filebasename = write_sol if (type(write_sol) is str) else sys.argv[0][:-3]+"-sol"
@@ -93,7 +94,6 @@ class TimeIntegrator():
             self.xdmf_file_sol = dmech.XDMFFile(
                 filename=self.write_sol_filebasename+".xdmf",
                 functions=self.functions_to_write)
-            self.problem.update_fois()
             self.xdmf_file_sol.write(0.)
 
             self.write_vtus                             = bool(write_vtus)
@@ -187,8 +187,8 @@ class TimeIntegrator():
                 if (solver_success):
                     n_iter_tot += n_iter
 
+                    self.problem.update_fois()
                     if (self.write_sol):
-                        self.problem.update_fois()
                         self.xdmf_file_sol.write(t)
 
                         if (self.write_vtus):
