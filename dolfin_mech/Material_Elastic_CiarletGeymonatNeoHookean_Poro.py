@@ -29,23 +29,39 @@ class CiarletGeymonatNeoHookeanElasticMaterialPoro(ElasticMaterial):
         material_dev=dmech.WskelLungElasticMaterial(
                 kinematics=kinematics,
                 parameters=parameters)
-        self.dev = dmech.PorousElasticMaterial(
-                solid_material= material_dev,
-                scaling="linear",
-                Phis0=kinematics.J*problem.get_porosity_subsol().subfunc)   
         
-
-
-        material_bulk = dmech.WbulkLungElasticMaterial(
-            Phis=kinematics.J * problem.phis, 
-            Phis0=kinematics.J * problem.get_porosity_subsol().subfunc, 
-            parameters={"kappa":1e2}, 
-            kinematics=kinematics)
-        self.bulk = dmech.PorousElasticMaterial(
+        
+        if "Inverse" in str(problem):
+                print("in inverse")
+                self.dev = dmech.PorousElasticMaterial(
+                        solid_material= material_dev,
+                        scaling="linear",
+                        Phis0=kinematics.J*problem.get_porosity_subsol().subfunc) 
+                material_bulk = dmech.WbulkLungElasticMaterial(
+                        Phis=kinematics.J * problem.phis, 
+                        Phis0=kinematics.J * problem.get_porosity_subsol().subfunc, 
+                        parameters={"kappa":1e2}, 
+                        kinematics=kinematics)
+                self.bulk = dmech.PorousElasticMaterial(
                 solid_material= material_bulk,
                 scaling="linear",
                 Phis0= kinematics.J * problem.get_porosity_subsol().subfunc)  
-
+        else:
+                print("in direct")
+                self.dev = dmech.PorousElasticMaterial(
+                        solid_material= material_dev,
+                        scaling="linear",
+                        Phis0=problem.Phis0) 
+                material_bulk = dmech.WbulkLungElasticMaterial(
+                        Phis=1/kinematics.J * problem.Phis0, 
+                        Phis0=problem.Phis0, 
+                        parameters={"kappa":1e2}, 
+                        kinematics=kinematics)
+                self.bulk = dmech.PorousElasticMaterial(
+                solid_material= material_bulk,
+                scaling="linear",
+                Phis0= problem.Phis0)  
+          
         self.Psi   = self.bulk.Psi   + self.dev.Psi
         self.Sigma = self.bulk.Sigma + self.dev.Sigma
         self.P     = self.bulk.P     + self.dev.P

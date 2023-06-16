@@ -32,7 +32,7 @@ def RivlinCube_PoroHyperelasticity(
         res_basename="RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         verbose=0,
-        inertia_val = 1e-6,
+        inertia_val = 1e-5,
         multimaterial = 0,
         get_results_fields = 0,
         mesh_from_file=0,
@@ -673,20 +673,20 @@ def RivlinCube_PoroHyperelasticity(
             k_step=k_step)
         P = load_params.get("P", -0.5)
         problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(xmax_id),
+            measure=problem.dS,
             P_ini=0,
             P_fin=P,
             k_step=k_step)
-        problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0,
-            P_fin=P,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0,
-            P_fin=P,
-            k_step=k_step)
+        # problem.add_surface_pressure_loading_operator(
+        #     measure=problem.dS(ymax_id),
+        #     P_ini=0,
+        #     P_fin=P,
+        #     k_step=k_step)
+        # if (dim==3): problem.add_surface_pressure_loading_operator(
+        #     measure=problem.dS(zmax_id),
+        #     P_ini=0,
+        #     P_fin=P,
+        #     k_step=k_step)
     elif (load_type == "pgra0"):
         problem.add_pf_operator(
             measure=problem.dV,
@@ -706,7 +706,7 @@ def RivlinCube_PoroHyperelasticity(
             P0_ini=0.,
             P0_fin=P0,
             k_step=k_step)
-        volume_forces.append([[0., 0., problem.phis*rho_solid*f], problem.dV])
+        volume_forces.append([[0., 0.,rho_solid*f], problem.dV])
     elif (load_type == "pgra"):
         problem.add_pf_operator(
             measure=problem.dV,
@@ -725,7 +725,7 @@ def RivlinCube_PoroHyperelasticity(
             P0_ini=0.,
             P0_fin=P0,
             k_step=k_step)
-        # volume_forces.append([[0, 0., problem.phis*rho_solid*f], problem.dV])
+        volume_forces.append([[0, 0., rho_solid*f], problem.dV])
 
     ################################################# Quantities of Interest ###
 
@@ -841,7 +841,7 @@ def RivlinCube_PoroHyperelasticity(
 
     # print (problem.get_lbda0_subsol().func.vector().get_local())
     if not inverse:
-        print(problem.get_x0_direct_subsol().func.vector().get_local())
+        # print(problem.get_x0_direct_subsol().func.vector().get_local())
         # print(problem.get_porosity_subsol().func.vector().get_local())
         print("Phis0", dolfin.assemble(problem.Phis0*problem.dV)/dolfin.assemble(problem.kinematics.J*problem.dV))
         # print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[0] + problem.get_displacement_subsol().func[0]) * problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
@@ -854,9 +854,17 @@ def RivlinCube_PoroHyperelasticity(
 
     
     if estimation_gap:
-        kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().subfunc)
-        surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
-        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions)
+        if inverse:
+            print("phis", problem.phis)
+            kinematics = dmech.InverseKinematics(u=problem.get_displacement_subsol().subfunc)
+            surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
+        else:
+            print("Phis0", problem.Phis0)
+            kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().subfunc)
+            # surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
+            surface_forces.append([-0.5, problem.dS])
+
+        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=inverse)
         
 
     if get_results_fields:
