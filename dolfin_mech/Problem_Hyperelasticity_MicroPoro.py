@@ -29,6 +29,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             w_solid_incompressibility=False,
             mesh=None,
             mesh_bbox=None,
+            vertices=None,
             domains_mf=None,
             boundaries_mf=None,
             points_mf=None,

@@ -7,6 +7,8 @@ from .Disc_Hyperelasticity import *
 from .Disc_Mesh import *
 from .Expression_MeshFunction_cpp import *
 from .FOI import *
+from .HollowBox_Homogenization import *
+from .HollowBox_Mesh import *
 from .HeartSlice_Hyperelasticity import *
 from .HeartSlice_Mesh import *
 from .Kinematics import *
@@ -62,6 +64,7 @@ from .Problem_Hyperelasticity_Inverse import *
 from .Problem_Hyperelasticity_MicroPoro import *
 from .Problem_Hyperelasticity_Poro import *
 from .Problem_Hyperelasticity_Poro_Inverse import *
+from .Problem_Homogenization import *
 from .QOI import *
 from .RivlinCube_Elasticity import *
 from .RivlinCube_Hyperelasticity import *

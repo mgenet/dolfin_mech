@@ -14,7 +14,6 @@ tests-on-ubuntu-20.04:
     - ci.inria.fr
     - large
   image: registry.gitlab.inria.fr/inria-ci/docker/ubuntu:20.04
-  # image: ubuntu:20.04
   # image: quay.io/fenicsproject/stable:latest # MG20211221: somehow this does not work
   # image: python $ MG20211221: this seems to be debian not ubuntu, which is necessary for ppa install
   script:
@@ -41,7 +40,6 @@ tests-on-ubuntu-22.04:
     - ci.inria.fr
     - large
   image: registry.gitlab.inria.fr/inria-ci/docker/ubuntu:22.04
-  # image: ubuntu:22.04
   script:
     - apt update; apt upgrade -y
     - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y git gnuplot python3-matplotlib python3-numpy python3-pandas python3-pip python-is-python3 # MG20220814: environment variables are needed to prevent tzdata installation hanging while waiting timezone info, cf. https://anonoz.github.io/tech/2020/04/24/docker-build-stuck-tzdata.html
