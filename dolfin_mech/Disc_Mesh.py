@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -55,6 +55,8 @@ def Disc_Mesh(
 
     gmsh.write(mesh_filebasename+".vtk")
 
+    gmsh.finalize()
+
     mesh_meshio = meshio.read(mesh_filebasename+".vtk")
 
     mesh_meshio.points = mesh_meshio.points[:, :2]
@@ -64,7 +66,7 @@ def Disc_Mesh(
     mesh = dolfin.Mesh()
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
 
-    gmsh.finalize()
+    dolfin.File(mesh_filebasename+".xml") << mesh
 
     ############################################################# Boundaries ###
 

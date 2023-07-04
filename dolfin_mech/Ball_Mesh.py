@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -44,6 +44,8 @@ def Ball_Mesh(
 
     gmsh.write(mesh_filebasename+".vtk")
 
+    gmsh.finalize()
+
     mesh_meshio = meshio.read(mesh_filebasename+".vtk")
 
     meshio.write(mesh_filebasename+".xdmf", mesh_meshio)
@@ -51,7 +53,7 @@ def Ball_Mesh(
     mesh = dolfin.Mesh()
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
 
-    gmsh.finalize()
+    dolfin.File(mesh_filebasename+".xml") << mesh
 
     ############################################################# Boundaries ###
 

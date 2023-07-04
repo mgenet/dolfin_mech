@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -107,21 +107,11 @@ class SurfacePressureGradient0LoadingOperator(Operator):
 
     def __init__(self,
             x,
-            x0,
-            n,
-            u_test,
-            lbda,
-            lbda_test,
-            mu,
-            mu_test,
-            p,
-            p_test,
-            gamma,
-            gamma_test,
-            dS,
-            dV,
-            rho_solid,
-            phis,
+            U_test,
+            N,
+            measure,
+            X0_val=None, X0_ini=None, X0_fin=None,
+            N0_val=None, N0_ini=None, N0_fin=None,
             P0_val=None, P0_ini=None, P0_fin=None,
             f_val=None, f_ini=None, f_fin=None):
 
@@ -136,21 +126,11 @@ class SurfacePressureGradient0LoadingOperator(Operator):
         self.tv_P0 = dmech.TimeVaryingConstant(
             val=P0_val, val_ini=P0_ini, val_fin=P0_fin)
         P0 = self.tv_P0.val
+        self.tv_DP = dmech.TimeVaryingConstant(
+            val=DP_val, val_ini=DP_ini, val_fin=DP_fin)
+        DP = self.tv_DP.val
 
-        self.tv_fg = dmech.TimeVaryingConstant(
-            val=None, val_ini=0, val_fin=abs(f_fin[2]))
-        fg = self.tv_fg.val
-
-        x_tilde = x-dolfin.Constant(x0)
-
-        print("z0=", x0[2])
-
-        # P_tilde = P0 + rho_solid * fg * ( x[2]- dolfin.Constant(x0[2])) #+ rho_solid * fg * ( x[1]- x0[1]) #+ rho_solid * 100 * ( x[1]- x0[1]) # * ( x[0]- dolfin.Constant(x0[0]))
-        P_tilde = P0 #+ dolfin.Constant(1e-2/2) * ( x[2]- dolfin.Constant(x0[2])) #+ rho_solid * 100 * ( x[1]- x0[1]) # * ( x[0]- dolfin.Constant(x0[0]))
-        
-        grads_p = dolfin.grad(p-P_tilde) - n*(dolfin.dot(n,dolfin.grad(p-P_tilde)))
-        grads_p_test = dolfin.grad(p_test) - n*(dolfin.dot(n,dolfin.grad(p_test)))
-
+        P = P0 + DP * dolfin.inner(x - X0, N0)
 
         self.res_form = dolfin.Constant(1e-8)*p*p_test * self.measure
         self.res_form -= dolfin.inner(rho_solid*phis*f, u_test) * self.measure

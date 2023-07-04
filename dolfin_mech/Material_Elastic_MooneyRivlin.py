@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -30,15 +30,17 @@ class MooneyRivlinElasticMaterial(ElasticMaterial):
 
         if (decoup):
             if   (self.kinematics.dim == 2):
-                self.Psi   =   self.C2 * (self.kinematics.IIC_bar + self.kinematics.J**(-2/3) * self.kinematics.IC_bar - 3) # MG20200206: Plane strain
-                assert (0), "ToDo. Aborting."
+                self.Psi      =   self.C2 * (self.kinematics.IIC_bar + self.kinematics.J**(-2/3) * self.kinematics.IC_bar - 3) # MG20200206: Plane strain
+                self.Sigma    = 2*self.C2 * self.kinematics.J**(-4/3) * ((self.kinematics.IC+1) * self.kinematics.I - self.kinematics.C - 2*(self.kinematics.IIC+self.kinematics.IC)/3 * self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
+                self.Sigma_ZZ = 2*self.C2 * self.kinematics.J**(-4/3) * (self.kinematics.IC - 2*(self.kinematics.IIC+self.kinematics.IC)/3)
             elif (self.kinematics.dim == 3):
                 self.Psi   =   self.C2 * (self.kinematics.IIC_bar - 3)
-                self.Sigma = dolfin.diff(self.Psi, self.kinematics.C)
+                self.Sigma = 2*self.C2 * self.kinematics.J**(-4/3) * (self.kinematics.IC * self.kinematics.I - self.kinematics.C - 2*self.kinematics.IIC/3 * self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
         else:
             if   (self.kinematics.dim == 2):
-                self.Psi   =   self.C2 * (self.kinematics.IIC + self.kinematics.IC - 3 - 4*dolfin.ln(self.kinematics.J)) # MG20200206: Plane strain
-                self.Sigma = 2*self.C2 * (self.kinematics.IC * self.kinematics.I - self.kinematics.C + self.kinematics.I - 2*self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
+                self.Psi      =   self.C2 * (self.kinematics.IIC + self.kinematics.IC - 3 - 4*dolfin.ln(self.kinematics.J)) # MG20200206: Plane strain
+                self.Sigma    = 2*self.C2 * ((self.kinematics.IC+1) * self.kinematics.I - self.kinematics.C - 2*self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
+                self.Sigma_ZZ = 2*self.C2 * (self.kinematics.IC - 2)
             elif (self.kinematics.dim == 3):
                 self.Psi   =   self.C2 * (self.kinematics.IIC - 3 - 4*dolfin.ln(self.kinematics.J))
                 self.Sigma = 2*self.C2 * (self.kinematics.IC * self.kinematics.I - self.kinematics.C - 2*self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C

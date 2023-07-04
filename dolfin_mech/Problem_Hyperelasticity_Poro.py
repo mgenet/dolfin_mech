@@ -2,13 +2,14 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ################################################################################
 
 import dolfin
+import numpy
 
 import dolfin_mech as dmech
 from .Problem_Hyperelasticity import HyperelasticityProblem
@@ -38,7 +39,8 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             bulk_behavior=None,
             bulk_behaviors=[],
             pore_behavior=None,
-            pore_behaviors=[]):
+            pore_behaviors=[],
+            gradient_operators=None):
 
         HyperelasticityProblem.__init__(self)
 
@@ -58,8 +60,15 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 displacement_degree=displacement_degree,
                 porosity_degree=porosity_degree,
                 porosity_init_val=porosity_init_val,
-                porosity_init_fun=porosity_init_fun,
-                inverse=self.inverse)
+                porosity_init_fun=porosity_init_fun)
+            
+            assert (porosity_init_val is None) or (porosity_init_fun is None)
+            if gradient_operators=="direct":
+                self.Phis0 = porosity_init_val if (porosity_init_fun is None) else porosity_init_fun ### AP2023 - defined here to initialise subsol center of gravity
+                self.set_subsols_gradient_direct()
+            elif gradient_operators=="inverse":
+                self.set_subsols_gradient_inverse()
+            
             self.set_solution_finite_element()
             self.set_solution_function_space()
             self.set_solution_functions()
@@ -139,71 +148,26 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
     
 
 
-    def get_p_name(self):
-        return "p_surface"
+    def get_balanced_gravity_boundary_pressure_name(self):
+            return "pressure_boundary_condition"
 
-    def add_p_subsol(self):
+    def add_balanced_gravity_boundary_pressure_subsol(self):
 
         self.add_scalar_subsol(
-            name=self.get_p_name(),
+            name=self.get_balanced_gravity_boundary_pressure_name(),
             family="CG",
             degree=1)
         
+    def get_balanced_gravity_boundary_pressure_subsol(self):
 
-    def get_p_subsol(self):
+        return self.get_subsol(self.get_balanced_gravity_boundary_pressure_name())
 
-        return self.get_subsol(self.get_p_name())
+    def get_balanced_gravity_boundary_pressure_function_space(self):
 
-
-    def get_p_function_space(self):
-
-        return self.get_subsol_function_space(name=self.get_p_name())
-    
-
-    
-    def get_gamma_name(self):
-        return "gamma"
-
-    def add_gamma_subsol(self):
-
-        self.add_scalar_subsol(
-            name=self.get_gamma_name(),
-            family="R",
-            degree=0)
-        
-
-    def get_gamma_subsol(self):
-
-        return self.get_subsol(self.get_gamma_name())
-
-
-    def get_gamma_function_space(self):
-
-        return self.get_subsol_function_space(name=self.get_gamma_name())
+        return self.get_subsol_function_space(name=self.get_balanced_gravity_boundary_pressure_name())
     
 
 
-
-
-    def get_deformed_volume_name(self):
-
-        return "v"
-
-    def add_deformed_volume_subsol(self,
-            init_val=None):
-
-        self.add_scalar_subsol(
-            name=self.get_deformed_volume_name(),
-            family="R",
-            degree=0,
-            init_val=self.mesh_V0)
-        
-    def get_deformed_volume_subsol(self):
-
-        return self.get_subsol(self.get_deformed_volume_name())
-        
-
-        
     def get_lbda_name(self):
 
         return "lbda"
@@ -239,33 +203,46 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
     def get_mu_subsol(self):
 
         return self.get_subsol(self.get_mu_name())
-        
+    
 
-        
-    def get_x0_direct_name(self):
+    
+    def get_gamma_name(self):
+        return "gamma"
 
-        return "x0"
-            
-    def add_x0_direct_subsol(self,
-            init_val=None):
+    def add_gamma_subsol(self):
 
-        self.add_vector_subsol(
-            name=self.get_x0_direct_name(),
+        self.add_scalar_subsol(
+            name=self.get_gamma_name(),
             family="R",
-            degree=0,
-            init_val=init_val) #[dolfin.assemble(self.X[0]*self.dV)/self.mesh_V0, dolfin.assemble(self.X[1]*self.dV)/self.mesh_V0, dolfin.assemble(self.X[2]*self.dV)/self.mesh_V0])    
+            degree=0)
+        
+    def get_gamma_subsol(self):
 
-    def get_x0_direct_subsol(self):
-        return self.get_subsol(self.get_x0_direct_name())
+        return self.get_subsol(self.get_gamma_name())
 
+    def get_gamma_function_space(self):
+
+        return self.get_subsol_function_space(name=self.get_gamma_name())
     
 
 
+    def get_center_gravity_direct_problem_name(self):
 
-    # def get_density_direct(self):
-    #     self.density = self.Phis0*1e-6
-    #     # print("density=", self.density)
-    #     return(self.density)
+        return "xg"
+            
+    def add_center_gravity_direct_problem_subsol(self,
+            init_val=None):
+        
+        self.add_vector_subsol(
+            name=self.get_center_gravity_direct_problem_name(),
+            family="R",
+            degree=0,
+            init_val=self.get_center_gravity())
+
+    def get_center_gravity_direct_problem_subsol(self):
+        return self.get_subsol(self.get_center_gravity_direct_problem_name())
+
+
 
 
     def set_subsols(self,
@@ -284,20 +261,25 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             degree=porosity_degree,
             init_val=porosity_init_val,
             init_fun=porosity_init_fun)
-    
-        self.add_p_subsol()
 
-        self.add_gamma_subsol()
 
-        self.add_lbda_subsol()
 
-        self.add_mu_subsol()
+    def set_subsols_gradient_direct(self):
+            
+                self.add_balanced_gravity_boundary_pressure_subsol()
+                self.add_gamma_subsol()
+                self.add_lbda_subsol()
+                self.add_mu_subsol()
+                self.add_center_gravity_direct_problem_subsol()
 
-        self.add_deformed_volume_subsol()
 
-        if not inverse:
-            self.add_x0_direct_subsol()
-            pass
+    def set_subsols_gradient_inverse(self):
+        
+            self.add_balanced_gravity_boundary_pressure_subsol()
+            self.add_gamma_subsol()
+            self.add_lbda_subsol()
+            self.add_mu_subsol()
+
 
 
     def init_known_porosity(self,
@@ -436,6 +418,54 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
+    def add_pressure_balancing_gravity0_loading_operator(self,
+            k_step=None,
+            **kwargs):
+
+        operator = dmech.PressureBalancingGravity0LoadingOperator(
+            x = self.x,
+            x0 = self.get_center_gravity(),
+            n = self.mesh_normals,
+            u_test = self.get_displacement_subsol().dsubtest, 
+            lbda = self.get_lbda_subsol().subfunc,
+            lbda_test = self.get_lbda_subsol().dsubtest,
+            p = self.get_balanced_gravity_boundary_pressure_subsol().subfunc,
+            p_test = self.get_balanced_gravity_boundary_pressure_subsol().dsubtest,
+            gamma = self.get_gamma_subsol().subfunc,
+            gamma_test = self.get_gamma_subsol().dsubtest,
+            mu = self.get_mu_subsol().subfunc,
+            mu_test= self.get_mu_subsol().dsubtest,
+            **kwargs)
+        return self.add_operator(operator=operator, k_step=k_step)
+
+
+
+    def add_pressure_balancing_gravity_loading_operator(self,
+            k_step=None,
+            **kwargs):
+
+        operator = dmech.PressureBalancingGravityLoadingOperator(
+            X=self.X,
+            x0=self.get_center_gravity_direct_problem_subsol().subfunc,
+            x0_test=self.get_center_gravity_direct_problem_subsol().dsubtest,
+            lbda=self.get_lbda_subsol().subfunc,
+            lbda_test=self.get_lbda_subsol().dsubtest,
+            mu=self.get_mu_subsol().subfunc,
+            mu_test=self.get_mu_subsol().dsubtest,
+            p = self.get_balanced_gravity_boundary_pressure_subsol().subfunc,
+            p_test = self.get_balanced_gravity_boundary_pressure_subsol().dsubtest,
+            gamma = self.get_gamma_subsol().subfunc,
+            gamma_test = self.get_gamma_subsol().dsubtest,
+            kinematics=self.kinematics,
+            U=self.get_displacement_subsol().subfunc,
+            U_test=self.get_displacement_subsol().dsubtest,
+            Phis0=self.Phis0,
+            N=self.mesh_normals,
+            **kwargs)
+        return self.add_operator(operator=operator, k_step=k_step)
+
+
+
     def add_deformed_volume_operator(self,
             k_step=None):
 
@@ -533,6 +563,21 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
         self.add_qoi(
             name="phif",
             expr=(1. - self.get_porosity_subsol().subfunc/self.kinematics.J) * self.dV)
+        
+
+    
+    def get_center_gravity(self): 
+        if "Inverse" in str(self):
+            porosity = self.phis 
+            position = self.x
+        else:
+            porosity=self.Phis0
+            position=self.X
+        center_gravity = numpy.empty(self.dim)
+        for k_dim in range(self.dim):
+            center_gravity[k_dim] = dolfin.assemble(porosity*position[k_dim]*self.dV)/dolfin.assemble(porosity*self.dV)
+        return(center_gravity)
+
 
 
 

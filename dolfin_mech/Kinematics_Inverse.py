@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -40,7 +40,7 @@ class InverseKinematics():
         self.E     = (self.C - self.I)/2
         self.E     = dolfin.variable(self.E)
 
-        self.F_bar   = self.J**(-1./3) * self.F
+        self.F_bar   = self.J**(-1/self.dim) * self.F
         self.C_bar   = self.F_bar.T * self.F_bar
         self.IC_bar  = dolfin.tr(self.C_bar)
         self.IIC_bar = (dolfin.tr(self.C_bar)*dolfin.tr(self.C_bar) - dolfin.tr(self.C_bar*self.C_bar))/2
@@ -55,6 +55,6 @@ class InverseKinematics():
             self.C_old = self.F_old.T * self.F_old
             self.E_old = (self.C_old - self.I)/2
 
-            self.F_bar_old = self.J_old**(-1./3) * self.F_old
+            self.F_bar_old = self.J_old**(-1/self.dim) * self.F_old
             self.C_bar_old = self.F_bar_old.T * self.F_bar_old
             self.E_bar_old = (self.C_bar_old - self.I)/2

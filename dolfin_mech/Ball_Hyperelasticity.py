@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -23,6 +23,7 @@ def Ball_Hyperelasticity(
         step_params={},
         load_params={},
         res_basename="Ball_Hyperelasticity",
+        write_vtus_with_preserved_connectivity=False,
         verbose=0):
 
     ################################################################### Mesh ###
@@ -110,7 +111,8 @@ def Ball_Hyperelasticity(
         write_qois=res_basename+"-qois",
         write_qois_limited_precision=1,
         write_sol=res_basename*verbose,
-        write_vtus=res_basename*verbose)
+        write_vtus=res_basename*verbose,
+        write_vtus_with_preserved_connectivity=write_vtus_with_preserved_connectivity)
 
     success = integrator.integrate()
     assert (success),\

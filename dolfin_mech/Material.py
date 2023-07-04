@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -70,10 +70,7 @@ class Material():
             K = parameters["K"]
         else:
             lmbda, mu = self.get_lambda_and_mu_from_parameters(parameters)
-            if (parameters.get("dim", 3) == 2):
-                K = (2*lmbda+2*mu)/2
-            else:
-                K = (3*lmbda+2*mu)/3
+            K = (3*lmbda+2*mu)/3
         return dolfin.Constant(K)
 
 
@@ -87,6 +84,25 @@ class Material():
             mu = self.get_mu_from_parameters(parameters)
             G = mu
         return dolfin.Constant(G)
+
+
+    
+    def get_C0_from_parameters(self,
+            parameters,
+            decoup=False):
+
+        if ("C0" in parameters):
+            C0 = parameters["C0"]
+        elif ("c0" in parameters):
+            C0 = parameters["c0"]
+        else:
+            if (decoup):
+                K = self.get_K_from_parameters(parameters)
+                C0 = K/4
+            else:
+                lmbda = self.get_lambda_from_parameters(parameters)
+                C0 = lmbda/4
+        return dolfin.Constant(C0)
 
 
     
@@ -303,42 +319,42 @@ def material_factory(
         parameters,
         problem=None):
 
-    if   (model in ("hooke", "H")):
+    if   (model in ("hooke", "Hooke", "H")):
         material = dmech.HookeElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("hooke_dev", "H_dev")):
+    elif (model in ("hooke_dev", "Hooke_dev", "H_dev")):
         material = dmech.HookeDevElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("hooke_bulk", "H_bulk")):
+    elif (model in ("hooke_bulk", "Hooke_bulk", "H_bulk")):
         material = dmech.HookeBulkElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("saintvenantkirchhoff", "kirchhoff", "SVK")):
+    elif (model in ("saintvenantkirchhoff", "SaintVenantKirchhoff", "kirchhoff", "Kirchhoff", "SVK")):
         material = dmech.KirchhoffElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("saintvenantkirchhoff_dev", "kirchhoff_dev", "SVK_dev")):
+    elif (model in ("saintvenantkirchhoff_dev", "SaintVenantKirchhoff_dev", "kirchhoff_dev", "Kirchhoff_dev", "SVK_dev")):
         material = dmech.KirchhoffDevElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("saintvenantkirchhoff_bulk", "kirchhoff_bulk", "SVK_bulk")):
+    elif (model in ("saintvenantkirchhoff_bulk", "SaintVenantKirchhoff_bulk", "kirchhoff_bulk", "Kirchhoff_bulk", "SVK_bulk")):
         material = dmech.KirchhoffBulkElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("neohookean", "NH")):
+    elif (model in ("neohookean", "NeoHookean", "NH")):
         material = dmech.NeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("neohookean_bar", "NH_bar")):
+    elif (model in ("neohookean_bar", "NeoHookean_bar", "NH_bar")):
         material = dmech.NeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
-    elif (model in ("mooneyrivlin", "MR")):
+    elif (model in ("mooneyrivlin", "MooneyRivlin", "MR")):
         material = dmech.MooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("mooneyrivlin_bar", "MR_bar")):
+    elif (model in ("mooneyrivlin_bar", "MooneyRivlin_bar", "MR_bar")):
         material = dmech.MooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
-    elif (model in ("neohookeanmooneyrivlin", "NHMR")):
+    elif (model in ("neohookeanmooneyrivlin", "NeoHookeanMooneyRivlin", "NHMR")):
         material = dmech.NeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("neohookeanmooneyrivlin_bar", "NHMR_bar")):
+    elif (model in ("neohookeanmooneyrivlin_bar", "NeoHookeanMooneyRivlin_bar", "NHMR_bar")):
         material = dmech.NeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
-    elif (model in ("ciarletgeymonat", "CG")):
-        material = dmech.CiarletGeymonatElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("ciarletgeymonatneohookean", "CGNH")):
-        material = dmech.CiarletGeymonatNeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("ciarletgeymonatneohookean_bar", "CGNH_bar")):
-        material = dmech.CiarletGeymonatNeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
-    elif (model in ("ciarletgeymonatneohookeanmooneyrivlin", "CGNHMR")):
-        material = dmech.CiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters)
-    elif (model in ("ciarletgeymonatneohookeanmooneyrivlin_bar", "CGNHMR_bar")):
-        material = dmech.CiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
-    elif (model in ("ciarletgeymonatneohookeanmooneyrivlin_poro", "CGNHMR_poro")):
-        material = dmech.CiarletGeymonatNeoHookeanElasticMaterialPoro(kinematics=kinematics, parameters=parameters, problem=problem)
+    elif (model in ("ogdenciarletgeymonat", "OgdenCiarletGeymonat", "OCG", "ciarletgeymonat", "CiarletGeymonat", "CG")):
+        material = dmech.OgdenCiarletGeymonatElasticMaterial(kinematics=kinematics, parameters=parameters)
+    elif (model in ("ogdenciarletgeymonat_bar", "OgdenCiarletGeymonat_bar", "OCG_bar", "ciarletgeymonat_bar", "CiarletGeymonat_bar", "CG_bar")):
+        material = dmech.OgdenCiarletGeymonatElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
+    elif (model in ("ogdenciarletgeymonatneohookean", "OgdenCiarletGeymonatNeoHookean", "OCGNH", "ciarletgeymonatneohookean", "CiarletGeymonatNeoHookean", "CGNH")):
+        material = dmech.OgdenCiarletGeymonatNeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters)
+    elif (model in ("ogdenciarletgeymonatneohookean_bar", "OgdenCiarletGeymonatNeoHookean_bar", "OCGNH_bar", "ciarletgeymonatneohookean_bar", "CiarletGeymonatNeoHookean_bar", "CGNH_bar")):
+        material = dmech.OgdenCiarletGeymonatNeoHookeanElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
+    elif (model in ("ogdenciarletgeymonatneohookeanmooneyrivlin", "OgdenCiarletGeymonatNeoHookeanMooneyRivlin", "OCGNHMR", "ciarletgeymonatneohookeanmooneyrivlin", "CiarletGeymonatNeoHookeanMooneyRivlin", "CGNHMR")):
+        material = dmech.OgdenCiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters)
+    elif (model in ("ogdenciarletgeymonatneohookeanmooneyrivlin_bar", "OgdenCiarletGeymonatNeoHookeanMooneyRivlin_bar", "OCGNHMR_bar", "ciarletgeymonatneohookeanmooneyrivlin_bar", "CiarletGeymonatNeoHookeanMooneyRivlin_bar", "CGNHMR_bar")):
+        material = dmech.OgdenCiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
     else:
         assert(0), "Material model (\""+model+"\") not recognized. Aborting."
     return material

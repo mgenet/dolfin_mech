@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -36,6 +36,9 @@ class HookeElasticMaterial(ElasticMaterial):
         self.Sigma = self.sigma
         self.P     = self.sigma
 
+        if (self.kinematics.dim == 2):
+            self.sigma_ZZ = self.lmbda * dolfin.tr(self.kinematics.epsilon)
+
 
 
     # def get_free_energy(self,
@@ -67,13 +70,18 @@ class HookeBulkElasticMaterial(ElasticMaterial):
 
         self.kinematics = kinematics
 
-        self.K = self.get_K_from_parameters(parameters)
+        # self.K = self.get_K_from_parameters(parameters)
+        self.lmbda, self.mu = self.get_lambda_and_mu_from_parameters(parameters)
+        self.K = (self.kinematics.dim*self.lmbda + 2*self.mu)/self.kinematics.dim
 
         self.psi   = (self.kinematics.dim*self.K/2) * dolfin.tr(self.kinematics.epsilon_sph)**2
         self.sigma =  self.kinematics.dim*self.K    *           self.kinematics.epsilon_sph
 
         self.Sigma = self.sigma
         self.P     = self.sigma
+
+        if (self.kinematics.dim == 2):
+            self.sigma_ZZ = self.K * dolfin.tr(self.kinematics.epsilon)
 
 
 
@@ -127,6 +135,9 @@ class HookeDevElasticMaterial(ElasticMaterial):
 
         self.Sigma = self.sigma
         self.P     = self.sigma
+
+        if (self.kinematics.dim == 2):
+            self.sigma_ZZ = -2*self.G/3 * dolfin.tr(self.kinematics.epsilon)
 
 
 

@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -72,6 +72,6 @@ class GrowthKinematics():
         self.Ce_mid = (self.Ce_old + self.Ce)/2
         self.Ee_mid = (self.Ee_old + self.Ee)/2
 
-        self.Fe_bar  = self.Je**(-1./3) * self.Fe
+        self.Fe_bar  = self.Je**(-1/self.dim) * self.Fe
         self.Ce_bar  = self.Fe_bar.T * self.Fe_bar
         self.ICe_bar = dolfin.tr(self.Ce_bar)

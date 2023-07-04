@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -41,7 +41,6 @@ class Problem():
 
     def set_mesh(self,
             mesh,
-            # boundary_mesh,
             define_spatial_coordinates=True,
             define_facet_normals=False,
             compute_bbox=True,
@@ -57,7 +56,10 @@ class Problem():
         self.mesh_V0 = dolfin.assemble(dolfin.Constant(1) * self.dV)
 
         if (define_spatial_coordinates):
-            self.X = dolfin.SpatialCoordinate(self.mesh)
+            if "Inverse" in str(self):
+                self.x = dolfin.SpatialCoordinate(self.mesh)
+            else:
+                self.X = dolfin.SpatialCoordinate(self.mesh)
 
         if (define_facet_normals):
             self.mesh_normals = dolfin.FacetNormal(mesh)
@@ -504,13 +506,11 @@ class Problem():
             self.steps[k_step].operators += [operator]
         return operator
 
-    def get_x0_mass(self, phis):
-        X0 = numpy.empty(self.dim)
-        rho_solid = 1e-6
-        for k_dim in range(self.dim):
-            X0[k_dim] = dolfin.assemble(phis*self.X[k_dim]*self.dV)/dolfin.assemble(phis*self.dV)
-        return(X0)
+################################################################## operators ###
 
+# MG20230131: Loading operators should not be there,
+# but they are shared between Elasticity & HyperElasticity problems,
+# so it is more convenient for the moment.
 
     def add_volume_force0_loading_operator(self,
             k_step=None,
@@ -590,19 +590,9 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfacePressureGradient0LoadingOperator(
-            x = self.X,
-            x0 = self.get_x0_mass(),
-            n = self.mesh_normals,
-            u_test = self.get_displacement_subsol().dsubtest,
-            lbda=self.get_lbda_subsol().subfunc,
-            lbda_test=self.get_lbda_subsol().dsubtest,
-            mu=self.get_mu_subsol().subfunc,
-            mu_test=self.get_mu_subsol().dsubtest,
-            p=self.get_p_subsol().subfunc,
-            p_test=self.get_p_subsol().dsubtest,
-            proj_op=self.proj_op, 
-            gamma = self.get_gamma_subsol().subfunc,
-            gamma_test = self.get_gamma_subsol().dsubtest,
+            x=dolfin.SpatialCoordinate(self.mesh),
+            U_test=self.get_displacement_subsol().dsubtest,
+            N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -700,7 +690,7 @@ class Problem():
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
-
+################################################################ constraints ###
 
     def add_constraint(self,
             *args,

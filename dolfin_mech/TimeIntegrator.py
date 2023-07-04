@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -29,9 +29,8 @@ class TimeIntegrator():
             write_qois_limited_precision=False,
             write_sol=True,
             write_vtus=False,
-            write_xmls=True):
-        
-        # dolfin.set_log_level(dolfin.LogLevel.ERROR)
+            write_vtus_with_preserved_connectivity=False,
+            write_xmls=False):
 
         self.problem = problem
 
@@ -82,6 +81,7 @@ class TimeIntegrator():
             self.problem.update_qois(dt=1)
             self.qoi_printer.write_line([0.]+[qoi.value for qoi in self.problem.qois])
 
+        self.problem.update_fois()
         self.write_sol = bool(write_sol)
         if (self.write_sol):
             self.write_sol_filebasename = write_sol if (type(write_sol) is str) else sys.argv[0][:-3]+"-sol"
@@ -94,15 +94,16 @@ class TimeIntegrator():
             self.xdmf_file_sol = dmech.XDMFFile(
                 filename=self.write_sol_filebasename+".xdmf",
                 functions=self.functions_to_write)
-            self.problem.update_fois()
             self.xdmf_file_sol.write(0.)
 
-            self.write_vtus = bool(write_vtus)
+            self.write_vtus                             = bool(write_vtus)
+            self.write_vtus_with_preserved_connectivity = bool(write_vtus_with_preserved_connectivity)
             if (self.write_vtus):
                 dmech.write_VTU_file(
                     filebasename=self.write_sol_filebasename,
                     function=self.problem.get_displacement_subsol().subfunc,
-                    time=0)
+                    time=0,
+                    preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 
             self.write_xmls = bool(write_xmls)
             if (self.write_xmls):
@@ -186,15 +187,16 @@ class TimeIntegrator():
                 if (solver_success):
                     n_iter_tot += n_iter
 
+                    self.problem.update_fois()
                     if (self.write_sol):
-                        self.problem.update_fois()
                         self.xdmf_file_sol.write(t)
 
                         if (self.write_vtus):
                             dmech.write_VTU_file(
                                 filebasename=self.write_sol_filebasename,
                                 function=self.problem.get_displacement_subsol().subfunc,
-                                time=k_t_tot)
+                                time=k_t_tot,
+                                preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 
                         if (self.write_xmls):
                             dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.get_subsols_func_lst()[0]

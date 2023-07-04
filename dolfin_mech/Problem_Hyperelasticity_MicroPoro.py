@@ -2,12 +2,12 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2022                                    ###
+### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -29,6 +29,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             w_solid_incompressibility=False,
             mesh=None,
             mesh_bbox=None,
+            vertices=None,
             domains_mf=None,
             boundaries_mf=None,
             points_mf=None,
@@ -109,14 +110,16 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 self.add_hydrostatic_pressure_operator()
                 self.add_incompressibility_operator()
 
-            self.add_macroscopic_stretch_symmetry_operator()
+            # self.add_macroscopic_stretch_symmetry_operator()
+            self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
 
             self.add_macrosocpic_stress_operator()
+            # self.add_macrosocpic_stress_operator(pen_val=1e6)
 
             if (bcs == "kubc"):
                 self.add_kubc()
             elif (bcs == "pbc"):
-                pinpoint_sd = dmech.PinpointSubDomain(coords=mesh.coordinates()[0], tol=1e-3)
+                pinpoint_sd = dmech.PinpointSubDomain(coords=mesh.coordinates()[-1], tol=1e-3)
                 self.add_constraint(
                     V=self.get_displacement_perturbation_function_space(), 
                     val=[0.]*self.dim,
@@ -318,6 +321,20 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
+    def add_macroscopic_stretch_symmetry_penalty_operator(self,
+            **kwargs):
+
+        operator = dmech.MacroscopicStretchSymmetryPenaltyOperator(
+            U_bar=self.get_macroscopic_stretch_subsol().subfunc,
+            U_bar_test=self.get_macroscopic_stretch_subsol().dsubtest,
+            sol=self.sol_func,
+            sol_test=self.dsol_test,
+            measure=self.dV,
+            **kwargs)
+        return self.add_operator(operator)
+
+
+
     def add_macroscopic_stretch_component_penalty_operator(self,
             k_step=None,
             **kwargs):
@@ -325,15 +342,18 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         operator = dmech.MacroscopicStretchComponentPenaltyOperator(
             U_bar=self.get_macroscopic_stretch_subsol().subfunc,
             U_bar_test=self.get_macroscopic_stretch_subsol().dsubtest,
+            sol=self.sol_func,
+            sol_test=self.dsol_test,
             measure=self.dV,
             **kwargs)
         return self.add_operator(operator, k_step=k_step)
 
 
 
-    def add_macrosocpic_stress_operator(self):
+    def add_macrosocpic_stress_operator(self,
+            **kwargs):
 
-        for operator in self.operators:
+        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
             if hasattr(operator, "material"):
                 material = operator.material
                 break
@@ -343,8 +363,11 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             mesh_bbox_V0=self.mesh_bbox_V0,
             sigma_bar=self.get_macroscopic_stress_subsol().subfunc,
             sigma_bar_test=self.get_macroscopic_stress_subsol().dsubtest,
+            sol=self.sol_func,
+            sol_test=self.dsol_test,
             material=material,
-            measure=self.dV)
+            measure=self.dV,
+            **kwargs)
         return self.add_operator(operator)
 
 
@@ -353,14 +376,14 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             k_step=None,
             **kwargs):
 
-        for operator in self.operators:
+        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
             if hasattr(operator, "material"):
                 material = operator.material
                 break
 
         operator = dmech.MacroscopicStressComponentPenaltyOperator(
-            # sigma_bar=self.get_macroscopic_stress_subsol().subfunc,
-            # sigma_bar_test=self.get_macroscopic_stress_subsol().dsubtest,
+            sigma_bar=self.get_macroscopic_stress_subsol().subfunc,
+            sigma_bar_test=self.get_macroscopic_stress_subsol().dsubtest,
             sol=self.sol_func,
             sol_test=self.dsol_test,
             material=material,

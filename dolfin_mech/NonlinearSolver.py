@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -106,6 +106,10 @@ class NonlinearSolver():
         elif (relax_type == "gss"):
             self.compute_relax = self.compute_relax_gss
             self.relax_n_iter_max = relax_parameters.get("relax_n_iter_max", 9)
+        elif (relax_type == "backtracking"):
+            self.compute_relax = self.compute_relax_backtracking
+            self.relax_backtracking_factor = parameters["relax_backtracking_factor"] if ("relax_backtracking_factor" in parameters) and (parameters["relax_backtracking_factor"] is not None) else 2.
+            self.relax_n_iter_max          = parameters["relax_n_iter_max"]          if ("relax_n_iter_max"          in parameters) and (parameters["relax_n_iter_max"]          is not None) else 8
 
         self.sol_tol    = parameters.get("sol_tol"   , [1e-6]*len(self.problem.subsols))
         self.n_iter_max = parameters.get("n_iter_max", 32)
@@ -215,18 +219,55 @@ class NonlinearSolver():
             k_step=None,
             k_t=None):
 
+        assemble_linear_system = self.assemble_linear_system()   
 
-        self.assemble_linear_system()
-
+        if assemble_linear_system==False:
+            return False 
+        
         # eigen problem
         if (k_step == 1) and (k_t == 1) and (self.k_iter == 1) and (0):
             self.eigen_solve()
 
-        test = self.linear_solve()
+        # linear system: solve
+        try:
+            self.printer.print_str("Solve…",newline=False)
+            timer = time.time()
+            self.linear_solver.solve(
+                self.problem.dsol_func.vector(),
+                self.res_vec)
+            timer = time.time() - timer
+            self.printer.print_str(" "+str(timer)+" s",tab=False)
+            #self.printer.print_var("dsol_func",self.problem.dsol_func.vector().get_local())
+        except:
+            self.printer.print_str("Warning! Linear solver failed!",tab=False)
+            return False
 
-        return test
+        if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
+            # self.problem.dsol_func.vector().zero()
 
+            self.printer.print_str("Warning! Solution increment is NaN!")
+            return False
 
+        if (len(self.problem.subsols) > 1):
+            dolfin.assign(
+                self.problem.get_subsols_dfunc_lst(),
+                self.problem.dsol_func)
+            # for subsol_name,subsol in self.problem.subsols.items():
+            #     self.printer.print_var("d"+subsol_name+"_func",subsol.dfunc.vector().get_local())
+
+        if (0):
+            rinfo12 = self.linear_solver.ksp().getPC().getFactorMatrix().getMumpsRinfog(12)
+            #self.printer.print_sci("rinfo12",rinfo12)
+            rinfo12 = decimal.Decimal(rinfo12)
+            #self.printer.print_sci("rinfo12",rinfo12)
+            infog34 = self.linear_solver.ksp().getPC().getFactorMatrix().getMumpsInfog(34)
+            #self.printer.print_sci("infog34",infog34)
+            infog34 = decimal.Decimal(infog34)
+            #self.printer.print_sci("infog34",infog34)
+            self.jac_det = rinfo12*(decimal.Decimal(2.)**infog34)
+            self.printer.print_sci("jac_det",self.jac_det)
+
+        return True
 
     def assemble_linear_system(self):
 
@@ -338,52 +379,6 @@ class NonlinearSolver():
                 val=self.dres_norm,
                 ref=self.res_old_norm)
             self.printer.print_sci("res_err_rel",self.res_err_rel)
-
-
-
-    def linear_solve(self):
-
-        # linear system: solve
-        try:
-            self.printer.print_str("Solve…",newline=False)
-            timer = time.time()
-            self.linear_solver.solve(
-                self.problem.dsol_func.vector(),
-                self.res_vec)
-            timer = time.time() - timer
-            self.printer.print_str(" "+str(timer)+" s",tab=False)
-            #self.printer.print_var("dsol_func",self.problem.dsol_func.vector().get_local())
-        except:
-            self.printer.print_str("Warning! Linear solver failed!",tab=False)
-            return False
-
-        if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
-            # self.problem.dsol_func.vector().zero()
-
-            self.printer.print_str("Warning! Solution increment is NaN!")
-            return False
-
-        if (len(self.problem.subsols) > 1):
-            dolfin.assign(
-                self.problem.get_subsols_dfunc_lst(),
-                self.problem.dsol_func)
-            # for subsol_name,subsol in self.problem.subsols.items():
-            #     self.printer.print_var("d"+subsol_name+"_func",subsol.dfunc.vector().get_local())
-
-        if (0):
-            rinfo12 = self.linear_solver.ksp().getPC().getFactorMatrix().getMumpsRinfog(12)
-            #self.printer.print_sci("rinfo12",rinfo12)
-            rinfo12 = decimal.Decimal(rinfo12)
-            #self.printer.print_sci("rinfo12",rinfo12)
-            infog34 = self.linear_solver.ksp().getPC().getFactorMatrix().getMumpsInfog(34)
-            #self.printer.print_sci("infog34",infog34)
-            infog34 = decimal.Decimal(infog34)
-            #self.printer.print_sci("infog34",infog34)
-            self.jac_det = rinfo12*(decimal.Decimal(2.)**infog34)
-            self.printer.print_sci("jac_det",self.jac_det)
-
-        return True
-
 
 
     def eigen_solve():
@@ -584,6 +579,25 @@ class NonlinearSolver():
             if (self.relax == 0.):
                 self.printer.print_str("Warning! Optimal relaxation is null…")
 
+    def compute_relax_backtracking(self):
+        k_relax = 1
+        self.printer.inc()
+        while (True):
+            relax = 1./self.relax_backtracking_factor**(k_relax-1)
+            self.problem.sol_func.vector().axpy(relax, self.problem.dsol_func.vector())
+            self.assemble_linear_system()
+            res_is_finite = numpy.isfinite(self.res_vec).all()
+            # print("numpy.isfinite(self.res_vec).all()", res_is_finite)
+            self.problem.sol_func.vector().axpy(-relax, self.problem.dsol_func.vector())
+            if (res_is_finite):
+                self.relax = relax
+                break
+            if (k_relax == self.relax_n_iter_max):
+                self.relax = 0.
+                self.printer.print_str("Warning! Optimal relaxation is null…")
+                break
+            k_relax += 1
+        self.printer.dec()
 
 
     def update_sol(self):

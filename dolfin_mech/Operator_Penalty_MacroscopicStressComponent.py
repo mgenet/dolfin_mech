@@ -2,12 +2,12 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2022                                    ###
+### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -23,6 +23,8 @@ from .Operator import Operator
 class MacroscopicStressComponentPenaltyOperator(Operator):
 
     def __init__(self,
+            sigma_bar,
+            sigma_bar_test,
             sol,
             sol_test,
             material,
@@ -43,10 +45,12 @@ class MacroscopicStressComponentPenaltyOperator(Operator):
         pen = self.tv_pen.val
 
         Pi = (pen/2) * (self.material.sigma[comp_i,comp_j] - comp)**2 * self.measure # MG20220426: Need to compute <sigma> properly, including fluid pressure
-        self.res_form = dolfin.derivative(Pi, sol, sol_test)
+        # self.res_form = dolfin.derivative(Pi, sigma_bar[comp_i,comp_j], sigma_bar_test[comp_i,comp_j]) # MG20230106: This does not work…
+        self.res_form = dolfin.derivative(Pi, sol, sol_test) # MG20230106: This works…
 
-        # Pi = (pen/2) * (sigma_bar[comp_i,comp_j] - comp)**2 * self.measure
+        # Pi = (pen/2) * (sigma_bar[comp_i,comp_j] - comp)**2 * self.measure # MG20230106: This does not work…
         # self.res_form = dolfin.derivative(Pi, sigma_bar[comp_i,comp_j], sigma_bar_test[comp_i,comp_j])
+        # self.res_form = dolfin.derivative(Pi, sol, sol_test)
 
 
 

@@ -2,12 +2,12 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2022                                    ###
+### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -23,8 +23,8 @@ from .Operator import Operator
 class MacroscopicStretchComponentPenaltyOperator(Operator):
 
     def __init__(self,
-            U_bar,
-            U_bar_test,
+            U_bar, U_bar_test,
+            sol, sol_test,
             comp_i, comp_j,
             measure,
             comp_val=None, comp_ini=None, comp_fin=None,
@@ -42,6 +42,7 @@ class MacroscopicStretchComponentPenaltyOperator(Operator):
 
         Pi = (pen/2) * (U_bar[comp_i,comp_j] - comp)**2 * self.measure
         self.res_form = dolfin.derivative(Pi, U_bar[comp_i,comp_j], U_bar_test[comp_i,comp_j])
+        # self.res_form = dolfin.derivative(Pi, sol, sol_test)
 
 
 

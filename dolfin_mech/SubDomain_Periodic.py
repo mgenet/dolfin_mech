@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -12,7 +12,7 @@
 ### Pontificia Universidad Católica, Santiago, Chile                         ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2022                                    ###
+### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -23,6 +23,7 @@
 ################################################################################
 
 import dolfin
+import numpy as np
 
 ################################################################################
 
@@ -33,6 +34,7 @@ class PeriodicSubDomain(dolfin.SubDomain):
     def __init__(self,
             dim,
             bbox,
+            vertices=None,
             tol=None):
 
         self.dim = dim
@@ -53,10 +55,10 @@ class PeriodicSubDomain(dolfin.SubDomain):
             if (self.dim >= 3):
                 self.tol += (self.zmax - self.zmin)**2
             self.tol = (self.tol)**(1/2)
-            self.tol *= 1e-6
+            self.tol *= 1e-2
         else:
             self.tol = tol
-
+       
         dolfin.SubDomain.__init__(self, map_tol=self.tol)
 
         if (self.dim == 2):
@@ -69,10 +71,34 @@ class PeriodicSubDomain(dolfin.SubDomain):
             assert (0),\
                 "dim must be 2 or 3. Aborting."
 
+    
+        if (vertices is None):
+            vertices = np.array([[self.xmin, self.ymin],
+                                 [self.xmax, self.ymin],
+                                 [self.xmax, self.ymax],
+                                 [self.xmin, self.ymax]])
+        # if (vertices is not None):
+        self.vv = vertices
+        self.a1 = self.vv[1,:]-self.vv[0,:] # first vector generating periodicity
+        self.a2 = self.vv[3,:]-self.vv[0,:] # second vector generating periodicity
+        # check if UC vertices form indeed a parallelogram
+        assert np.linalg.norm(self.vv[2,:] - self.vv[3,:] - self.a1) <= self.tol
+        assert np.linalg.norm(self.vv[2,:] - self.vv[1,:] - self.a2) <= self.tol
+
+
+
+    # def inside_2D(self, x, on_boundary):
+    #     return bool(on_boundary and (dolfin.near(x[0], self.xmin, self.tol) or dolfin.near(x[1], self.ymin, self.tol)) and not (dolfin.near(x[0], self.xmax, self.tol) or dolfin.near(x[1], self.ymax, self.tol)))
+
 
 
     def inside_2D(self, x, on_boundary):
-        return bool(on_boundary and (dolfin.near(x[0], self.xmin, self.tol) or dolfin.near(x[1], self.ymin, self.tol)) and not (dolfin.near(x[0], self.xmax, self.tol) or dolfin.near(x[1], self.ymax, self.tol)))
+        # return True if on left or bottom boundary AND NOT on one of the
+        # bottom-right or top-left vertices
+        return bool((dolfin.near(x[0], self.vv[0,0] + x[1]*self.a2[0]/self.vv[3,1], self.tol) or
+                    dolfin.near(x[1], self.vv[0,1] + x[0]*self.a1[1]/self.vv[1,0], self.tol)) and
+                    (not ((dolfin.near(x[0], self.vv[1,0], self.tol) and dolfin.near(x[1], self.vv[1,1], self.tol)) or
+                    (dolfin.near(x[0], self.vv[3,0], self.tol) and dolfin.near(x[1], self.vv[3,1], self.tol)))) and on_boundary)
 
 
 
@@ -81,27 +107,40 @@ class PeriodicSubDomain(dolfin.SubDomain):
 
 
 
+    # def map_2D(self, x, y):
+    #     # Vertex
+    #     if  (dolfin.near(x[0], self.xmax, self.tol) \
+    #     and  dolfin.near(x[1], self.ymax, self.tol))\
+    #     or  (dolfin.near(x[0], self.xmax, self.tol) \
+    #     and  dolfin.near(x[1], self.ymin, self.tol))\
+    #     or  (dolfin.near(x[0], self.xmin, self.tol) \
+    #     and  dolfin.near(x[1], self.ymax, self.tol)):
+    #         y[0] = self.xmin
+    #         y[1] = self.ymin
+    #     # Edges
+    #     elif dolfin.near(x[0], self.xmax, self.tol):
+    #         y[0] = self.xmin
+    #         y[1] = x[1]
+    #     elif dolfin.near(x[1], self.ymax, self.tol):
+    #         y[0] = x[0]
+    #         y[1] = self.ymin
+    #     # FAB: Else clause is there to have the point always end up mapped somewhere, cf. https://fenicsproject.discourse.group/t/periodic-boundary-class-for-2-target-domains/99/2
+    #     else:
+    #         y[0] = -1.
+    #         y[1] = -1.
+
+
+
     def map_2D(self, x, y):
-        # Vertex
-        if  (dolfin.near(x[0], self.xmax, self.tol) \
-        and  dolfin.near(x[1], self.ymax, self.tol))\
-        or  (dolfin.near(x[0], self.xmax, self.tol) \
-        and  dolfin.near(x[1], self.ymin, self.tol))\
-        or  (dolfin.near(x[0], self.xmin, self.tol) \
-        and  dolfin.near(x[1], self.ymax, self.tol)):
-            y[0] = self.xmin
-            y[1] = self.ymin
-        # Edges
-        elif dolfin.near(x[0], self.xmax, self.tol):
-            y[0] = self.xmin
-            y[1] = x[1]
-        elif dolfin.near(x[1], self.ymax, self.tol):
-            y[0] = x[0]
-            y[1] = self.ymin
-        # FAB: Else clause is there to have the point always end up mapped somewhere, cf. https://fenicsproject.discourse.group/t/periodic-boundary-class-for-2-target-domains/99/2
-        else:
-            y[0] = -1.
-            y[1] = -1.
+        if dolfin.near(x[0], self.vv[2,0], self.tol) and dolfin.near(x[1], self.vv[2,1], self.tol): # if on top-right corner
+            y[0] = x[0] - (self.a1[0]+self.a2[0])
+            y[1] = x[1] - (self.a1[1]+self.a2[1])
+        elif dolfin.near(x[0], self.vv[1,0] + x[1]*self.a2[0]/self.vv[2,1], self.tol): # if on right boundary
+            y[0] = x[0] - self.a1[0]
+            y[1] = x[1] - self.a1[1]
+        else:   # should be on top boundary
+            y[0] = x[0] - self.a2[0]
+            y[1] = x[1] - self.a2[1]
 
 
 

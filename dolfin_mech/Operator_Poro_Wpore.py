@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -31,8 +31,7 @@ class WporePoroOperator(Operator):
         self.solid_material = dmech.WporeLungElasticMaterial(
             Phif=self.kinematics.J - Phis,
             Phif0=1-Phis0,
-            parameters=material_parameters,
-            kinematics=self.kinematics)
+            parameters=material_parameters)
         self.material = dmech.PorousElasticMaterial(
             solid_material=self.solid_material,
             scaling=material_scaling,

@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2022                                       ###
+### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -24,6 +24,8 @@ def RivlinCube_Hyperelasticity(
         mat_params={},
         step_params={},
         load_params={},
+        move={},
+        get_results=0,
         res_basename="RivlinCube_Hyperelasticity",
         estimation_virtual_fields=0,
         verbose=0):
@@ -34,6 +36,10 @@ def RivlinCube_Hyperelasticity(
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
     elif (dim==3):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+
+    if move.get("move", False) == True :
+        Umove = move.get("U")
+        dolfin.ALE.move(mesh, Umove)
 
     if (multimaterial):
         mat1_sd = dolfin.CompiledSubDomain("x[0] <= x0", x0=0.5)
@@ -135,7 +141,7 @@ def RivlinCube_Hyperelasticity(
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
             k_step=k_step)
     elif (load_type == "volu"):
-        f = load_params.get("f", 1.)
+        f = load_params.get("f", 0.5)
         problem.add_volume_force_loading_operator(
             measure=problem.dV,
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
@@ -177,7 +183,7 @@ def RivlinCube_Hyperelasticity(
         p = load_params.get("p", -0.5)
         problem.add_inertia_operator(
             measure=problem.dV,
-            rho_val=1.,
+            rho_val=1e-2,
             k_step=k_step)
         problem.add_surface_pressure0_loading_operator(
             measure=problem.dS(xmin_id),
@@ -245,6 +251,7 @@ def RivlinCube_Hyperelasticity(
     problem.add_global_strain_qois()
     problem.add_global_stress_qois()
     if (incomp): problem.add_global_pressure_qoi()
+    if (inverse==0) and (dim==2): problem.add_global_out_of_plane_stress_qois()
 
     ################################################################# Solver ###
 
@@ -287,3 +294,6 @@ def RivlinCube_Hyperelasticity(
         dmech.VirtualFields(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], inverse=inverse, U=problem.get_displacement_subsol().func)
 
     return(problem.get_displacement_subsol().func, problem.mesh_V0)
+
+    if get_results:
+        return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
