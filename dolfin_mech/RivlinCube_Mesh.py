@@ -65,11 +65,11 @@ def RivlinCube_Mesh(
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
     boundaries_mf.set_all(0)
     xmin_sd.mark(boundaries_mf, xmin_id)
-    # xmax_sd.mark(boundaries_mf, xmax_id)
-    # ymin_sd.mark(boundaries_mf, ymin_id)
-    # ymax_sd.mark(boundaries_mf, ymax_id)
-    # if (dim==3): zmin_sd.mark(boundaries_mf, zmin_id)
-    # if (dim==3): zmax_sd.mark(boundaries_mf, zmax_id)
+    xmax_sd.mark(boundaries_mf, xmax_id)
+    ymin_sd.mark(boundaries_mf, ymin_id)
+    ymax_sd.mark(boundaries_mf, ymax_id)
+    if (dim==3): zmin_sd.mark(boundaries_mf, zmin_id)
+    if (dim==3): zmax_sd.mark(boundaries_mf, zmax_id)
 
     # xdmf_file_boundaries = dolfin.XDMFFile("boundaries.xdmf")
     # xdmf_file_boundaries.write(boundaries_mf)

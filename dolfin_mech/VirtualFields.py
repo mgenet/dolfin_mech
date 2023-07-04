@@ -24,7 +24,7 @@ import copy
 
 
 
-class EquilibriumGap(Operator):
+class VirtualFields(Operator):
 
     def __init__(self,
             problem,
@@ -33,9 +33,6 @@ class EquilibriumGap(Operator):
             material_model,
             material_parameters,
             initialisation_estimation,
-            surface_forces,
-            volume_forces,
-            boundary_conditions,
             U):
         
         # print("material_parameters", material_parameters)
@@ -71,11 +68,11 @@ class EquilibriumGap(Operator):
 
         calculation_noise= True
         if calculation_noise:
-            path_solution =  "/Users/peyrault/Documents/Computations_articles/2nd_article/results.dat"
+            path_solution =  "/Users/peyrault/Documents/Computations_articles/2nd_article"
             results={}
             params_names = []
             initialisation=[]
-            noises = [ 1/5., 1/1.25]
+            noises = [0., 1/20, 1/10, 1/5, 1/2.5, 1/1.25]
             results['noise']=[]
             initialisation_values, ref_values = {}, []
             for key, value in initialisation_estimation.items():
@@ -84,106 +81,76 @@ class EquilibriumGap(Operator):
                 params_names.append(key)
                 initialisation.append(value)
             nb_parameters = len(initialisation_estimation)
-            for noise_level in noises:
+            for noise in noises:
                 compteur_value = 0
-                initialisation_values[noise_level] = []
+                initialisation_values[noise] = []
                 for value in ref_values :
-                    initialisation_values[noise_level].append([])
+                    initialisation_values[noise].append([])
                     for compteur in range(0,1000):
                         initial_value = float(numpy.random.normal(loc=value, scale=abs(0.3*value), size=1))
-                        initialisation_values[noise_level][compteur_value].append(initial_value)
+                        initialisation_values[noise][compteur_value].append(initial_value)
                     compteur_value +=1
             V0 = dolfin.assemble(dolfin.Constant(1)*problem.dV)
             U_norm =  (dolfin.assemble(dolfin.inner(U, U)*problem.dV)/2/V0)**(1/2)
-            for noise_level in noises:
-                print("noise=", noise_level)
+            for noise in noises:
+                print("noise=", noise)
                 params_opt = {}
                 for i in range(0, nb_parameters):
                     params_opt[params_names[i]]=[]
                 compteur_iter = 0
-                if noise_level !=0:
-                    SNR = 1/noise_level
+                if noise !=0:
+                    SNR = 1/noise
                     scale = (1/SNR)*U_norm
                 else:
                     scale = 0.
-                print("scale=", scale)
                 converged=False
                 while not converged:
                     init = []
-                    # print("initialisation_estimation", initialisation_estimation)
+                    print("initialisation_estimation", initialisation_estimation)
                     for key, value in initialisation_estimation.items():
-                        # print("key", key)
-                        # print("initialisation_estimation[key]", initialisation_estimation[key])
-                        # print("noise", noise)
-                        # print("compteur_iter", compteur_iter)
-                        # print("initialisation_values", initialisation_values[noise])
-                        # print("initialisation_values", initialisation_values[noise][0])
-                        # print("initialisation_values", initialisation_values[noise][0][compteur_iter])
+                        print("key", key)
+                        print("initialisation_estimation[key]", initialisation_estimation[key])
+                        print("noise", noise)
+                        print("compteur_iter", compteur_iter)
+                        print("initialisation_values", initialisation_values[noise])
+                        print("initialisation_values", initialisation_values[noise][0])
+                        print("initialisation_values", initialisation_values[noise][0][compteur_iter])
                         for param in range(0, nb_parameters):
-                            initialisation_estimation[key]=initialisation_values[noise_level][param][compteur_iter]
-                            init.append(initialisation_values[noise_level][param][compteur_iter])
-                    # print("initializing parameters at values", init)
+                            initialisation_estimation[key]=initialisation_values[noise][param][compteur_iter]
+                            init.append(initialisation_values[noise][param][compteur_iter])
+                    print("initializing parameters at values", init)
                     U_noise = U.copy(deepcopy=True)
                     noise = U.copy(deepcopy=True)
                     noise.vector()[:] = numpy.random.normal(loc=0.0, scale=scale, size=U.vector().get_local().shape)
-                    noise_norm = (dolfin.assemble(dolfin.inner(noise,noise)*problem.dV)/2/V0)**(1/2)
-                    U_noise.vector().set_local(U.vector().get_local()[:]+noise.vector().get_local()[:])
-                    U_noise_norm =  (dolfin.assemble(dolfin.inner(U_noise,U_noise)*problem.dV)/2/V0)**(1/2)
-                    print("SNR is", U_noise_norm/noise_norm)
+                    # noise_norm = (dolfin.assemble(dolfin.inner(noise,noise)*problem.dV)/2/V0)**(1/2)
+                    U_noise.vector()[:] += noise.vector()[:]
                     if inverse:
                         kinematics = dmech.InverseKinematics(u=U_noise)
                     else:
                         kinematics=dmech.Kinematics(U=U_noise)
-                    # epsilon_u_truth = dolfin.sym(dolfin.grad(U))
-                    # print("epsilon_u_truth", epsilon_u_truth.vector()[:])
-                    # epsilon_u_truth = dolfin.variable(epsilon_u_truth)
-                    # epsilon_noise = dolfin.sym(dolfin.grad(noise))
-                    # epsilon_noise = dolfin.variable(epsilon_noise)
-                    # print("epsilon computed")
-                    # fe_epsilon = dolfin.TensorElement(
-                    #     family="CG",
-                    #     cell=problem.mesh.ufl_cell(),
-                    #     degree=1)
-                    # epsilon_fs = dolfin.FunctionSpace(
-                    #     problem.mesh,
-                    #     fe_epsilon)
-                    # print("projecting epsilon_u_truth_vec")
-                    # epsilon_u_truth_vec = dolfin.project(epsilon_u_truth, epsilon_fs)
-                    # print("projecting epsilon_u_noise_vec")
-                    # epsilon_u_noise_vec = dolfin.project(epsilon_noise, epsilon_fs)
-                    # print("epsilon_u_truh_vec", epsilon_u_truth_vec.vector()[:])
-                    # print("epsilon_u_noise_vec", epsilon_u_noise_vec.vector()[:])
-
                     # print("initialisation values", initialisation_values)
                     print("starting optimization")
                     sol = scipy.optimize.minimize(J, init, args=(inverse, problem, kinematics, material_parameters, material_model, V0, initialisation_estimation, surface_forces, volume_forces, boundary_conditions), method="Nelder-Mead")
-                    # print("optimization over")
+                    print("optimization over")
                     if sol.success == True:
                         print("optimization is a success!")
-                        print("iteration completed with value for initialisation", compteur_iter, sol.x[0], init)
+                        print("iteration completed with value", compteur_iter, sol.x[0])
                         for i in range(0, nb_parameters):
-                            results['noise'].append(noise_level)
+                            results['noise'].append(noise)
                             results[params_names[i]].append((float(sol.x[i])-initialisation[i])/initialisation[i]*100)
-                            # print("params_opt before append", params_opt)
-                            # print("params_names[i]", params_names[i])
                             params_opt[params_names[i]].append(float(sol.x[i]))
-                            # print("params_opt after append", params_opt)
-                            if compteur_iter > 4:
-                                converged, crit = criteria_convergence(params_opt, 10)
+                            if compteur_iter > 20:
+                                converged, crit = criteria_convergence(params_opt, 0.02)
                                 # print("crit for noise", crit, noise)
-                                print("converged, crit", converged, crit)
                             if converged:
                                 converged=True    
                         print("distribution converged?", converged)
-                        compteur_iter += 1
-                    else:
-                        print("did not converge...")
                             
             # print("results", results)
-            df = pd.DataFrame(results)
-            myfile= open(path_solution, 'w')
-            myfile.write(df.to_string(index=False))
-            myfile.close()
+                df = pd.DataFrame(results)
+                myfile= open(path_solution, 'w')
+                myfile.write(df.to_string(index=False))
+                myfile.close()
         else:
             print("initialisation_estimation", initialisation_estimation)
             V0 = dolfin.assemble(dolfin.Constant(1)*problem.dV)
@@ -217,7 +184,7 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
     #     norm_params *= x[i]
         # print(x[i])
 
-    # print("param value during opti", x[0])
+    print("param value during opti", x[0])
     # print("E", x[0])
     
     # print("material model is", material_model)
@@ -229,26 +196,17 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
             sigma = material.sigma 
             n = problem.mesh_normals
         else:
-            Sigma = kinematics.F*material.Sigma
+            sigma = kinematics.F*material.Sigma
             N = problem.mesh_normals
             nf = dolfin.dot(N, dolfin.inv(kinematics.F))
             nf_norm = dolfin.sqrt(dolfin.inner(nf,nf))
-            # print("nf_norm", dolfin.assemble(nf_norm*problem.dS)/dolfin.assemble(dolfin.Constant(1)*problem.dS))
-            # n = nf/nf_norm   
-            fe_sigma = dolfin.TensorElement(
-                        family="DG",
-                        cell=problem.mesh.ufl_cell(),
-                        degree=0)
-            sigma_fs = dolfin.FunctionSpace(
-                problem.mesh,
-                fe_sigma)
-            print("Sigma_proj", dolfin.assemble(dolfin.dot(dolfin.dot(Sigma, N), dolfin.dot(Sigma, N))*problem.dS))
+            n = nf/nf_norm   
     else:
         material   = dmech.material_factory(kinematics, material_model, material_parameters)
         sigma = material.sigma 
         n = problem.mesh_normals
 
-    div_sigma_value = 0
+    # div_sigma_value = 0
 
     # volume_forces = []
     # print("volume forces", volume_forces[0][0])
@@ -257,7 +215,7 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
         # print("parameters to identify", parameters_to_identify)
         div_sigma = dwarp.VolumeRegularizationDiscreteEnergy(problem=problem,  b=volume_forces[0][0], model=material_model, parameters_to_identify=parameters_to_identify, inverse=inverse)
         div_sigma_value = div_sigma.assemble_ener()  # / abs(norm_params) 
-        print("div_sigma", div_sigma_value)
+        # print("div_sigma", div_sigma_value)
     # div_sigma_value=0
 
    
@@ -276,7 +234,7 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
             if inverse:
                 sigma_t = dolfin.dot(sigma, n)
             else:
-                sigma_t = dolfin.dot(Sigma, N)
+                sigma_t = dolfin.dot(sigma, N)
             # print("sigma_t", sigma_t)
             for force in surface_forces:
                 if force[1]==Sref:
@@ -296,9 +254,6 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
                 S_old.append(Sref)
             if material_model==None:
                 if not inverse: 
-                    # print("J=", kinematics.J )
-                    # print("denominateur",dolfin.assemble(dolfin.Constant(1)*kinematics.J*nf_norm*Sref) )
-                    # print("numerateur", dolfin.assemble(dolfin.inner(dolfin.dot(Sigma, n), dolfin.dot(Sigma, n))*Sref))
                     norm_sigma_t += (1/2*dolfin.assemble(dolfin.inner(sigma_t, sigma_t)*kinematics.J*nf_norm*Sref)/dolfin.assemble(dolfin.Constant(1)*kinematics.J*nf_norm*Sref) )**(1/2) #  / abs(norm_params)
                 else:
                     norm_sigma_t += (1/2*dolfin.assemble(dolfin.inner(sigma_t, sigma_t)*Sref)/dolfin.assemble(dolfin.Constant(1)*Sref) )**(1/2) #  / abs(norm_params)
@@ -307,7 +262,7 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
     # print("out of loop")
 
 
-    print("norm_sigma_t", norm_sigma_t)
+    # print("norm_sigma_t", norm_sigma_t)
             
 
     # sigma_t = dolfin.dot(sigma, problem.mesh_normals) - 1*problem.mesh_normals    
@@ -326,7 +281,7 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
     # print("norm_sigma_t_working", norm_sigma_t)
 
     
-    print("function", div_sigma_value+norm_sigma_t)
+    # print("function", div_sigma_value+norm_sigma_t)
     # print("norm sigma.n - t", norm_sigma_t)
     return(div_sigma_value+norm_sigma_t)
 
@@ -335,8 +290,8 @@ def J(x, inverse, problem, kinematics, material_parameters, material_model, V0, 
 def criteria_convergence(params_opt={}, tol=1e-3):
     converged =False
     crit_max = []
-    for key, list in params_opt.items():
-        l = list[:]
+    for list in params_opt:
+        l = list[1:]
         if numpy.percentile(l[:-1], 50) == 0:
             median = abs((numpy.percentile(l[:],50)-numpy.percentile(l[:-1],50)))
         else:

@@ -32,3 +32,4 @@ class WskelLungElasticMaterial(ElasticMaterial):
         self.Sigma = self.bulk.Sigma + self.dev.Sigma
         self.P     = self.bulk.P     + self.dev.P
         self.sigma = self.bulk.sigma + self.dev.sigma 
+        self.derivative_sigma  = self.bulk.derivative_sigma

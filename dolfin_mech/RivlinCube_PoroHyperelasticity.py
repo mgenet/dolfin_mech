@@ -32,7 +32,7 @@ def RivlinCube_PoroHyperelasticity(
         res_basename="RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         verbose=0,
-        inertia_val = 1e-5,
+        inertia_val = 1e-8,
         multimaterial = 0,
         get_results_fields = 0,
         mesh_from_file=0,
@@ -75,6 +75,7 @@ def RivlinCube_PoroHyperelasticity(
         # xmax = mesh.coordinates()[:, 0].max()
         zmin = mesh.coordinates()[:, 2].min()
         zmax = mesh.coordinates()[:, 2].max()
+        print("zmin, zmax", zmin, zmax)
         # print("zmin, zmax", zmin, zmax)
         zones = 10
         delta_z = (zmax-zmin)/(zones+1)
@@ -403,7 +404,7 @@ def RivlinCube_PoroHyperelasticity(
                 boundaries_mf=boundaries_mf,
                 domains_mf = domains_mf,
                 displacement_degree=1,
-                # quadrature_degree = 10,
+                quadrature_degree = 1,
                 porosity_init_val=porosity_val,
                 porosity_init_fun=porosity_fun,
                 # skel_behavior=mat_params,
@@ -420,6 +421,7 @@ def RivlinCube_PoroHyperelasticity(
                 boundaries_mf=boundaries_mf,
                 domains_mf = domains_mf,
                 displacement_degree=1,
+                quadrature_degree = 1,
                 # quadrature_degree = "default",
                 porosity_init_val=porosity_val,
                 porosity_init_fun=porosity_fun,
@@ -441,7 +443,7 @@ def RivlinCube_PoroHyperelasticity(
                 # domains_dirichlet=domains_dirichlet,
                 displacement_degree=1,
                 # quadrature_degree = "default",
-                # quadrature_degree = 1,
+                quadrature_degree = 1,
                 porosity_init_val=porosity_val,
                 porosity_init_fun=porosity_fun,
                 skel_behavior=mat_params,
@@ -459,7 +461,8 @@ def RivlinCube_PoroHyperelasticity(
                 boundaries_mf=boundaries_mf,
                 domains_mf = domains_mf,
                 displacement_degree=1,
-                # quadrature_degree = 1,
+                quadrature_degree = 1,
+                # porosity_degree=0,
                 # quadrature_degree = "default",
                 porosity_init_val=porosity_val,
                 porosity_init_fun=porosity_fun,
@@ -475,7 +478,8 @@ def RivlinCube_PoroHyperelasticity(
     # problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
     # problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
     # if (dim==3):
-    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    # problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.,0.,0.])
+    # problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     #     problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     #     problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     
@@ -569,6 +573,7 @@ def RivlinCube_PoroHyperelasticity(
     problem.add_inertia_operator(
         measure=problem.dV,
         rho_val=float(inertia_val),
+        # rho_val=0,
         k_step=k_step)
     
     surface_forces = []
@@ -626,7 +631,7 @@ def RivlinCube_PoroHyperelasticity(
             pf_ini=0.,
             pf_fin=0.,
             k_step=k_step)
-        f = load_params.get("f", 0.5)
+        f = load_params.get("f", 5e-4)
         problem.add_volume_force0_loading_operator(
             measure=problem.dV,
             F_ini=[0.]*dim,
@@ -637,29 +642,29 @@ def RivlinCube_PoroHyperelasticity(
             pf_ini=0.,
             pf_fin=0.,
             k_step=k_step)
-        P = load_params.get("P", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0,
-            P_fin=P,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0,
-            P_fin=P,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0,
-            P_fin=P,
-            k_step=k_step)
+        # P = load_params.get("P", -0.5)
+        # problem.add_surface_pressure0_loading_operator(
+            # measure=problem.dS(xmax_id),
+            # P_ini=0,
+            # P_fin=P,
+            # k_step=k_step)
+        # problem.add_surface_pressure0_loading_operator(
+            # measure=problem.dS(ymax_id),
+            # P_ini=0,
+            # P_fin=P,
+            # k_step=k_step)
+        # if (dim==3): problem.add_surface_pressure0_loading_operator(
+            # measure=problem.dS(zmax_id),
+            # P_ini=0,
+            # P_fin=P,
+            # k_step=k_step)
     elif (load_type == "volu"):
         problem.add_pf_operator(
             measure=problem.dV,
             pf_ini=0.,
             pf_fin=0.,
             k_step=k_step)
-        f = load_params.get("f", 1e-3)
+        f = load_params.get("f", 5e-4)
         problem.add_volume_force_loading_operator(
             measure=problem.dV,
             F_ini=[0.]*dim,
@@ -726,10 +731,11 @@ def RivlinCube_PoroHyperelasticity(
             P0_fin=P0,
             k_step=k_step)
         volume_forces.append([[0, 0., rho_solid*f], problem.dV])
+        # print("volume forces")
 
     ################################################# Quantities of Interest ###
 
-    problem.add_deformed_volume_qoi()
+    # problem.add_deformed_volume_qoi()
     problem.add_global_strain_qois()
     problem.add_global_stress_qois()
     problem.add_global_porosity_qois()
@@ -844,11 +850,16 @@ def RivlinCube_PoroHyperelasticity(
         # print(problem.get_x0_direct_subsol().func.vector().get_local())
         # print(problem.get_porosity_subsol().func.vector().get_local())
         print("Phis0", dolfin.assemble(problem.Phis0*problem.dV)/dolfin.assemble(problem.kinematics.J*problem.dV))
-        # print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[0] + problem.get_displacement_subsol().func[0]) * problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
+        print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[0] + problem.get_displacement_subsol().func[0]) * problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
 
-        # print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[1] + problem.get_displacement_subsol().func[1])* problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
+        print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[1] + problem.get_displacement_subsol().func[1])* problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
 
-        # print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[2] + problem.get_displacement_subsol().func[2])* problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
+        print("x0=", dolfin.assemble(problem.Phis0 * (problem.X[2] + problem.get_displacement_subsol().func[2])* problem.dV) / dolfin.assemble(problem.Phis0 * problem.dV) )
+        print("x0z=", dolfin.assemble(problem.get_porosity_subsol().func * (problem.X[2] + problem.get_displacement_subsol().func[2])* problem.kinematics.J* problem.dV) / dolfin.assemble(problem.get_porosity_subsol().subfunc * problem.kinematics.J * problem.dV) )
+        # print("x0z=", dolfin.assemble(problem.Phis0 * (problem.X[2] + problem.get_displacement_subsol().func[2]) * problem.dV) / dolfin.assemble(problem.get_porosity_subsol().subfunc * problem.kinematics.J * problem.dV) )
+        print("Phis0/phis", dolfin.assemble(problem.Phis0*problem.dV), dolfin.assemble(problem.get_porosity_subsol().subfunc*problem.kinematics.J*problem.dV))
+        # print("phisx", dolfin.assemble(problem.get_porosity_subsol().func * ( problem.get_displacement_subsol().func[2])* problem.dV) )
+        # print("Phis0x", dolfin.assemble(problem.Phis0 *  (problem.get_displacement_subsol().func[2])* problem.dV) )
     else:
         print("phis", dolfin.assemble(problem.phis*problem.dV)/problem.mesh_V0)
 
@@ -856,15 +867,15 @@ def RivlinCube_PoroHyperelasticity(
     if estimation_gap:
         if inverse:
             print("phis", problem.phis)
-            kinematics = dmech.InverseKinematics(u=problem.get_displacement_subsol().subfunc)
+            kinematics = dmech.InverseKinematics(u=problem.get_displacement_subsol().func)
             surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
         else:
-            print("Phis0", problem.Phis0)
-            kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().subfunc)
-            # surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
-            surface_forces.append([-0.5, problem.dS])
+            # print("Phis0", problem.Phis0)
+            kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().func)
+            surface_forces.append([problem.get_p_subsol().subfunc, problem.dS])
+            # surface_forces.append([-0.5, problem.dS])
 
-        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=inverse)
+        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=inverse, U=problem.get_displacement_subsol().func)
         
 
     if get_results_fields:
@@ -881,6 +892,11 @@ def RivlinCube_PoroHyperelasticity(
                 file.write('  </mesh_function>\n')
                 file.write('</dolfin>\n')
                 file.close()
+            # equilibrium_rhog= dolfin.assemble(1e-6*f*problem.phis*problem.dV)
+            # equilibrium_p_x = dolfin.assemble(problem.get_p_subsol().func*problem.mesh_normals[0]*problem.dS)
+            # # equilibrium_p_y = dolfin.assemble(problem.get_p_subsol().func*problem.mesh_normals[1]*problem.dS)
+            # # equilibrium_p_z = dolfin.assemble(problem.get_p_subsol().func*problem.mesh_normals[2]*problem.dS)
+            # equilibrium = equilibrium_rhog - equilibrium_p_z
         else:
             with open(porosity_filename, "w") as file:
                 file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -891,6 +907,28 @@ def RivlinCube_PoroHyperelasticity(
                 file.write('  </mesh_function>\n')
                 file.write('</dolfin>\n')
                 file.close()
+            kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().func)
+            nf = dolfin.dot(problem.mesh_normals, dolfin.inv(kinematics.F))
+            nf_norm = dolfin.sqrt(dolfin.dot(nf,nf))
+            n = nf/nf_norm
+            # equilibrium_rhog= dolfin.assemble(1e-6*f*problem.Phis0*problem.dV)
+            # p = problem.get_p_subsol().func
+            # equilibrium_p_x = dolfin.assemble(p * n[0] * nf_norm * kinematics.J * problem.dS)
+            # equilibrium_p_y = dolfin.assemble(p * n[1] * nf_norm * kinematics.J * problem.dS)
+            # equilibrium_p_z = dolfin.assemble(p * n[2] * nf_norm * kinematics.J * problem.dS)
+            # equilibrium = equilibrium_rhog - equilibrium_p_z
+            # lbda = problem.get_lbda_subsol().func
+            # mu =  problem.get_mu_subsol().func
+            # gamma =  problem.get_gamma_subsol().func
+            # x0 = problem.get_x0_direct_subsol().func
+            # print("x0", x0.vector()[:])
+            # print("x0 computed", dolfin.assemble(problem.get_porosity_subsol().func*(problem.X[2]+problem.get_displacement_subsol().func[2])*kinematics.J*problem.dV)/dolfin.assemble(problem.get_porosity_subsol().func*kinematics.J*problem.dV))
+        # # print("equilibrium_rhog",dolfin.assemble(1e-6*f*problem.get_porosity_subsol().func*problem.dV))
+        # print("equilibrium_rhog_end",equilibrium_rhog)
+        # print("equilibrium_p", equilibrium_p_x)
+        # print("equilibrium_p", equilibrium_p_y)
+        # print("equilibrium_p", equilibrium_p_z)
+        # print("equilibrium=", equilibrium)
         if get_invariants:
             U_inspi = problem.get_displacement_subsol().func
             U_expi = get_invariants["Uexpi"]

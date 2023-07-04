@@ -470,6 +470,7 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             U=self.get_displacement_subsol().subfunc,
             U_test=self.get_displacement_subsol().dsubtest,
             Phis0=self.Phis0,
+            phis = self.get_porosity_subsol().subfunc,
             v = self.get_deformed_volume_subsol().subfunc,
             V0=dolfin.assemble(dolfin.Constant(1)*self.dV),
             N=self.mesh_normals,

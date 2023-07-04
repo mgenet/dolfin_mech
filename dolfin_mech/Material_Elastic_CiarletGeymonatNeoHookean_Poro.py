@@ -32,7 +32,7 @@ class CiarletGeymonatNeoHookeanElasticMaterialPoro(ElasticMaterial):
         
         
         if "Inverse" in str(problem):
-                print("in inverse")
+                # print("in inverse")
                 self.dev = dmech.PorousElasticMaterial(
                         solid_material= material_dev,
                         scaling="linear",
@@ -47,13 +47,13 @@ class CiarletGeymonatNeoHookeanElasticMaterialPoro(ElasticMaterial):
                 scaling="linear",
                 Phis0= kinematics.J * problem.get_porosity_subsol().subfunc)  
         else:
-                print("in direct")
+                # print("in direct")
                 self.dev = dmech.PorousElasticMaterial(
                         solid_material= material_dev,
                         scaling="linear",
                         Phis0=problem.Phis0) 
                 material_bulk = dmech.WbulkLungElasticMaterial(
-                        Phis=1/kinematics.J * problem.Phis0, 
+                        Phis= problem.get_porosity_subsol().subfunc, 
                         Phis0=problem.Phis0, 
                         parameters={"kappa":1e2}, 
                         kinematics=kinematics)
@@ -66,6 +66,7 @@ class CiarletGeymonatNeoHookeanElasticMaterialPoro(ElasticMaterial):
         self.Sigma = self.bulk.Sigma + self.dev.Sigma
         self.P     = self.bulk.P     + self.dev.P
         self.sigma = self.bulk.sigma + self.dev.sigma
+        self.derivative_sigma = self.dev.derivative_sigma
 
 
 

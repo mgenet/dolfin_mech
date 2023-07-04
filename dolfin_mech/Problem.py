@@ -614,7 +614,7 @@ class Problem():
         
         
         operator = dmech.SurfacePressureGradientLoadingOperator(
-            X=dolfin.SpatialCoordinate(self.mesh),
+            X=self.X,
             x0 = self.get_x0_mass(),
             kinematics=self.kinematics,
             lbda=self.get_lbda_subsol().subfunc,

@@ -29,6 +29,7 @@ class SurfacePressureGradientLoadingOperator(Operator):
             Phis0,
             V0, 
             v,
+            phis,
             N,
             lbda,
             lbda_test,
@@ -57,7 +58,7 @@ class SurfacePressureGradientLoadingOperator(Operator):
         P0 = self.tv_P0.val
 
         self.tv_fg = dmech.TimeVaryingConstant(
-            val=None, val_ini=0., val_fin=f_fin[2])
+            val=None, val_ini=0., val_fin=abs(f_fin[2]))
         fg = self.tv_fg.val
 
 
@@ -71,13 +72,14 @@ class SurfacePressureGradientLoadingOperator(Operator):
         x = X + U
         x_tilde = x-x0
 
-        P_tilde = P0 - rho_solid * fg * ( x[2]- x0[2]) #* ( x[0]- x0[0])
+        # P_tilde = P0 + rho_solid * fg * ( x[2]- x0[2]) # + rho_solid * fg * ( x[1]- x0[1])
+        P_tilde = P0 # + dolfin.Constant(1e-2/2) * ( x[2]- x0[2])
 
     
         grads_p = dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F))))
         grads_p_test = dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F))))
 
-        self.res_form = dolfin.Constant(1e-8)*p*p_test * kinematics.J * self.measure
+        self.res_form = dolfin.Constant(1e-8)*p*p_test * self.measure
         self.res_form -= dolfin.inner(rho_solid*Phis0*F, U_test) * self.measure
         self.res_form -=  dolfin.inner(-p * n, U_test) * nf_norm * kinematics.J * dS
         self.res_form += dolfin.inner(rho_solid*Phis0*F, lbda_test) * self.measure
@@ -136,12 +138,15 @@ class SurfacePressureGradient0LoadingOperator(Operator):
         P0 = self.tv_P0.val
 
         self.tv_fg = dmech.TimeVaryingConstant(
-            val=None, val_ini=0, val_fin=f_fin[2])
+            val=None, val_ini=0, val_fin=abs(f_fin[2]))
         fg = self.tv_fg.val
 
         x_tilde = x-dolfin.Constant(x0)
 
-        P_tilde = P0 - rho_solid * fg * ( x[2]- dolfin.Constant(x0[2]))# * ( x[0]- dolfin.Constant(x0[0]))
+        print("z0=", x0[2])
+
+        # P_tilde = P0 + rho_solid * fg * ( x[2]- dolfin.Constant(x0[2])) #+ rho_solid * fg * ( x[1]- x0[1]) #+ rho_solid * 100 * ( x[1]- x0[1]) # * ( x[0]- dolfin.Constant(x0[0]))
+        P_tilde = P0 #+ dolfin.Constant(1e-2/2) * ( x[2]- dolfin.Constant(x0[2])) #+ rho_solid * 100 * ( x[1]- x0[1]) # * ( x[0]- dolfin.Constant(x0[0]))
         
         grads_p = dolfin.grad(p-P_tilde) - n*(dolfin.dot(n,dolfin.grad(p-P_tilde)))
         grads_p_test = dolfin.grad(p_test) - n*(dolfin.dot(n,dolfin.grad(p_test)))

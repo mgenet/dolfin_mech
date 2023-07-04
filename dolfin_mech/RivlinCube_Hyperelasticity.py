@@ -25,6 +25,7 @@ def RivlinCube_Hyperelasticity(
         step_params={},
         load_params={},
         res_basename="RivlinCube_Hyperelasticity",
+        estimation_virtual_fields=0,
         verbose=0):
 
     ################################################################### Mesh ###
@@ -102,7 +103,9 @@ def RivlinCube_Hyperelasticity(
 
     load_type = load_params.get("type", "disp")
 
-    if ("inertia" not in load_type):
+    if estimation_virtual_fields:
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.,0.,0.])
+    elif ("inertia" not in load_type):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
         problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
         if (dim==3):
@@ -149,6 +152,7 @@ def RivlinCube_Hyperelasticity(
             measure=problem.dS(xmax_id),
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
             k_step=k_step)
+        surface_forces.append([f, problem.dS(xmax_id)])
     elif (load_type == "pres0"):
         p = load_params.get("p", -0.5)
         problem.add_surface_pressure0_loading_operator(
@@ -271,3 +275,15 @@ def RivlinCube_Hyperelasticity(
         "Integration failed. Aborting."
 
     integrator.close()
+
+    
+
+    if estimation_virtual_fields:
+        if inverse:
+            kinematics = dmech.InverseKinematics(u=problem.get_displacement_subsol().func)
+        else:
+            kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().func)
+
+        dmech.VirtualFields(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], inverse=inverse, U=problem.get_displacement_subsol().func)
+
+    return(problem.get_displacement_subsol().func, problem.mesh_V0)
