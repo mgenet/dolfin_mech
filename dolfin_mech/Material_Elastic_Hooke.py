@@ -33,9 +33,6 @@ class HookeElasticMaterial(ElasticMaterial):
         self.sigma = dolfin.diff(self.psi, self.kinematics.epsilon)
         # self.sigma = self.lmbda * dolfin.tr(self.kinematics.epsilon) * self.kinematics.I + 2 * self.mu * self.kinematics.epsilon
 
-        self.Sigma = self.sigma
-        self.P     = self.sigma
-
         if (self.kinematics.dim == 2):
             self.sigma_ZZ = self.lmbda * dolfin.tr(self.kinematics.epsilon)
 
@@ -76,9 +73,6 @@ class HookeBulkElasticMaterial(ElasticMaterial):
 
         self.psi   = (self.kinematics.dim*self.K/2) * dolfin.tr(self.kinematics.epsilon_sph)**2
         self.sigma =  self.kinematics.dim*self.K    *           self.kinematics.epsilon_sph
-
-        self.Sigma = self.sigma
-        self.P     = self.sigma
 
         if (self.kinematics.dim == 2):
             self.sigma_ZZ = self.K * dolfin.tr(self.kinematics.epsilon)

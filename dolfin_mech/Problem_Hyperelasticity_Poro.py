@@ -109,7 +109,7 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 pore_behaviors = [pore_behavior]
             self.add_Wpore_operators(pore_behaviors)
 
-            self.add_deformed_volume_operator()    
+            # self.add_deformed_volume_operator()    
 
 
 
@@ -515,7 +515,7 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
         
 
         operator = dmech.SurfacePressureGradient0LoadingOperator(
-            x = self.X,
+            x = self.x,
             x0 = self.get_x0_mass(self.phis),
             n = self.mesh_normals,
             u_test = self.get_displacement_subsol().dsubtest, 

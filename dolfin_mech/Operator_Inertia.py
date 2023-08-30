@@ -21,7 +21,6 @@ class InertiaOperator(Operator):
             U,
             U_old,
             U_test,
-            U_old,
             measure,
             rho_val=None, rho_ini=None, rho_fin=None):
 

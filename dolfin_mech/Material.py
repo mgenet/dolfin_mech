@@ -355,6 +355,8 @@ def material_factory(
         material = dmech.OgdenCiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters)
     elif (model in ("ogdenciarletgeymonatneohookeanmooneyrivlin_bar", "OgdenCiarletGeymonatNeoHookeanMooneyRivlin_bar", "OCGNHMR_bar", "ciarletgeymonatneohookeanmooneyrivlin_bar", "CiarletGeymonatNeoHookeanMooneyRivlin_bar", "CGNHMR_bar")):
         material = dmech.OgdenCiarletGeymonatNeoHookeanMooneyRivlinElasticMaterial(kinematics=kinematics, parameters=parameters, decoup=True)
+    elif (model in ("ciarletgeymonatneohookeanmooneyrivlin_poro", "CGNHMR_poro")):
+        material = dmech.CiarletGeymonatNeoHookeanElasticMaterialPoro(kinematics=kinematics, parameters=parameters, problem=problem)
     else:
         assert(0), "Material model (\""+model+"\") not recognized. Aborting."
     return material

@@ -146,12 +146,12 @@ def RivlinCube_Elasticity(
         volume_forces.append([[f]+[0.]*(dim-1), problem.dV])
         p = load_params.get("p", -1.)
         problem.add_surface_pressure0_loading_operator(
-            # measure=problem.dS(xmax_id),
-            measure=problem.dS(0),
+            measure=problem.dS(xmax_id),
+            # measure=problem.dS(0),
             P_ini=0, P_fin=p,
             k_step=k_step)
-        # surface_forces.append([p,problem.dS(xmax_id)])
-        surface_forces.append([p,problem.dS(0)])
+        surface_forces.append([p,problem.dS(xmax_id)])
+        # surface_forces.append([p,problem.dS(0)])
     elif (load_type == "volu"):
         f = load_params.get("f", 1.)
         problem.add_volume_force0_loading_operator(
@@ -245,8 +245,11 @@ def RivlinCube_Elasticity(
         # u = problem.get_subsols_func_lst()[0]
         # print("u estimation=", problem.get_subsols_func_lst()[0].vector())
         # print("gradu", dolfin.grad(u))
-        kinematics = dmech.LinearizedKinematics(u=problem.get_subsols_func_lst()[0], u_old=None)
-        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions)
+        kinematics = problem.kinematics
+        # kinematics = dmech.LinearizedKinematics(u=problem.get_subsols_func_lst()[0], u_old=None)
+        # print("surface force is", surface_forces)
+        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=1, U=problem.get_displacement_subsol().func)
+        
         
         
 

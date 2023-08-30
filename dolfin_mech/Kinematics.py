@@ -40,6 +40,8 @@ class Kinematics():
         self.C_inv = dolfin.inv(self.C)
         self.IC    = dolfin.tr(self.C)
         self.IIC   = (dolfin.tr(self.C)*dolfin.tr(self.C) - dolfin.tr(self.C*self.C))/2
+        self.I1    = 1/3 * dolfin.tr(self.C)
+        self.I2    = 1/3*(dolfin.tr(self.C)*dolfin.tr(self.C) - dolfin.tr(self.C*self.C))/2
         self.E     = (self.C - self.I)/2
         self.E     = dolfin.variable(self.E)
 

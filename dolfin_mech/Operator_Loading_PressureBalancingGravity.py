@@ -55,7 +55,7 @@ class PressureBalancingGravityLoadingOperator(Operator):
         P0 = self.tv_P0.val
 
         self.tv_grad = dmech.TimeVaryingConstant(
-            val=None, val_ini=0., val_fin=f_fin[0]) #### AP2023 - depends on the orientation of gravity: here, g = [9.81e3, 0., 0.]
+            val=None, val_ini=0., val_fin=f_fin[2]) #### AP2023 - depends on the orientation of gravity: here, g = [0., 0., 9.81e3]
         grad = self.tv_grad.val
 
         nf = dolfin.dot(N, dolfin.inv(kinematics.F))
@@ -65,7 +65,7 @@ class PressureBalancingGravityLoadingOperator(Operator):
         x = X + U
         x_tilde = x-x0
 
-        P_tilde = P0 - rho_solid * grad * ( x[0]- x0[0])
+        P_tilde = P0 + rho_solid * grad * ( x[2]- x0[2])
 
         grads_p = dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F))))
         grads_p_test = dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F))))
@@ -127,12 +127,12 @@ class PressureBalancingGravity0LoadingOperator(Operator):
         P0 = self.tv_P0.val
 
         self.tv_grad = dmech.TimeVaryingConstant(
-            val=None, val_ini=0, val_fin=f_fin[0]) #### AP2023 - depends on the orientation of gravity: here, g = [9.81e3, 0., 0.]
+            val=None, val_ini=0, val_fin=f_fin[2]) #### AP2023 - depends on the orientation of gravity: here, g = [0., 0., 9.81e3]
         grad = self.tv_grad.val
 
         x_tilde = x-dolfin.Constant(x0)
 
-        P_tilde = P0 - rho_solid * grad * ( x[0]- dolfin.Constant(x0[0]))
+        P_tilde = P0 + rho_solid * grad * ( x[2]- dolfin.Constant(x0[2]))
         
         grads_p = dolfin.grad(p-P_tilde) - n*(dolfin.dot(n,dolfin.grad(p-P_tilde)))
         grads_p_test = dolfin.grad(p_test) - n*(dolfin.dot(n,dolfin.grad(p_test)))

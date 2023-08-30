@@ -81,7 +81,6 @@ class TimeIntegrator():
             self.problem.update_qois(dt=1)
             self.qoi_printer.write_line([0.]+[qoi.value for qoi in self.problem.qois])
 
-        self.problem.update_fois()
         self.write_sol = bool(write_sol)
         if (self.write_sol):
             self.write_sol_filebasename = write_sol if (type(write_sol) is str) else sys.argv[0][:-3]+"-sol"
@@ -94,6 +93,7 @@ class TimeIntegrator():
             self.xdmf_file_sol = dmech.XDMFFile(
                 filename=self.write_sol_filebasename+".xdmf",
                 functions=self.functions_to_write)
+            self.problem.update_fois()
             self.xdmf_file_sol.write(0.)
 
             self.write_vtus                             = bool(write_vtus)
@@ -107,7 +107,7 @@ class TimeIntegrator():
 
             self.write_xmls = bool(write_xmls)
             if (self.write_xmls):
-                dolfin.File(self.write_sol_filebasename+"_"+str(0).zfill(3)+".xml") << problem.get_subsols_func_lst()[0]
+                dolfin.File(self.write_sol_filebasename+"_"+str(0).zfill(3)+".xml") << self.problem.get_displacement_subsol().subfunc
 
 
 
@@ -187,8 +187,8 @@ class TimeIntegrator():
                 if (solver_success):
                     n_iter_tot += n_iter
 
-                    self.problem.update_fois()
                     if (self.write_sol):
+                        self.problem.update_fois()
                         self.xdmf_file_sol.write(t)
 
                         if (self.write_vtus):
@@ -199,7 +199,7 @@ class TimeIntegrator():
                                 preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 
                         if (self.write_xmls):
-                            dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.get_subsols_func_lst()[0]
+                            dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.get_displacement_subsol().subfunc
 
                     if (self.write_qois):
                         self.problem.update_qois(dt)
@@ -239,8 +239,6 @@ class TimeIntegrator():
                         self.printer.print_str("Warning! Time integrator failed to move forward!")
                         self.success = False
                         break
-            if (self.write_xmls):
-                dolfin.File(self.write_sol_filebasename+"final"+".xml") << self.problem.get_subsols_func_lst()[0]
 
             self.printer.dec()
 

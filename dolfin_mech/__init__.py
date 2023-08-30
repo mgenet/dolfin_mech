@@ -30,6 +30,7 @@ from .Material_Elastic_MooneyRivlin import *
 from .Material_Elastic_NeoHookean import *
 from .Material_Elastic_NeoHookeanMooneyRivlin import *
 from .Material_Elastic_Porous import *
+from .Material_Elastic_CiarletGeymonatNeoHookean_Poro import *
 from .Material_Inelastic import *
 from .NonlinearSolver import *
 from .Operator import *

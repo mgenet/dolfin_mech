@@ -31,7 +31,8 @@ class WporePoroOperator(Operator):
         self.solid_material = dmech.WporeLungElasticMaterial(
             Phif=self.kinematics.J - Phis,
             Phif0=1-Phis0,
-            parameters=material_parameters)
+            parameters=material_parameters,
+            kinematics=kinematics)
         self.material = dmech.PorousElasticMaterial(
             solid_material=self.solid_material,
             scaling=material_scaling,

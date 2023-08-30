@@ -28,6 +28,9 @@ class InverseKinematics():
         self.dim = self.u.ufl_shape[0]
         self.I = dolfin.Identity(self.dim)
 
+        self.epsilon = dolfin.sym(dolfin.grad(self.u))
+        self.epsilon = dolfin.variable(self.epsilon)
+
         self.f     = self.I + dolfin.grad(self.u)
         self.F     = dolfin.inv(self.f)
         self.F     = dolfin.variable(self.F)
