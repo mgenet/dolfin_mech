@@ -45,9 +45,11 @@ class OgdenCiarletGeymonatElasticMaterial(ElasticMaterial):
         # self.P = dolfin.diff(self.Psi, self.kinematics.F) # MG20220426: Cannot do that for micromechanics problems
         # self.P = 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.F_inv.T
         self.P = self.kinematics.F * self.Sigma
+        self.P_old = self.kinematics.F_old * self.Sigma_old # Mahdi
 
         self.sigma = self.P * self.kinematics.F.T / self.kinematics.J
-
+        self.sigma_old = self.P_old * self.kinematics.F_old.T / self.kinematics.J_old # Mahdi
+        
 
 
     # def get_free_energy(self,

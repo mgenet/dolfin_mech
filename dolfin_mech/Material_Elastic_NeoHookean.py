@@ -50,6 +50,7 @@ class NeoHookeanElasticMaterial(ElasticMaterial):
         # self.P = self.kinematics.F * self.Sigma
 
         self.sigma = self.P * self.kinematics.F.T / self.kinematics.J
+        self.sigma_old = self.P_old * self.kinematics.F_old.T / self.kinematics.J_old
 
 
 

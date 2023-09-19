@@ -344,14 +344,6 @@ class HyperelasticityProblem(Problem):
 
 
 
-    def add_deformed_volume_qoi(self):
-
-        self.add_qoi(
-            name="v",
-            expr=self.kinematics.J * self.dV)
-
-
-
     def add_global_strain_qois(self):
 
         basename = "E_"
