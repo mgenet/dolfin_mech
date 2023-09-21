@@ -228,7 +228,7 @@ def microporohyperelasticity(
             pf_ini=0.0, pf_fin=pf,
             k_step=k_step)
     elif (load_type == "macroscopic_stress"):
-        problem.add_macroscopic_stress_component_penalty_operator(
+        problem.add_macroscopic_stress_component_constraint_operator(
             comp_i=0, comp_j=0,
             comp_ini=0.0, comp_fin=0.5,
             pen_val=1e3,
