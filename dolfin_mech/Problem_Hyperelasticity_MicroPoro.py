@@ -212,7 +212,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             self.add_pressure_subsol(
                 degree=solid_pressure_degree)
 
-        self.add_macroscopic_stress_subsol()
 
         # self.add_deformed_total_volume_subsol()
         # self.add_deformed_solid_volume_subsol()
