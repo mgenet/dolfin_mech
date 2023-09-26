@@ -227,22 +227,28 @@ def microporohyperelasticity(
             U_bar_ij_ini=0.0, U_bar_ij_fin=0.5,
             pen_val=1e3,
             k_step=k_step)
-        problem.add_macroscopic_stress_component_constraint_operator(
-            i=1, j=1,
-            sigma_bar_ij_ini=0.0, sigma_bar_ij_fin=0.0,
-            pf_ini=0.0, pf_fin=pf,
-            k_step=k_step)
+        for k in range(dim):
+            for l in range (dim):
+                if (k!=0 or l!=0):
+                    problem.add_macroscopic_stress_component_constraint_operator(
+                        i=k, j=l,
+                        sigma_bar_ij_ini=0.0, sigma_bar_ij_fin=0.0,
+                        pf_ini=0.0, pf_fin=0.0,
+                        k_step=k_step)
     elif (load_type == "macroscopic_stress"):
         problem.add_macroscopic_stress_component_constraint_operator(
             i=0, j=0,
             sigma_bar_ij_ini=0.0, sigma_bar_ij_fin=0.5,
             pf_ini=0.0, pf_fin=0.0,
             k_step=k_step)
-        problem.add_macroscopic_stress_component_constraint_operator(
-            i=1, j=1,
-            sigma_bar_ij_ini=0.0, sigma_bar_ij_fin=0.0,
-            pf_ini=0.0, pf_fin=pf,
-            k_step=k_step)
+        for k in range(dim):
+            for l in range (dim):
+                if (k!=0 or l!=0):
+                    problem.add_macroscopic_stress_component_constraint_operator(
+                        i=k, j=l,
+                        sigma_bar_ij_ini=0.0, sigma_bar_ij_fin=0.0,
+                        pf_ini=0.0, pf_fin=0.0,
+                        k_step=k_step)
 
     ################################################# Quantities of Interest ###
 
