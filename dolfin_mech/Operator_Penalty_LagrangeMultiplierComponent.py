@@ -7,7 +7,7 @@
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
+### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -20,28 +20,22 @@ from .Operator import Operator
 
 ################################################################################
 
-class MacroscopicStressOperator(Operator):
+class LagrangeMultiplierComponentPenaltyOperator(Operator):
 
     def __init__(self,
-            mesh_V0,
-            mesh_bbox_V0,
-            sigma_bar, sigma_bar_test,
-            sol, sol_test,
-            material,
+            lambda_bar,
+            lambda_bar_test,
+            i, j,
             measure,
             pen_val=None, pen_ini=None, pen_fin=None):
 
-        self.material = material
-        self.measure  = measure
+        self.measure = measure
 
-        # self.tv_pen = dmech.TimeVaryingConstant(
-        #     val=pen_val, val_ini=pen_ini, val_fin=pen_fin)
-        # pen = self.tv_pen.val
+        self.tv_pen = dmech.TimeVaryingConstant(
+            val=pen_val, val_ini=pen_ini, val_fin=pen_fin)
+        pen = self.tv_pen.val
 
-        # Pi = (pen/2) * dolfin.inner((mesh_bbox_V0/mesh_V0) * sigma_bar - self.material.sigma, (mesh_bbox_V0/mesh_V0) * sigma_bar - self.material.sigma) * self.measure # MG20220426: Need to compute <sigma> properly, including fluid pressure # MG20230103: This does not work…
-        # self.res_form = dolfin.derivative(Pi, sol, sol_test)
-
-        self.res_form = dolfin.inner((mesh_bbox_V0/mesh_V0) * sigma_bar - self.material.sigma, sigma_bar_test) * self.measure # MG20220426: Need to compute <sigma> properly, including fluid pressure
+        self.res_form = pen * lambda_bar[i,j] * lambda_bar_test[i,j] * self.measure
 
 
 

@@ -2,12 +2,12 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2023                                       ###
+### Created by Mahdi Manoochehrtayebi, 2020-2023                             ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
+### And Martin Genet, 2018-2023                                              ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -18,14 +18,18 @@ import dolfin
 import dolfin_mech as dmech
 from .Operator import Operator
 
-################################################################################
+# ################################################################################
 
-class TensorSymmetryOperator(Operator):
+class DeformedSolidVolumeOperator(Operator):
 
     def __init__(self,
-            tensor,
-            tensor_test,
+            vs,
+            vs_test,
+            J,
+            Vs0, 
             measure):
 
+        self.Vs0 = dolfin.Constant(Vs0)
         self.measure = measure
-        self.res_form = dolfin.inner(tensor.T - tensor, tensor_test) * self.measure
+        
+        self.res_form = ((vs/self.Vs0 - J) * vs_test) * self.measure

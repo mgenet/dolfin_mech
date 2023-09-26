@@ -6,7 +6,14 @@
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
+###                                                                          ###
+### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
+###                                                                          ###
+### École Polytechnique, Palaiseau, France                                   ###
+###                                                                          ###
 ################################################################################
+
+import dolfin 
 
 import dolfin_mech as dmech
 from .Material_Elastic import ElasticMaterial
@@ -31,8 +38,12 @@ class OgdenCiarletGeymonatNeoHookeanElasticMaterial(ElasticMaterial):
         self.Sigma = self.bulk.Sigma + self.dev.Sigma
         if (self.kinematics.dim == 2):
             self.Sigma_ZZ = self.bulk.Sigma_ZZ + self.dev.Sigma_ZZ
+            self.p_hydro = -(dolfin.tr(self.Sigma.T*self.kinematics.C)+ self.Sigma_ZZ)/3/self.kinematics.J
+            self.Sigma_dev = self.Sigma + self.p_hydro * self.kinematics.J * self.kinematics.C_inv
+            self.Sigma_VM = dolfin.sqrt(1.5 *dolfin.tr(self.Sigma_dev.T*self.Sigma_dev))
         self.P     = self.bulk.P     + self.dev.P
         self.sigma = self.bulk.sigma + self.dev.sigma
+        self.sigma_old = self.bulk.sigma_old + self.dev.sigma_old
 
 
 
