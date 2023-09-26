@@ -11,11 +11,9 @@ from .HollowBox_Homogenization import *
 from .HollowBox_Mesh import *
 from .HeartSlice_Hyperelasticity import *
 from .HeartSlice_Mesh import *
-from .Homogenization import *
 from .Kinematics import *
 from .Kinematics_Inverse import *
 from .Kinematics_Linearized import *
-from .Linear_Homogenization import *
 from .Loading import *
 from .Material import *
 from .Material_Elastic import *
@@ -48,13 +46,10 @@ from .Operator_Loading_SurfaceForce import *
 from .Operator_Loading_SurfacePressure import *
 from .Operator_Loading_SurfacePressureGradient import *
 from .Operator_Loading_SurfaceTension import *
-from .Operator_Loading_SurfaceTension_TimeDependent import *
 from .Operator_Loading_VolumeForce import *
 from .Operator_MicroPoro_DeformedFluidVolume import *
 from .Operator_MicroPoro_DeformedSolidVolume import *
 from .Operator_MicroPoro_DeformedTotalVolume import *
-from .Operator_MicroPoro_DeformedSurfaceArea import *
-from .Operator_MicroPoro_MacroscopicStress import *
 from .Operator_Penalty_DirectionalDisplacement import *
 from .Operator_Penalty_LagrangeMultiplierComponent import *
 from .Operator_Penalty_MacroscopicStretchComponent import *
@@ -66,7 +61,6 @@ from .Operator_Poro_Wpore import *
 from .Operator_Poro_Wskel import *
 from .Problem import *
 from .Problem_Elasticity import *
-from .Problem_Elasticity_MicroPoro import *
 from .Problem_Hyperelasticity import *
 from .Problem_Hyperelasticity_Inverse import *
 from .Problem_Hyperelasticity_MicroPoro import *
