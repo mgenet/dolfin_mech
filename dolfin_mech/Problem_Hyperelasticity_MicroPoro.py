@@ -56,8 +56,11 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             d = [0]*self.dim
             for k_dim in range(self.dim):
                 d[k_dim] = self.mesh_bbox[2*k_dim+1] - self.mesh_bbox[2*k_dim+0]
-            self.mesh_bbox_V0 = numpy.prod(d)
-            self.Vf0 = self.mesh_bbox_V0 - self.mesh_V0
+
+            self.V0 = numpy.prod(d) 
+            self.Vs0 = self.mesh_V0
+            self.Vf0 = self.V0 - self.Vs0
+
 
             self.set_measures(
                 domains=domains_mf,
@@ -277,7 +280,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_total_volume_subsol()
         # self.add_deformed_solid_volume_subsol()
         # self.add_deformed_fluid_volume_subsol()
-        self.add_surface_area_subsol()
+        # self.add_surface_area_subsol()
 
 
 
