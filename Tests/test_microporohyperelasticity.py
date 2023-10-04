@@ -254,6 +254,7 @@ def microporohyperelasticity(
 
     problem.add_macroscopic_stretch_qois()
     problem.add_macroscopic_stress_qois()
+    problem.add_hydrostatic_pressure_qois()
 
     ################################################################# Solver ###
 

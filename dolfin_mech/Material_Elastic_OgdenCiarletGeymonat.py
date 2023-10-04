@@ -6,11 +6,6 @@
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
-###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
-###                                                                          ###
-### École Polytechnique, Palaiseau, France                                   ###
-###                                                                          ###
 ################################################################################
 
 import dolfin
@@ -42,13 +37,8 @@ class OgdenCiarletGeymonatElasticMaterial(ElasticMaterial):
                 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.C_inv, # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
                 self.kinematics.C_inv/dolfin.Constant(0.))
             
-            self.Sigma_old = dolfin.conditional( # MG20230320: Otherwise Sigma is well defined for J < 0…
-                dolfin.gt(self.kinematics.J_old, 0.),
-                2*self.C0 * (self.kinematics.J_old**2 - 1) * self.kinematics.C_inv_old, # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
-                self.kinematics.C_inv_old/dolfin.Constant(0.))
         else:
             self.Sigma = 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.C_inv # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
-            self.Sigma_old = 2*self.C0 * (self.kinematics.J_old**2 - 1) * self.kinematics.C_inv_old # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
 
         if (self.kinematics.dim == 2):
             self.Sigma_ZZ = 2*self.C0 * (self.kinematics.J**2 - 1)
@@ -56,10 +46,8 @@ class OgdenCiarletGeymonatElasticMaterial(ElasticMaterial):
         # self.P = dolfin.diff(self.Psi, self.kinematics.F) # MG20220426: Cannot do that for micromechanics problems
         # self.P = 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.F_inv.T
         self.P = self.kinematics.F * self.Sigma
-        self.P_old = self.kinematics.F_old * self.Sigma_old # Mahdi
 
         self.sigma = self.P * self.kinematics.F.T / self.kinematics.J
-        self.sigma_old = self.P_old * self.kinematics.F_old.T / self.kinematics.J_old # Mahdi
         
 
 

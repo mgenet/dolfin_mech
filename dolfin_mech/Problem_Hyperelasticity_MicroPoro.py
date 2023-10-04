@@ -193,69 +193,69 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-    # def get_deformed_total_volume_name(self):
+    def get_deformed_total_volume_name(self):
 
-    #     return "v"
-
-
-
-    # def add_deformed_total_volume_subsol(self):
-
-    #     self.add_scalar_subsol(
-    #         name=self.get_deformed_total_volume_name(),
-    #         family="R",
-    #         degree=0,
-    #         init_val=self.V0)
+        return "v"
 
 
 
-    # def get_deformed_total_volume_subsol(self):
+    def add_deformed_total_volume_subsol(self):
 
-    #     return self.get_subsol(self.get_deformed_total_volume_name())
-
-
-
-    # def get_deformed_solid_volume_name(self):
-
-    #     return "v_s"
+        self.add_scalar_subsol(
+            name=self.get_deformed_total_volume_name(),
+            family="R",
+            degree=0,
+            init_val=self.V0)
 
 
 
-    # def add_deformed_solid_volume_subsol(self):
+    def get_deformed_total_volume_subsol(self):
 
-    #     self.add_scalar_subsol(
-    #         name=self.get_deformed_solid_volume_name(),
-    #         family="R",
-    #         degree=0,
-    #         init_val=self.mesh_V0)
+        return self.get_subsol(self.get_deformed_total_volume_name())
 
 
 
-    # def get_deformed_solid_volume_subsol(self):
+    def get_deformed_solid_volume_name(self):
 
-    #     return self.get_subsol(self.get_deformed_solid_volume_name())
-
-
-
-    # def get_deformed_fluid_volume_name(self):
-
-    #     return "v_f"
+        return "v_s"
 
 
 
-    # def add_deformed_fluid_volume_subsol(self):
+    def add_deformed_solid_volume_subsol(self):
 
-    #     self.add_scalar_subsol(
-    #         name=self.get_deformed_fluid_volume_name(),
-    #         family="R",
-    #         degree=0,
-    #         init_val=self.Vf0)
+        self.add_scalar_subsol(
+            name=self.get_deformed_solid_volume_name(),
+            family="R",
+            degree=0,
+            init_val=self.mesh_V0)
 
 
 
-    # def get_deformed_fluid_volume_subsol(self):
+    def get_deformed_solid_volume_subsol(self):
 
-    #     return self.get_subsol(self.get_deformed_fluid_volume_name())
+        return self.get_subsol(self.get_deformed_solid_volume_name())
+
+
+
+    def get_deformed_fluid_volume_name(self):
+
+        return "v_f"
+
+
+
+    def add_deformed_fluid_volume_subsol(self):
+
+        self.add_scalar_subsol(
+            name=self.get_deformed_fluid_volume_name(),
+            family="R",
+            degree=0,
+            init_val=self.Vf0)
+
+
+
+    def get_deformed_fluid_volume_subsol(self):
+
+        return self.get_subsol(self.get_deformed_fluid_volume_name())
 
 
 
@@ -570,3 +570,11 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                     expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
 
         
+    def add_hydrostatic_pressure_qois(self):
+        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+            if hasattr(operator, "material"):
+                material = operator.material
+                break
+        self.add_qoi(
+            name="p_hydro",
+            expr=(material.p_hydro/self.V0 * self.dV))

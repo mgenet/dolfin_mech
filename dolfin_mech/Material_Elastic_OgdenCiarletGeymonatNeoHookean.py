@@ -39,12 +39,12 @@ class OgdenCiarletGeymonatNeoHookeanElasticMaterial(ElasticMaterial):
         if (self.kinematics.dim == 2):
             self.Sigma_ZZ = self.bulk.Sigma_ZZ + self.dev.Sigma_ZZ
             self.p_hydro = -(dolfin.tr(self.Sigma.T*self.kinematics.C)+ self.Sigma_ZZ)/3/self.kinematics.J
-            self.Sigma_dev = self.Sigma + self.p_hydro * self.kinematics.J * self.kinematics.C_inv
-            self.Sigma_VM = dolfin.sqrt(1.5 *dolfin.tr(self.Sigma_dev.T*self.Sigma_dev))
+        elif (self.kinematics.dim == 3):
+            self.p_hydro = -(dolfin.tr(self.Sigma.T*self.kinematics.C))/3/self.kinematics.J
         self.P     = self.bulk.P     + self.dev.P
         self.sigma = self.bulk.sigma + self.dev.sigma
-        self.sigma_old = self.bulk.sigma_old + self.dev.sigma_old
-
+        self.Sigma_dev = self.Sigma + self.p_hydro * self.kinematics.J * self.kinematics.C_inv
+        self.Sigma_VM = dolfin.sqrt(1.5 *dolfin.tr(self.Sigma_dev.T*self.Sigma_dev))
 
 
     # def get_free_energy(self, *args, **kwargs):
