@@ -127,7 +127,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             if (bcs == "kubc"):
                 self.add_kubc()
             elif (bcs == "pbc"):
-                pinpoint_sd = dmech.PinpointSubDomain(coords=mesh.coordinates()[-1], tol=1e-3)
+                pinpoint_sd = dmech.PinpointSubDomain(coords=mesh.coordinates()[0], tol=1e-3)
                 self.add_constraint(
                     V=self.get_displacement_perturbation_function_space(), 
                     val=[0.]*self.dim,
