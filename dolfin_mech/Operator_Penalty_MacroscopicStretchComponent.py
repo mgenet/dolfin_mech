@@ -7,7 +7,7 @@
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
+### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -23,31 +23,30 @@ from .Operator import Operator
 class MacroscopicStretchComponentPenaltyOperator(Operator):
 
     def __init__(self,
-            U_bar, U_bar_test,
-            sol, sol_test,
-            comp_i, comp_j,
+            U_bar,
+            U_bar_test,
+            i, j,
             measure,
-            comp_val=None, comp_ini=None, comp_fin=None,
+            U_bar_ij_val=None, U_bar_ij_ini=None, U_bar_ij_fin=None,
             pen_val=None, pen_ini=None, pen_fin=None):
 
         self.measure = measure
 
-        self.tv_comp = dmech.TimeVaryingConstant(
-            val=comp_val, val_ini=comp_ini, val_fin=comp_fin)
-        comp = self.tv_comp.val
+        self.tv_U_bar_ij = dmech.TimeVaryingConstant(
+            val=U_bar_ij_val, val_ini=U_bar_ij_ini, val_fin=U_bar_ij_fin)
+        U_bar_ij = self.tv_U_bar_ij.val
 
         self.tv_pen = dmech.TimeVaryingConstant(
             val=pen_val, val_ini=pen_ini, val_fin=pen_fin)
         pen = self.tv_pen.val
 
-        Pi = (pen/2) * (U_bar[comp_i,comp_j] - comp)**2 * self.measure
-        self.res_form = dolfin.derivative(Pi, U_bar[comp_i,comp_j], U_bar_test[comp_i,comp_j])
-        # self.res_form = dolfin.derivative(Pi, sol, sol_test)
+        Pi = (pen/2) * (U_bar[i,j] - U_bar_ij)**2 * self.measure
+        self.res_form = dolfin.derivative(Pi, U_bar[i,j], U_bar_test[i,j])
 
 
 
     def set_value_at_t_step(self,
             t_step):
 
-        self.tv_comp.set_value_at_t_step(t_step)
+        self.tv_U_bar_ij.set_value_at_t_step(t_step)
         self.tv_pen.set_value_at_t_step(t_step)

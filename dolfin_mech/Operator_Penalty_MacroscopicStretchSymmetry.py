@@ -18,8 +18,9 @@ from .Operator import Operator
 class MacroscopicStretchSymmetryPenaltyOperator(Operator):
 
     def __init__(self,
-            U_bar, U_bar_test,
-            sol, sol_test,
+            U_bar,
+            sol,
+            sol_test,
             measure,
             pen_val=None, pen_ini=None, pen_fin=None):
 

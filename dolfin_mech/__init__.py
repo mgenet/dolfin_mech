@@ -33,6 +33,7 @@ from .Material_Elastic_Porous import *
 from .Material_Inelastic import *
 from .NonlinearSolver import *
 from .Operator import *
+from .Operator_Constraint_MacroscopicStressComponent import *
 from .Operator_HyperElasticity import *
 from .Operator_HyperHydrostaticPressure import *
 from .Operator_HyperIncompressibility import *
@@ -46,9 +47,11 @@ from .Operator_Loading_SurfacePressure import *
 from .Operator_Loading_SurfacePressureGradient import *
 from .Operator_Loading_SurfaceTension import *
 from .Operator_Loading_VolumeForce import *
-from .Operator_MacroscopicStress import *
+from .Operator_MicroPoro_DeformedFluidVolume import *
+from .Operator_MicroPoro_DeformedSolidVolume import *
+from .Operator_MicroPoro_DeformedTotalVolume import *
 from .Operator_Penalty_DirectionalDisplacement import *
-from .Operator_Penalty_MacroscopicStressComponent import *
+from .Operator_Penalty_LagrangeMultiplierComponent import *
 from .Operator_Penalty_MacroscopicStretchComponent import *
 from .Operator_Penalty_MacroscopicStretchSymmetry import *
 from .Operator_Penalty_NormalDisplacement import *
@@ -56,7 +59,6 @@ from .Operator_Poro_Pf import *
 from .Operator_Poro_Wbulk import *
 from .Operator_Poro_Wpore import *
 from .Operator_Poro_Wskel import *
-from .Operator_TensorSymmetry import *
 from .Problem import *
 from .Problem_Elasticity import *
 from .Problem_Hyperelasticity import *
