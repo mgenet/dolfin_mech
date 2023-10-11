@@ -13,8 +13,8 @@ import dolfin
 ################################################################################
 
 def RivlinCube_Mesh(
-        dim=3,
-        params={}):
+        dim    : int  = 3 ,
+        params : dict = {}):
 
     X0 = params.get("X0", 0.)
     X1 = params.get("X1", 1.)
@@ -23,6 +23,8 @@ def RivlinCube_Mesh(
     if (dim==3): Z0 = params.get("Z0", 0.)
     if (dim==3): Z1 = params.get("Z1", 1.)
     l = params.get("l", 1.)
+
+    mesh_filebasename = params.get("mesh_filebasename", "mesh")
 
     LX = X1-X0
     LY = Y1-Y0
@@ -42,9 +44,11 @@ def RivlinCube_Mesh(
             dolfin.Point(X0, Y0, Z0), dolfin.Point(X1, Y1, Z1),
             NX, NY, NZ)
 
-    # xdmf_file_mesh = dolfin.XDMFFile("mesh.xdmf")
-    # xdmf_file_mesh.write(mesh)
-    # xdmf_file_mesh.close()
+    xdmf_file_mesh = dolfin.XDMFFile(mesh_filebasename+".xdmf")
+    xdmf_file_mesh.write(mesh)
+    xdmf_file_mesh.close()
+
+    dolfin.File(mesh_filebasename+".xml") << mesh
 
     ################################################## Subdomains & Measures ###
 

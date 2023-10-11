@@ -16,15 +16,16 @@ import dolfin_mech as dmech
 ################################################################################
 
 def RivlinCube_Elasticity(
-        dim=3,
-        incomp=0,
-        multimaterial=0,
-        cube_params={},
-        mat_params={},
-        step_params={},
-        load_params={},
-        res_basename="RivlinCube_Elasticity",
-        verbose=0):
+        dim           : int  = 3                      ,
+        incomp        : bool = 0                      ,
+        multimaterial : bool = 0                      ,
+        cube_params   : dict = {}                     ,
+        mat_params    : dict = {}                     ,
+        step_params   : dict = {}                     ,
+        const_params  : dict = {}                     ,
+        load_params   : dict = {}                     ,
+        res_basename  : str  = "RivlinCube_Elasticity",
+        verbose       : bool = 0                      ):
 
     ################################################################### Mesh ###
 
@@ -94,13 +95,22 @@ def RivlinCube_Elasticity(
 
     ########################################## Boundary conditions & Loading ###
 
-    load_type = load_params.get("type", "disp")
+    const_type = const_params.get("type", "sym")
 
-    if ("inertia" not in load_type):
+    if (const_type in ("symx", "sym")):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    if (const_type in ("symy", "sym")) and (dim >= 2):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
-        if (dim==3):
-            problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    if (const_type in ("symz", "sym")) and (dim >= 3):
+        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    if (const_type in ("blox")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
+    if (const_type in ("bloy")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
+    if (const_type in ("bloz")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
+
+    load_type = load_params.get("type", "disp")
 
     Deltat = step_params.get("Deltat", 1.)
     dt_ini = step_params.get("dt_ini", 1.)

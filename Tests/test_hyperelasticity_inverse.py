@@ -35,6 +35,11 @@ for dim in dim_lst:
     load_lst += ["pres0_inertia"]
     for load in load_lst:
 
+        if (load in ("pres0", "pres0_multi")):
+            const_params = {"type":"sym"}
+        elif (load in ("pres0_inertia")):
+            const_params = {"type":"None"}
+
         print("dim =",dim)
         print("load =",load)
 
@@ -43,12 +48,14 @@ for dim in dim_lst:
         res_basename += "-load="+str(load)
 
         dmech.RivlinCube_Hyperelasticity(
-            dim=dim,
-            inverse=1,
-            mat_params={"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},
-            step_params={"dt_min":0.1},
-            load_params={"type":load},
-            res_basename=res_folder+"/"+res_basename,
-            verbose=0)
+            dim          = dim                                                ,
+            inverse      = 1                                                  ,
+            cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"}        ,
+            mat_params   = {"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},
+            step_params  = {"dt_min":0.1}                                     ,
+            const_params = const_params                                  ,
+            load_params  = {"type":load}                                      ,
+            res_basename = res_folder+"/"+res_basename                        ,
+            verbose      = 0                                                  )
 
         test.test(res_basename)

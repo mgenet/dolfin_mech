@@ -50,11 +50,12 @@ for dim in dim_lst:
         res_basename += "-load="+str(load)
 
         dmech.RivlinCube_Hyperelasticity(
-            dim=dim,
-            mat_params={"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},
-            step_params={"dt_min":0.1},
-            load_params={"type":load},
-            res_basename=res_folder+"/"+res_basename,
-            verbose=0)
+            dim          = dim                                                ,
+            cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"}        ,
+            mat_params   = {"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},
+            step_params  = {"dt_min":0.1}                                     ,
+            load_params  = {"type":load}                                      ,
+            res_basename = res_folder+"/"+res_basename                        ,
+            verbose      = 0                                                  )
 
         test.test(res_basename)

@@ -42,13 +42,13 @@ for dim in dim_lst:
         res_basename += "-incomp="+str(incomp)
 
         dmech.RivlinCube_Hyperelasticity(
-            dim=dim,
-            incomp=incomp,
-            multimaterial=1,
-            cube_params={"l":0.1},
-            step_params={"dt_min":0.1},
-            load_params={"type":"disp"},
-            res_basename=res_folder+"/"+res_basename,
-            verbose=0)
+            dim           = dim                                                 ,
+            incomp        = incomp                                              ,
+            multimaterial = 1                                                   ,
+            cube_params   = {"l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
+            step_params   = {"dt_min":0.1}                                      ,
+            load_params   = {"type":"disp"}                                     ,
+            res_basename  = res_folder+"/"+res_basename                         ,
+            verbose       = 0                                                   )
 
         test.test(res_basename)

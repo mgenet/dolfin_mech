@@ -4,6 +4,8 @@
 ###                                                                          ###
 ### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
+### And Alice Peyraut, 2023                                                  ###
+###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ################################################################################
@@ -26,7 +28,6 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-
 move, U_move = False, None
 inverse_lst = [0,1]
 dim_lst  = []
@@ -34,10 +35,10 @@ dim_lst += [2]
 dim_lst += [3]
 for dim in dim_lst:
 
-    if dim==2:
-        cube_params = {"X1":1., "Y1":1., "l": 0.1}
-    else:
-        cube_params = {"X1":1., "Y1":1., "Z1":1., "l": 0.1}
+    cube_params = {"X1":1., "Y1":1., "l": 0.1}
+    if (dim==3):
+        cube_params["Z1"]:1.
+    cube_params["mesh_filebasename"] = res_folder+"/"+"mesh"
 
     load_lst  = []
     load_lst += [["volu", "volu0"]]

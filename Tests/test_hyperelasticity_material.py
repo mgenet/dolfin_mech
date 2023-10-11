@@ -63,11 +63,12 @@ for dim in dim_lst:
             res_basename += "-mat="+str(mat)
 
             dmech.RivlinCube_Hyperelasticity(
-                dim=dim,
-                incomp=incomp,
-                mat_params={"model":mat, "parameters":mat_params},
-                load_params={"type":"disp"},
-                res_basename=res_folder+"/"+res_basename,
-                verbose=0)
+                dim          = dim                                        ,
+                incomp       = incomp                                     ,
+                cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"},
+                mat_params   = {"model":mat, "parameters":mat_params}     ,
+                load_params  = {"type":"disp"}                            ,
+                res_basename = res_folder+"/"+res_basename                ,
+                verbose      = 0                                          )
 
             test.test(res_basename)
