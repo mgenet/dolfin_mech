@@ -183,11 +183,12 @@ class SurfaceTensionLoadingOperatorNew(Operator):
         
         S_hat = S_area/self.S0
 
-        # gamma_S = gamma * (1 - 10*dolfin.exp(-2.35*S_area/self.S0))
+        # gamma_S_inf = gamma * (1 - 10*dolfin.exp(-2.35*S_area/self.S0))
         # gamma_S = gamma * (1 - 1.6*dolfin.exp(-0.5*S/self.S0))
         # gamma_S = gamma * (1 - 2.7*dolfin.exp(-1*S_area/self.S0))
-        gamma_S_inf = gamma * (0.5*S_area/self.S0 - 0.5)
+        # gamma_S_inf = gamma * (0.5*S_area/self.S0 - 0.5)
         gamma_S_inf = gamma * (1.012369 + (-0.03803987 - 1.012369)/(1 + (S_hat/1.723308)**5.623721))
+        gamma_S_inf = gamma * (1.036431 + (-0.005382121 - 1.036431)/(1 + (S_hat/1.970393)**7.642404))
         
         # S_hat = S/self.S0
         # a = 0.0523
@@ -205,6 +206,7 @@ class SurfaceTensionLoadingOperatorNew(Operator):
         b = 2.19311234e-03
         c = 2.35165948e+00
         gamma_S_def = gamma*(a + b*dolfin.exp(c*S_hat))
+        gamma_S_def = gamma*(0.01679474 - (-0.0004253534/-3.275726)*(1 - dolfin.exp(+3.275726*S_hat)))
 
         # a = 11058820000
         # b = 21.839
@@ -220,7 +222,7 @@ class SurfaceTensionLoadingOperatorNew(Operator):
         T = dolfin.sqrt(dolfin.inner(FmTN, FmTN))
         n = FmTN/T
         P = I - dolfin.outer(n,n)
-        taus = gamma_S_def * P
+        taus = gamma * P
         fs = dolfin.dot(P, dolfin.div(taus))
         S0 = dolfin.assemble(dolfin.Constant(1)*self.measure)
 
