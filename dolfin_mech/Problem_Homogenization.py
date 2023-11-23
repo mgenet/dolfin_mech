@@ -12,12 +12,9 @@
 ##############################################################################
 
 import dolfin
+import numpy
 
 import dolfin_mech as dmech
-
-# from __future__ import print_function
-import dolfin
-import numpy
 
 #############################################################################
 
@@ -33,32 +30,37 @@ class HomogenizationProblem():
             bbox,
             vertices=None):
 
-
         self.mesh = mesh
         self.E_s = mat_params["E"]
         self.nu_s = mat_params["nu"]
         self.dim = dim
-        self.vertices=vertices
-        self.vol=vol
+        self.vertices = vertices
+        self.vol = vol
 
-        self.bbox=bbox
+        self.bbox = bbox
         # print ("self.vol:", self.vol)
-
-
     
         self.material_parameters = [(self.E_s, self.nu_s)]
 
 
+
     def eps(self, v):
+
         return dolfin.sym(dolfin.grad(v))
 
+
+
     def sigma(self, v, i, Eps):
+
         E, nu = self.material_parameters[i]
         lmbda = E*nu/(1+nu)/(1-2*nu)
         mu = E/2/(1+nu)
         return lmbda*dolfin.tr(self.eps(v) + Eps) * dolfin.Identity(self.dim) + 2*mu*(self.eps(v)+Eps)
 
+
+
     def Voigt2strain(self, s):
+
         if (self.dim==2):
             strain_tensor = numpy.array([[s[0]   , s[2]/2.],
                                          [s[2]/2., s[1]   ]])
@@ -68,8 +70,11 @@ class HomogenizationProblem():
                                          [s[4]/2 , s[3]/2 ,  s[2]  ]])
         return strain_tensor
 
+
+
     def get_macro_strain(self, i):
         """returns the macroscopic strain for the 3 elementary load cases"""
+
         if (self.dim==2):
             Eps_Voigt = numpy.zeros(3)
         if (self.dim==3):
@@ -78,14 +83,19 @@ class HomogenizationProblem():
         return self.Voigt2strain(Eps_Voigt)
 
 
+
     def stress2Voigt(self, s):
+
         if (self.dim==2):
             stress_vector = dolfin.as_vector([s[0,0], s[1,1], s[0,1]])
         if (self.dim==3):
             stress_vector = dolfin.as_vector([s[0,0], s[1,1], s[2,2], s[1,2], s[0,2], s[0,1]])
         return stress_vector
 
+
+
     def get_lambda_and_mu(self):
+
         Ve = dolfin.VectorElement("CG", self.mesh.ufl_cell(), 2)
         Re = dolfin.VectorElement("R", self.mesh.ufl_cell(), 0)
         W = dolfin.FunctionSpace(self.mesh, dolfin.MixedElement([Ve, Re]), constrained_domain=dmech.PeriodicSubDomain(self.dim, self.bbox, self.vertices))
@@ -157,8 +167,8 @@ class HomogenizationProblem():
 
 
 
-
     def get_kappa(self):
+
         p_f = 1
 
         coord = self.mesh.coordinates()
@@ -175,7 +185,6 @@ class HomogenizationProblem():
                                 [xmax, ymin],
                                 [xmax, ymax],
                                 [xmin, ymax]])
-
             
         tol = 1E-8
         vv = vertices
@@ -184,7 +193,6 @@ class HomogenizationProblem():
         # check if UC vertices form indeed a parallelogram
         assert numpy.linalg.norm(vv[2, :]-vv[3, :] - a1) <= tol
         assert numpy.linalg.norm(vv[2, :]-vv[1, :] - a2) <= tol
-
 
         ################################################## Subdomains & Measures ###
 
@@ -204,8 +212,7 @@ class HomogenizationProblem():
 
         class BoundaryY1(dolfin.SubDomain):
             def inside(self,x,on_boundary):
-                return on_boundary and dolfin.near(x[1],ymax,tol)
-            
+                return on_boundary and dolfin.near(x[1],ymax,tol)            
 
         if (self.dim ==3):
             class BoundaryZ0(dolfin.SubDomain):
@@ -220,7 +227,6 @@ class HomogenizationProblem():
         boundaries_mf = dolfin.MeshFunction("size_t", self.mesh, self.mesh.topology().dim() - 1)
         boundaries_mf.set_all(0)
 
-        # bsup = BoundaryHigher()
         bX0 = BoundaryX0()
         bY0 = BoundaryY0()
         bX1 = BoundaryX1()
@@ -229,7 +235,6 @@ class HomogenizationProblem():
             bZ0 = BoundaryZ0()
             bZ1 = BoundaryZ1()
 
-        # bsup.mark(boundary_markers, 8)
         bX0.mark(boundaries_mf, 1)
         bY0.mark(boundaries_mf, 2)
         bX1.mark(boundaries_mf, 3)
@@ -238,25 +243,24 @@ class HomogenizationProblem():
             bZ0.mark(boundaries_mf, 5)
             bZ1.mark(boundaries_mf, 6)
 
-    
-
-        dV = dolfin.Measure("dx",domain=self.mesh)
+        dV = dolfin.Measure(
+            "dx",
+            domain=self.mesh)
         dS = dolfin.Measure(
-                    "exterior_facet",
-                    domain=self.mesh,
-                    subdomain_data=boundaries_mf)
-
+            "exterior_facet",
+            domain=self.mesh,
+            subdomain_data=boundaries_mf)
 
         ############################################################# Functions #######
 
         def eps(v_bar):
             return dolfin.sym(dolfin.grad(v_bar))
+
         def sigma(v_bar, i, Eps):
             E, nu = self.material_parameters[i]
             lmbda = E*nu/(1+nu)/(1-2*nu)
             mu = E/2/(1+nu)
             return lmbda*dolfin.tr(eps(v_bar) + Eps)*dolfin.Identity(self.dim) + 2*mu*(eps(v_bar)+Eps)
-
 
         Ve = dolfin.VectorElement("CG", self.mesh.ufl_cell(), 2)
         Re = dolfin.VectorElement("R", self.mesh.ufl_cell(), 0)
@@ -288,8 +292,8 @@ class HomogenizationProblem():
         u_bar   = dolfin.dot(Eps, X-X_0)
         u_tot = u_bar + v
 
-
         ########################################################### Solver ###############
+
         pf = dolfin.Constant(p_f)
         N = dolfin.FacetNormal(self.mesh)
 
