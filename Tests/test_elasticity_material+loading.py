@@ -75,7 +75,7 @@ for dim in dim_lst:
                 res_basename += "-incomp="+str(incomp)
                 res_basename += "-load="+str(load)
 
-                dmech.RivlinCube_Elasticity(
+                dmech.run_RivlinCube_Elasticity(
                     dim=dim,
                     incomp=incomp,
                     mat_params={"model":mat_model, "parameters":mat_params},

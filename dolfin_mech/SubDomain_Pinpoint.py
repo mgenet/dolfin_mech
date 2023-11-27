@@ -12,7 +12,7 @@
 ### Pontificia Universidad Católica, Santiago, Chile                         ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2021-2023                                    ###
+### And Mahdi Manoochehrtayebi, 2020-2023                                    ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###

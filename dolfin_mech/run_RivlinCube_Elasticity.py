@@ -15,32 +15,24 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def RivlinCube_Hyperelasticity(
-        dim                                    : int  = 3                           ,
-        inverse                                : bool = 0                           ,
-        incomp                                 : bool = 0                           ,
-        multimaterial                          : bool = 0                           ,
-        cube_params                            : dict = {}                          ,
-        mat_params                             : dict = {}                          ,
-        step_params                            : dict = {}                          ,
-        const_params                           : dict = {}                          ,
-        load_params                            : dict = {}                          ,
-        move                                   : dict = {}                          ,
-        get_results                            : bool = 0                           ,
-        res_basename                           : str  = "RivlinCube_Hyperelasticity",
-        write_vtus_with_preserved_connectivity : bool = False                       ,
-        verbose                                : bool = 0                           ):
+def run_RivlinCube_Elasticity(
+        dim           : int  = 3                      ,
+        incomp        : bool = 0                      ,
+        multimaterial : bool = 0                      ,
+        cube_params   : dict = {}                     ,
+        mat_params    : dict = {}                     ,
+        step_params   : dict = {}                     ,
+        const_params  : dict = {}                     ,
+        load_params   : dict = {}                     ,
+        res_basename  : str  = "run_RivlinCube_Elasticity",
+        verbose       : bool = 0                      ):
 
     ################################################################### Mesh ###
 
     if   (dim==2):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
     elif (dim==3):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
-
-    if move.get("move", False) == True :
-        Umove = move.get("U")
-        dolfin.ALE.move(mesh, Umove)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
     if (multimaterial):
         mat1_sd = dolfin.CompiledSubDomain("x[0] <= x0", x0=0.5)
@@ -58,11 +50,6 @@ def RivlinCube_Hyperelasticity(
 
     ################################################################ Problem ###
 
-    if (inverse):
-        problem_type = dmech.InverseHyperelasticityProblem
-    else:
-        problem_type = dmech.HyperelasticityProblem
-
     if (incomp):
         displacement_degree = 2 # MG20211219: Incompressibility requires displacement_degree >= 2 ?!
         w_incompressibility = 1
@@ -76,11 +63,11 @@ def RivlinCube_Hyperelasticity(
     if (multimaterial):
         elastic_behavior = None
         if (incomp):
-            mat1_mod = "NHMR"
-            mat2_mod = "NHMR"
+            mat1_mod = "H_dev"
+            mat2_mod = "H_dev"
         else:
-            mat1_mod = "CGNHMR"
-            mat2_mod = "CGNHMR"
+            mat1_mod = "H"
+            mat2_mod = "H"
         mat1_params = {
             "E":1.,
             "nu":0.5*(incomp)+0.3*(1-incomp)}
@@ -95,7 +82,7 @@ def RivlinCube_Hyperelasticity(
         elastic_behavior = mat_params
         elastic_behaviors = None
 
-    problem = problem_type(
+    problem = dmech.ElasticityProblem(
         mesh=mesh,
         domains_mf=domains_mf,
         define_facet_normals=1,
@@ -126,8 +113,8 @@ def RivlinCube_Hyperelasticity(
     load_type = load_params.get("type", "disp")
 
     Deltat = step_params.get("Deltat", 1.)
-    dt_ini = step_params.get("dt_ini", Deltat)
-    dt_min = step_params.get("dt_min", dt_ini)
+    dt_ini = step_params.get("dt_ini", 1.)
+    dt_min = step_params.get("dt_min", 1.)
 
     k_step = problem.add_step(
         Deltat=Deltat,
@@ -135,111 +122,37 @@ def RivlinCube_Hyperelasticity(
         dt_min=dt_min)
 
     if (load_type == "disp"):
-        u = load_params.get("u", 0.5)
+        u = load_params.get("u", 1.)
         problem.add_constraint(
             V=problem.get_displacement_function_space().sub(0),
             sub_domains=boundaries_mf,
             sub_domain_id=xmax_id,
             val_ini=0., val_fin=u,
             k_step=k_step)
-    elif (load_type == "volu0"):
-        f = load_params.get("f", 0.5)
+    elif (load_type == "volu"):
+        f = load_params.get("f", 1.)
         problem.add_volume_force0_loading_operator(
             measure=problem.dV,
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
             k_step=k_step)
-    elif (load_type == "volu"):
-        f = load_params.get("f", 0.5)
-        problem.add_volume_force_loading_operator(
-            measure=problem.dV,
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "surf0"):
+    elif (load_type == "surf"):
         f = load_params.get("f", 1.)
         problem.add_surface_force0_loading_operator(
             measure=problem.dS(xmax_id),
             F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
             k_step=k_step)
-    elif (load_type == "surf"):
-        f = load_params.get("f", 1.0)
-        problem.add_surface_force_loading_operator(
-            measure=problem.dS(xmax_id),
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "pres0"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pres0_multi"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pres0_inertia"):
-        p = load_params.get("p", -0.5)
-        problem.add_inertia_operator(
-            measure=problem.dV,
-            rho_val=1e-2,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0,P_fin=p,
-            k_step=k_step)
     elif (load_type == "pres"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure_loading_operator(
+        p = load_params.get("p", -1.)
+        problem.add_surface_pressure0_loading_operator(
             measure=problem.dS(xmax_id),
             P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pgra0"):
-        X0 = load_params.get("X0", [0.5]*dim)
-        N0 = load_params.get("N0", [1.]+[0.]*(dim-1))
-        P0 = load_params.get("P0", -0.5)
-        DP = load_params.get("DP", -0.25)
-        problem.add_surface_pressure_gradient0_loading_operator(
-            measure=problem.dS(),
-            X0_val=X0,
-            N0_val=N0,
-            P0_ini=0., P0_fin=P0,
-            DP_ini=0., DP_fin=DP,
             k_step=k_step)
     elif (load_type == "pgra"):
         X0 = load_params.get("X0", [0.5]*dim)
         N0 = load_params.get("N0", [1.]+[0.]*(dim-1))
-        P0 = load_params.get("P0", -0.5)
-        DP = load_params.get("DP", -0.25)
-        problem.add_surface_pressure_gradient_loading_operator(
+        P0 = load_params.get("P0", -1.0)
+        DP = load_params.get("DP", -0.5)
+        problem.add_surface_pressure_gradient0_loading_operator(
             measure=problem.dS(),
             X0_val=X0,
             N0_val=N0,
@@ -248,9 +161,9 @@ def RivlinCube_Hyperelasticity(
             k_step=k_step)
     elif (load_type == "tens"):
         gamma = load_params.get("gamma", 0.01)
-        problem.add_surface_tension_loading_operator(
+        problem.add_surface_tension0_loading_operator(
             measure=problem.dS,
-            gamma_ini=0., gamma_fin=gamma,
+            gamma_ini=0.0, gamma_fin=gamma,
             k_step=k_step)
 
     ################################################# Quantities of Interest ###
@@ -258,7 +171,6 @@ def RivlinCube_Hyperelasticity(
     problem.add_global_strain_qois()
     problem.add_global_stress_qois()
     if (incomp): problem.add_global_pressure_qoi()
-    if (inverse==0) and (dim==2): problem.add_global_out_of_plane_stress_qois()
 
     ################################################################# Solver ###
 
@@ -282,15 +194,10 @@ def RivlinCube_Hyperelasticity(
         print_sta=res_basename*verbose,
         write_qois=res_basename+"-qois",
         write_qois_limited_precision=1,
-        write_sol=res_basename*verbose,
-        write_vtus=res_basename*verbose,
-        write_vtus_with_preserved_connectivity=write_vtus_with_preserved_connectivity)
+        write_sol=res_basename*verbose)
 
     success = integrator.integrate()
     assert (success),\
         "Integration failed. Aborting."
 
     integrator.close()
-
-    if get_results:
-        return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))

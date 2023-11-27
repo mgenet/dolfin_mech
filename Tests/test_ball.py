@@ -49,7 +49,7 @@ for incomp in incomp_lst:
         res_basename += "-incomp="+str(incomp)
         res_basename += "-load="+str(load)
 
-        dmech.Ball_Hyperelasticity(
+        dmech.run_Ball_Hyperelasticity(
             incomp=incomp,
             mesh_params={"X0":0.5, "Y0":0.5, "Z0":0.5, "R":0.3, "l":0.03, "mesh_filebasename":res_folder+"/mesh"},
             mat_params={"model":mat_model, "parameters":mat_params},

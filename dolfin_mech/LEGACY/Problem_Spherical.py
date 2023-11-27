@@ -208,7 +208,7 @@ class SphericalProblem(Problem):
             dt=None):
 
         self.Pi = sum([subdomain.Psi * 4 * math.pi * self.R**2 * self.dR(subdomain.id) for subdomain in self.subdomains])
-        # print (self.Pi)
+        # print(self.Pi)
 
         self.res_form = dolfin.derivative(
             self.Pi,

@@ -12,7 +12,7 @@ import dolfin
 
 ################################################################################
 
-def RivlinCube_Mesh(
+def run_RivlinCube_Mesh(
         dim    : int  = 3 ,
         params : dict = {}):
 

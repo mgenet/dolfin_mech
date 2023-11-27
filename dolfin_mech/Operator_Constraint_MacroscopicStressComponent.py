@@ -46,17 +46,14 @@ class MacroscopicStressComponentConstraintOperator(Operator):
             val=sigma_bar_ij_val, val_ini=sigma_bar_ij_ini, val_fin=sigma_bar_ij_fin)
         sigma_bar_ij = self.tv_sigma_bar_ij.val
 
-
         dim = U_bar.ufl_shape[0]
         I_bar = dolfin.Identity(dim)
         F_bar = I_bar + U_bar
         J_bar = dolfin.det(F_bar)
         v = J_bar * V0
 
-
         sigma_tilde = self.material.sigma * self.kinematics.J - (v/Vs0 - self.kinematics.J) * pf * I_bar
         self.res_form = U_bar_test[i,j] * (sigma_tilde[i,j] - (v/Vs0) * sigma_bar_ij) * self.measure
-
 
 
 

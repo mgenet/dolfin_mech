@@ -20,7 +20,7 @@ from .Material_Elastic import ElasticMaterial
 
 ################################################################################
 
-class ExponentialOgdenCiarletGeymonat(ElasticMaterial):
+class ExponentialOgdenCiarletGeymonatElasticMaterial(ElasticMaterial):
 
 
 

@@ -16,13 +16,13 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def Ball_Hyperelasticity(
+def run_HeartSlice_Hyperelasticity(
         incomp=0,
         mesh_params={},
         mat_params={},
         step_params={},
         load_params={},
-        res_basename="Ball_Hyperelasticity",
+        res_basename="run_HeartSlice_Hyperelasticity",
         write_vtus_with_preserved_connectivity=False,
         verbose=0):
 
@@ -30,10 +30,10 @@ def Ball_Hyperelasticity(
 
     X0 = mesh_params.get("X0", 0.5)
     Y0 = mesh_params.get("Y0", 0.5)
-    Z0 = mesh_params.get("Z0", 0.5)
-    R  = mesh_params.get("R" , 0.3)
+    Ri = mesh_params.get("Ri", 0.2)
+    Re = mesh_params.get("Re", 0.4)
 
-    mesh, boundaries_mf, S_id = dmech.Ball_Mesh(
+    mesh, boundaries_mf, Si_id, Se_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd = dmech.run_HeartSlice_Mesh(
         params=mesh_params)
 
     ################################################################ Problem ###
@@ -47,6 +47,7 @@ def Ball_Hyperelasticity(
         mesh=mesh,
         define_facet_normals=1,
         boundaries_mf=boundaries_mf,
+        points_mf=points_mf,
         displacement_degree=displacement_degree,
         quadrature_degree="default",
         w_incompressibility=incomp,
@@ -66,26 +67,85 @@ def Ball_Hyperelasticity(
     load_type = load_params.get("type", "disp")
 
     if (load_type == "disp"): # MG20220813: It would be possible to impose the spatially varying displacement directly through an expression, but this would need to be implemented within Constraint, e.g. with a TimeVaryingExpression.
-        surface_nodes_coords = [node_coords for node_coords in mesh.coordinates() if dolfin.near((node_coords[0]-X0)**2 + (node_coords[1]-Y0)**2 + (node_coords[2]-Z0)**2, R**2, eps=1e-3)]
-        dR = load_params.get("dR", +0.1)
-        for X in surface_nodes_coords:
-            eR = numpy.subtract(X, [X0, Y0, Z0])
-            eR /= numpy.linalg.norm(eR)
-            U = dR * eR
+        internal_nodes_coords = [node_coords for node_coords in mesh.coordinates() if dolfin.near((node_coords[0]-X0)**2 + (node_coords[1]-Y0)**2, Ri**2, eps=1e-3)]
+        # print(len(internal_nodes_coords))
+        dRi = load_params.get("dRi", -0.10     )
+        dTi = load_params.get("dTi", -math.pi/4)
+        for X in internal_nodes_coords:
+            X_inplane = numpy.array(X) - numpy.array([X0,Y0])
+            R = numpy.linalg.norm(X_inplane)
+            T = math.atan2(X_inplane[1], X_inplane[0])
+            r = R + dRi
+            t = T + dTi
+            x_inplane = numpy.array([r * math.cos(t), r * math.sin(t)])
+            x = numpy.array([X0,Y0]) + x_inplane
+            U = x - X
             # X_sd = dolfin.AutoSubDomain(lambda x, on_boundary: dolfin.near(x[0], X[0], eps=1e-3) and dolfin.near(x[1], X[1], eps=1e-3)) # MG20220813: OMG this behaves so weird!
-            X_sd = dolfin.CompiledSubDomain("near(x[0], x0) && near(x[1], y0) && near(x[2], z0)", x0=X[0], y0=X[1], z0=X[2])
+            X_sd = dolfin.CompiledSubDomain("near(x[0], x0) && near(x[1], y0)", x0=X[0], y0=X[1])
             problem.add_constraint(
                 V=problem.get_displacement_function_space(),
                 sub_domain=X_sd,
-                val_ini=[0.,0.,0.], val_fin=U,
+                val_ini=[0.,0.], val_fin=U,
                 k_step=k_step,
                 method="pointwise")
+        external_nodes_coords = [node_coords for node_coords in mesh.coordinates() if dolfin.near((node_coords[0]-X0)**2 + (node_coords[1]-Y0)**2, Re**2, eps=1e-3)]
+        # print(len(external_nodes_coords))
+        dRe = load_params.get("dRe", -0.05     )
+        dTe = load_params.get("dTe", -math.pi/8)
+        for X in external_nodes_coords:
+            X_inplane = numpy.array(X) - numpy.array([X0,Y0])
+            R = numpy.linalg.norm(X_inplane)
+            T = math.atan2(X_inplane[1], X_inplane[0])
+            r = R + dRe
+            t = T + dTe
+            x_inplane = numpy.array([r * math.cos(t), r * math.sin(t)])
+            x = numpy.array([X0,Y0]) + x_inplane
+            U = x - X
+            # X_sd = dolfin.AutoSubDomain(lambda x, on_boundary: dolfin.near(x[0], X[0], eps=1e-3) and dolfin.near(x[1], X[1], eps=1e-3)) # MG20220813: OMG this behaves so weird!
+            X_sd = dolfin.CompiledSubDomain("near(x[0], x0) && near(x[1], y0)", x0=X[0], y0=X[1])
+            problem.add_constraint(
+                V=problem.get_displacement_function_space(),
+                sub_domain=X_sd,
+                val_ini=[0.,0.], val_fin=U,
+                k_step=k_step,
+                method="pointwise")
+    elif (load_type == "pres"):
+        problem.add_constraint(
+            V=problem.get_displacement_function_space().sub(1),
+            sub_domain=x1_sd,
+            val=0.,
+            method="pointwise")
+        problem.add_constraint(
+            V=problem.get_displacement_function_space().sub(0),
+            sub_domain=x2_sd,
+            val=0.,
+            method="pointwise")
+        problem.add_constraint(
+            V=problem.get_displacement_function_space().sub(1),
+            sub_domain=x3_sd,
+            val=0.,
+            method="pointwise")
+        problem.add_constraint(
+            V=problem.get_displacement_function_space().sub(0),
+            sub_domain=x4_sd,
+            val=0.,
+            method="pointwise")
+        p = load_params.get("p", 0.1)
+        problem.add_surface_pressure_loading_operator(
+            measure=problem.dS(Si_id),
+            P_ini=0, P_fin=p,
+            k_step=k_step)
 
     ################################################# Quantities of Interest ###
 
     problem.add_point_displacement_qoi(
-        name="U",
-        coordinates=[X0+R, Y0, Z0],
+        name="ui",
+        coordinates=[X0+Ri, Y0],
+        component=0)
+
+    problem.add_point_position_qoi(
+        name="ri",
+        coordinates=[X0+Ri, Y0],
         component=0)
 
     ################################################################# Solver ###

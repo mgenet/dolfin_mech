@@ -4,6 +4,9 @@
 ###                                                                          ###
 ### Created by Martin Genet, 2018-2023                                       ###
 ###                                                                          ###
+### École Polytechnique, Palaiseau, France                                   ###
+###                                                                          ###
+###                                                                          ###
 ### And Alice Peyraut, 2023                                                  ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
@@ -62,7 +65,7 @@ for dim in dim_lst:
             res_basename += "-dim="+str(dim)
             res_basename += "-load="+str(load)
 
-            U, V=dmech.RivlinCube_Hyperelasticity(
+            U, V=dmech.run_RivlinCube_Hyperelasticity(
                 dim=dim,
                 cube_params=cube_params,
                 mat_params={"model":"CGNHMR", "parameters":{"E":1., "nu":0.3, "dim":dim}},

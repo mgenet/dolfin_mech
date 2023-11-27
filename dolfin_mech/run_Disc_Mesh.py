@@ -14,13 +14,12 @@ import meshio
 
 ################################################################################
 
-def HeartSlice_Mesh(
-        params={}):
+def run_Disc_Mesh(
+        params : dict = {}):
 
     X0 = params.get("X0", 0.5)
     Y0 = params.get("Y0", 0.5)
-    Ri = params.get("Ri", 0.2)
-    Re = params.get("Re", 0.4)
+    R  = params.get("R" , 0.3)
     l  = params.get("l" , 0.1)
 
     mesh_filebasename = params.get("mesh_filebasename", "mesh")
@@ -31,26 +30,18 @@ def HeartSlice_Mesh(
     gmsh.clear()
     factory = gmsh.model.geo
 
-    p0  = factory.addPoint(x=X0   , y=Y0   , z=0, meshSize=l)
-    p11 = factory.addPoint(x=X0+Ri, y=Y0   , z=0, meshSize=l)
-    p12 = factory.addPoint(x=X0   , y=Y0+Ri, z=0, meshSize=l)
-    p13 = factory.addPoint(x=X0-Ri, y=Y0   , z=0, meshSize=l)
-    p14 = factory.addPoint(x=X0   , y=Y0-Ri, z=0, meshSize=l)
-    p21 = factory.addPoint(x=X0+Re, y=Y0   , z=0, meshSize=l)
-    p22 = factory.addPoint(x=X0   , y=Y0+Re, z=0, meshSize=l)
-    p23 = factory.addPoint(x=X0-Re, y=Y0   , z=0, meshSize=l)
-    p24 = factory.addPoint(x=X0   , y=Y0-Re, z=0, meshSize=l)
+    p0 = factory.addPoint(x=X0  , y=Y0  , z=0, meshSize=l)
+    p1 = factory.addPoint(x=X0+R, y=Y0  , z=0, meshSize=l)
+    p2 = factory.addPoint(x=X0  , y=Y0+R, z=0, meshSize=l)
+    p3 = factory.addPoint(x=X0-R, y=Y0  , z=0, meshSize=l)
+    p4 = factory.addPoint(x=X0  , y=Y0-R, z=0, meshSize=l)
 
-    l11 = factory.addCircleArc(p11, p0, p12)
-    l12 = factory.addCircleArc(p12, p0, p13)
-    l13 = factory.addCircleArc(p13, p0, p14)
-    l14 = factory.addCircleArc(p14, p0, p11)
-    l21 = factory.addCircleArc(p21, p0, p22)
-    l22 = factory.addCircleArc(p22, p0, p23)
-    l23 = factory.addCircleArc(p23, p0, p24)
-    l24 = factory.addCircleArc(p24, p0, p21)
+    l1 = factory.addCircleArc(p1, p0, p2)
+    l2 = factory.addCircleArc(p2, p0, p3)
+    l3 = factory.addCircleArc(p3, p0, p4)
+    l4 = factory.addCircleArc(p4, p0, p1)
 
-    cl = factory.addCurveLoop([l11, l12, l13, l14, l21, l22, l23, l24])
+    cl = factory.addCurveLoop([l1, l2, l3, l4])
 
     s = factory.addPlaneSurface([cl])
 
@@ -86,24 +77,15 @@ def HeartSlice_Mesh(
 
     boundaries_mf.set_all(0)
 
-    Si_sd = dolfin.AutoSubDomain(
+    S_sd = dolfin.AutoSubDomain(
         lambda x, on_boundary:
             on_boundary and\
             dolfin.near(
                 (x[0]-X0)**2 + (x[1]-Y0)**2,
-                Ri**2,
+                R**2,
                 eps=1e-3))
 
-    Se_sd = dolfin.AutoSubDomain(
-        lambda x, on_boundary:
-            on_boundary and\
-            dolfin.near(
-                (x[0]-X0)**2 + (x[1]-Y0)**2,
-                Re**2,
-                eps=1e-3))
-
-    Si_id = 1; Si_sd.mark(boundaries_mf, Si_id)
-    Se_id = 2; Se_sd.mark(boundaries_mf, Se_id)
+    S_id = 1; S_sd.mark(boundaries_mf, S_id)
 
     # dolfin.XDMFFile(mesh_filebasename+"-boundaries.xdmf").write(boundaries_mf)
 
@@ -116,22 +98,22 @@ def HeartSlice_Mesh(
 
     points_mf.set_all(0)
 
-    x1 = [X0+Ri, Y0]
+    x1 = [X0+R, Y0]
     x1_sd = dolfin.AutoSubDomain(
         lambda x, on_boundary:
             dolfin.near(x[0], x1[0], eps=1e-3)
         and dolfin.near(x[1], x1[1], eps=1e-3))
-    x2 = [X0, Y0+Ri]
+    x2 = [X0, Y0+R]
     x2_sd = dolfin.AutoSubDomain(
         lambda x, on_boundary:
             dolfin.near(x[0], x2[0], eps=1e-3)
         and dolfin.near(x[1], x2[1], eps=1e-3))
-    x3 = [X0-Ri, Y0]
+    x3 = [X0-R, Y0]
     x3_sd = dolfin.AutoSubDomain(
         lambda x, on_boundary:
             dolfin.near(x[0], x3[0], eps=1e-3)
         and dolfin.near(x[1], x3[1], eps=1e-3))
-    x4 = [X0, Y0-Ri]
+    x4 = [X0, Y0-R]
     x4_sd = dolfin.AutoSubDomain(
         lambda x, on_boundary:
             dolfin.near(x[0], x4[0], eps=1e-3)
@@ -144,4 +126,4 @@ def HeartSlice_Mesh(
 
     # dolfin.XDMFFile(mesh_filebasename+"-points.xdmf").write(points_mf)
 
-    return mesh, boundaries_mf, Si_id, Se_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd
+    return mesh, boundaries_mf, S_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd
