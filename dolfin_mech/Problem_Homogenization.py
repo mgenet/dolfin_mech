@@ -38,7 +38,7 @@ class HomogenizationProblem():
         self.vol = vol
 
         self.bbox = bbox
-        # print ("self.vol:", self.vol)
+        # print("self.vol:", self.vol)
     
         self.material_parameters = [(self.E_s, self.nu_s)]
 

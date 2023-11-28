@@ -138,8 +138,6 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
 
         return self.get_subsol(self.get_porosity_name())
 
-
-
     def get_porosity_function_space(self):
 
         return self.get_subsol_function_space(name=self.get_porosity_name())
@@ -242,7 +240,6 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-
     def set_subsols(self,
             displacement_degree=1,
             porosity_degree=None,
@@ -268,6 +265,7 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 self.add_lbda_subsol()
                 self.add_mu_subsol()
                 self.add_center_gravity_direct_problem_subsol()
+
 
 
     def set_subsols_gradient_inverse(self):
@@ -497,7 +495,6 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-
     def add_global_stress_qois(self,
             stress_type="cauchy"):
 
@@ -556,7 +553,7 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
         #     print(hasattr(operator, "pf"))
 
         # for step in self.steps:
-        #     print (step)
+        #     print(step)
         #     for operator in step.operators:
         #         print(type(operator))
         #         print(hasattr(operator, "pf"))

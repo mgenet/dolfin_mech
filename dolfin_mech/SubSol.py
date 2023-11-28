@@ -45,11 +45,11 @@ class SubSol():
 
     def init_with_val(self):
         init_val_str = self.init_val.astype(str).tolist()
-        # print (self.func.vector().get_local())
+        # print(self.func.vector().get_local())
         self.func.interpolate(dolfin.Expression(
             init_val_str,
             element=self.fe))
-        # print (self.func.vector().get_local())
+        # print(self.func.vector().get_local())
         self.func_old.interpolate(dolfin.Expression(
             init_val_str,
             element=self.fe))

@@ -50,13 +50,13 @@ class RelaxationInelasticMaterial(InelasticMaterial):
             problem,
             dt):
 
-        #print(problem)
-        #print(problem.unloaded_kinematics)
+        # print(problem)
+        # print(problem.unloaded_kinematics)
         if (hasattr(problem, "unloaded_kinematics")):
             Fr_dot = problem.unloaded_kinematics.Ee_mid / dolfin.Constant(self.taur)
         else:
             Fr_dot = problem.kinematics.Ee_mid / dolfin.Constant(self.taur)
-        #Fr_dot = (problem.kinematics.Fe_mid - self.I) / dolfin.Constant(self.taur)
+        # Fr_dot = (problem.kinematics.Fe_mid - self.I) / dolfin.Constant(self.taur)
 
         Fr_new = self.Fr_old + Fr_dot * dolfin.Constant(dt)
 

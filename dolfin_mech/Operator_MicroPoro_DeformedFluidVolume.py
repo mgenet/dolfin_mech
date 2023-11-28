@@ -18,7 +18,7 @@ import dolfin
 import dolfin_mech as dmech
 from .Operator import Operator
 
-# ################################################################################
+################################################################################
 
 class DeformedFluidVolumeOperator(Operator):
 

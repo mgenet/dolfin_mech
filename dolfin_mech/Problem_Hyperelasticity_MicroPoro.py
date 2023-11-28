@@ -61,7 +61,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             self.Vs0 = self.mesh_V0
             self.Vf0 = self.V0 - self.Vs0
 
-
             self.set_measures(
                 domains=domains_mf,
                 boundaries=boundaries_mf,
@@ -136,7 +135,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         return "U_bar"
 
-
     def add_macroscopic_stretch_subsol(self,
             degree=0,
             symmetry=None,
@@ -149,13 +147,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             symmetry=symmetry,
             init_val=init_val)
 
-
-
     def get_macroscopic_stretch_subsol(self):
 
         return self.get_subsol(self.get_macroscopic_stretch_name())
-
-
 
     def get_macroscopic_stretch_function_space(self):
 
@@ -167,8 +161,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         return "U_tilde"
 
-
-
     def add_displacement_perturbation_subsol(self,
             degree):
 
@@ -178,13 +170,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             family="CG",
             degree=self.displacement_perturbation_degree)
 
-
-
     def get_displacement_perturbation_subsol(self):
 
         return self.get_subsol(self.get_displacement_perturbation_name())
-
-
 
     def get_displacement_perturbation_function_space(self):
 
@@ -197,8 +185,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         return "v"
 
-
-
     def add_deformed_total_volume_subsol(self):
 
         self.add_scalar_subsol(
@@ -206,8 +192,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             family="R",
             degree=0,
             init_val=self.V0)
-
-
 
     def get_deformed_total_volume_subsol(self):
 
@@ -219,8 +203,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         return "v_s"
 
-
-
     def add_deformed_solid_volume_subsol(self):
 
         self.add_scalar_subsol(
@@ -228,8 +210,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             family="R",
             degree=0,
             init_val=self.mesh_V0)
-
-
 
     def get_deformed_solid_volume_subsol(self):
 
@@ -241,8 +221,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         return "v_f"
 
-
-
     def add_deformed_fluid_volume_subsol(self):
 
         self.add_scalar_subsol(
@@ -250,8 +228,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             family="R",
             degree=0,
             init_val=self.Vf0)
-
-
 
     def get_deformed_fluid_volume_subsol(self):
 
@@ -281,7 +257,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_solid_volume_subsol()
         # self.add_deformed_fluid_volume_subsol()
         # self.add_surface_area_subsol()
-
 
 
 
@@ -517,6 +492,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
     def add_macroscopic_stretch_qois(self):
+
         self.add_macroscopic_tensor_qois(
             basename="U_bar",
             get_subsol=self.get_macroscopic_stretch_subsol)
@@ -535,7 +511,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         F_bar = I_bar + U_bar
         J_bar = dolfin.det(F_bar)
         v = J_bar * self.V0
-
 
         self.add_qoi(
             name="sigma_bar_XX",

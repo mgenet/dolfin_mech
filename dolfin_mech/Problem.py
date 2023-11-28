@@ -248,7 +248,7 @@ class Problem():
             self.sol_fe = list(self.subsols.values())[0].fe
         else:
             self.sol_fe = dolfin.MixedElement([subsol.fe for subsol in self.subsols.values()])
-        #print(self.sol_fe)
+        # print(self.sol_fe)
 
 
 
@@ -684,15 +684,15 @@ class Problem():
         if (k_step is not None):
             self.res_form += sum([operator.res_form for operator in self.steps[k_step].operators if (operator.measure.integral_type() != "vertex")]) # MG20190513: Cannot use point integral within assemble_system
 
-        # print (self.res_form)
+        # print(self.res_form)
         # for operator in self.operators:
         #     if (operator.measure.integral_type() != "vertex"):
-        #         print (type(operator))
-        #         print (operator.res_form)
+        #         print(type(operator))
+        #         print(operator.res_form)
 
         self.jac_form = dolfin.derivative(
             self.res_form,
             self.sol_func,
             self.dsol_tria)
 
-        # print (self.jac_form)
+        # print(self.jac_form)

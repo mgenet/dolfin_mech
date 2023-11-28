@@ -25,7 +25,7 @@ class WskelLungElasticMaterial(ElasticMaterial):
 
         self.kinematics = kinematics
 
-        self.bulk = dmech.ExponentialOgdenCiarletGeymonat(kinematics, parameters)
+        self.bulk = dmech.ExponentialOgdenCiarletGeymonatElasticMaterial(kinematics, parameters)
         self.dev  = dmech.NeoHookeanMooneyRivlinElasticMaterial(kinematics, parameters)
 
         self.Psi   = self.bulk.Psi   + self.dev.Psi
