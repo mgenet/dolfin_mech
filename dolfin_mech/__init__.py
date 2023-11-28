@@ -65,10 +65,6 @@ from .Problem_Hyperelasticity_MicroPoro import *
 from .Problem_Hyperelasticity_Poro import *
 from .Problem_Hyperelasticity_Poro_Inverse import *
 from .QOI import *
-from .RivlinCube_Elasticity import *
-from .RivlinCube_Hyperelasticity import *
-from .RivlinCube_Mesh import *
-from .RivlinCube_PoroHyperelasticity import *
 from .Step import *
 from .SubDomain_Periodic import *
 from .SubDomain_Pinpoint import *
@@ -82,4 +78,8 @@ from .run_Ball_Hyperelasticity import *
 from .run_Ball_Mesh import *
 from .run_Disc_Hyperelasticity import *
 from .run_Disc_Mesh import *
+from .run_RivlinCube_Elasticity import *
+from .run_RivlinCube_Hyperelasticity import *
+from .run_RivlinCube_Mesh import *
+from .run_RivlinCube_PoroHyperelasticity import *
 from .write_VTU_file import *

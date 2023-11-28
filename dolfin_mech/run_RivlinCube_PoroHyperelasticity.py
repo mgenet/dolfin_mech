@@ -16,7 +16,7 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def RivlinCube_PoroHyperelasticity(
+def run_RivlinCube_PoroHyperelasticity(
         dim=3,
         inverse=0,
         cube_params={},
@@ -26,7 +26,7 @@ def RivlinCube_PoroHyperelasticity(
         step_params={},
         load_params={},
         inertia=0,
-        res_basename="RivlinCube_PoroHyperelasticity",
+        res_basename="run_RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         get_results=0,
         verbose=0):
@@ -34,9 +34,9 @@ def RivlinCube_PoroHyperelasticity(
     ################################################################### Mesh ###
 
     if   (dim==2):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
     elif (dim==3):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
     if move.get("move", False) == True :
         Umove = move.get("U")

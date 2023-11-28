@@ -82,7 +82,7 @@ for dim in dim_lst:
                     res_basename += "-scaling="+str(scaling)
                     res_basename += "-load="+str(load)
 
-                    dmech.RivlinCube_PoroHyperelasticity(
+                    dmech.run_RivlinCube_PoroHyperelasticity(
                         dim=dim,
                         inverse=inverse,
                         porosity_params={"type":porosity},

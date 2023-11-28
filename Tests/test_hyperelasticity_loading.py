@@ -49,7 +49,7 @@ for dim in dim_lst:
         res_basename += "-dim="+str(dim)
         res_basename += "-load="+str(load)
 
-        dmech.RivlinCube_Hyperelasticity(
+        dmech.run_RivlinCube_Hyperelasticity(
             dim          = dim                                                ,
             cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"}        ,
             mat_params   = {"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},

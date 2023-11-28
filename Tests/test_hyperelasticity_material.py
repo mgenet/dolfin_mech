@@ -62,7 +62,7 @@ for dim in dim_lst:
             res_basename += "-incomp="+str(incomp)
             res_basename += "-mat="+str(mat)
 
-            dmech.RivlinCube_Hyperelasticity(
+            dmech.run_RivlinCube_Hyperelasticity(
                 dim          = dim                                        ,
                 incomp       = incomp                                     ,
                 cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"},

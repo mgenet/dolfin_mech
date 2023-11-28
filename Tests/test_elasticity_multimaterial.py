@@ -41,7 +41,7 @@ for dim in dim_lst:
         res_basename += "-dim="+str(dim)
         res_basename += "-incomp="+str(incomp)
 
-        dmech.RivlinCube_Elasticity(
+        dmech.run_RivlinCube_Elasticity(
             dim=dim,
             incomp=incomp,
             multimaterial=1,
