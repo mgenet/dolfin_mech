@@ -159,6 +159,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
     problem.add_macroscopic_solid_stress_qois()
     problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
     problem.add_macroscopic_stress_qois()
+    problem.add_fluid_pressure_qoi()
 
     ################################################################# Solver ###
 
@@ -181,7 +182,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         print_out=res_basename*verbose,
         print_sta=res_basename*verbose,
         write_qois=res_basename+"-qois",
-        write_qois_limited_precision=1,
+        write_qois_limited_precision=False,
         write_sol=res_basename*verbose)
 
     success = integrator.integrate()
