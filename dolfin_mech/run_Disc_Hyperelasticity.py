@@ -16,13 +16,13 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def Disc_Hyperelasticity(
+def run_Disc_Hyperelasticity(
         incomp=0,
         mesh_params={},
         mat_params={},
         step_params={},
         load_params={},
-        res_basename="Disc_Hyperelasticity",
+        res_basename="run_Disc_Hyperelasticity",
         write_vtus_with_preserved_connectivity=False,
         verbose=0):
 
@@ -32,7 +32,7 @@ def Disc_Hyperelasticity(
     Y0 = mesh_params.get("Y0", 0.5)
     R  = mesh_params.get("R" , 0.3)
 
-    mesh, boundaries_mf, S_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd = dmech.Disc_Mesh(
+    mesh, boundaries_mf, S_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd = dmech.run_Disc_Mesh(
         params=mesh_params)
 
     ################################################################ Problem ###

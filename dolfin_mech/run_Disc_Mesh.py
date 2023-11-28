@@ -14,8 +14,8 @@ import meshio
 
 ################################################################################
 
-def Disc_Mesh(
-        params={}):
+def run_Disc_Mesh(
+        params : dict = {}):
 
     X0 = params.get("X0", 0.5)
     Y0 = params.get("Y0", 0.5)
