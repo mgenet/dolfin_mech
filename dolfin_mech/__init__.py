@@ -5,8 +5,6 @@ from .Expression_MeshFunction_cpp import *
 from .FOI import *
 from .HollowBox_Homogenization import *
 from .HollowBox_Mesh import *
-from .HeartSlice_Hyperelasticity import *
-from .HeartSlice_Mesh import *
 from .Kinematics import *
 from .Kinematics_Inverse import *
 from .Kinematics_Linearized import *
@@ -78,6 +76,8 @@ from .run_Ball_Hyperelasticity import *
 from .run_Ball_Mesh import *
 from .run_Disc_Hyperelasticity import *
 from .run_Disc_Mesh import *
+from .run_HeartSlice_Hyperelasticity import *
+from .run_HeartSlice_Mesh import *
 from .run_RivlinCube_Elasticity import *
 from .run_RivlinCube_Hyperelasticity import *
 from .run_RivlinCube_Mesh import *

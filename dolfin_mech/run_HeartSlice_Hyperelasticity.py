@@ -16,13 +16,13 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def HeartSlice_Hyperelasticity(
+def run_HeartSlice_Hyperelasticity(
         incomp=0,
         mesh_params={},
         mat_params={},
         step_params={},
         load_params={},
-        res_basename="HeartSlice_Hyperelasticity",
+        res_basename="run_HeartSlice_Hyperelasticity",
         write_vtus_with_preserved_connectivity=False,
         verbose=0):
 
@@ -33,7 +33,7 @@ def HeartSlice_Hyperelasticity(
     Ri = mesh_params.get("Ri", 0.2)
     Re = mesh_params.get("Re", 0.4)
 
-    mesh, boundaries_mf, Si_id, Se_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd = dmech.HeartSlice_Mesh(
+    mesh, boundaries_mf, Si_id, Se_id, points_mf, x1_sd, x2_sd, x3_sd, x4_sd = dmech.run_HeartSlice_Mesh(
         params=mesh_params)
 
     ################################################################ Problem ###
@@ -68,7 +68,7 @@ def HeartSlice_Hyperelasticity(
 
     if (load_type == "disp"): # MG20220813: It would be possible to impose the spatially varying displacement directly through an expression, but this would need to be implemented within Constraint, e.g. with a TimeVaryingExpression.
         internal_nodes_coords = [node_coords for node_coords in mesh.coordinates() if dolfin.near((node_coords[0]-X0)**2 + (node_coords[1]-Y0)**2, Ri**2, eps=1e-3)]
-        # print (len(internal_nodes_coords))
+        # print(len(internal_nodes_coords))
         dRi = load_params.get("dRi", -0.10     )
         dTi = load_params.get("dTi", -math.pi/4)
         for X in internal_nodes_coords:
@@ -89,7 +89,7 @@ def HeartSlice_Hyperelasticity(
                 k_step=k_step,
                 method="pointwise")
         external_nodes_coords = [node_coords for node_coords in mesh.coordinates() if dolfin.near((node_coords[0]-X0)**2 + (node_coords[1]-Y0)**2, Re**2, eps=1e-3)]
-        # print (len(external_nodes_coords))
+        # print(len(external_nodes_coords))
         dRe = load_params.get("dRe", -0.05     )
         dTe = load_params.get("dTe", -math.pi/8)
         for X in external_nodes_coords:
