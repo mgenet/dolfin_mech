@@ -14,7 +14,7 @@ import meshio
 
 ################################################################################
 
-def Ball_Mesh(
+def run_Ball_Mesh(
         params={}):
 
     X0 = params.get("X0", 0.5)

@@ -16,13 +16,13 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def Ball_Hyperelasticity(
+def run_Ball_Hyperelasticity(
         incomp=0,
         mesh_params={},
         mat_params={},
         step_params={},
         load_params={},
-        res_basename="Ball_Hyperelasticity",
+        res_basename="run_Ball_Hyperelasticity",
         write_vtus_with_preserved_connectivity=False,
         verbose=0):
 
@@ -33,7 +33,7 @@ def Ball_Hyperelasticity(
     Z0 = mesh_params.get("Z0", 0.5)
     R  = mesh_params.get("R" , 0.3)
 
-    mesh, boundaries_mf, S_id = dmech.Ball_Mesh(
+    mesh, boundaries_mf, S_id = dmech.run_Ball_Mesh(
         params=mesh_params)
 
     ################################################################ Problem ###
