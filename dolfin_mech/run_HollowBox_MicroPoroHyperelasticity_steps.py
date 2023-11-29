@@ -20,7 +20,7 @@ import dolfin_mech as dmech
 
 ################################################################################
 
-def run_HollowBox_MicroPoroHyperelasticity(
+def run_HollowBox_MicroPoroHyperelasticity_steps(
         dim,
         mesh=None,
         mesh_params=None,
@@ -116,39 +116,40 @@ def run_HollowBox_MicroPoroHyperelasticity(
 
     ################################################################ Loading ###
 
-    Deltat = step_params.get("Deltat", 1.)
-    dt_ini = step_params.get("dt_ini", 1.)
-    dt_min = step_params.get("dt_min", 1.)
-    dt_max = step_params.get("dt_max", 1.)
-    k_step = problem.add_step(
-        Deltat=Deltat,
-        dt_ini=dt_ini,
-        dt_min=dt_min,
-        dt_max=dt_max)
+    for k in range(len(load_params)):
+        Deltat = step_params.get("Deltat", 1.)
+        dt_ini = step_params.get("dt_ini", 1.)
+        dt_min = step_params.get("dt_min", 1.)
+        dt_max = step_params.get("dt_max", 1.)
+        k_step = problem.add_step(
+            Deltat=Deltat,
+            dt_ini=dt_ini,
+            dt_min=dt_min,
+            dt_max=dt_max)
 
-    pf = load_params.get("pf", 0.)
-    problem.add_surface_pressure_loading_operator(
-        measure=problem.dS(0),
-        P_ini=0., P_fin=pf,
-        k_step=k_step)
+        pf = load_params["load_step_" +str(k+1)].get("pf", 0.)
+        problem.add_surface_pressure_loading_operator(
+            measure=problem.dS(0),
+            P_ini=0., P_fin=pf,
+            k_step=k_step)
 
-    for i in range(dim):
-     for j in range (dim):
-        U_bar_ij     = load_params.get("U_bar_"+str(i)+str(j)    , None)
-        sigma_bar_ij = load_params.get("sigma_bar_"+str(i)+str(j), None)
-        assert ((U_bar_ij is not None) ^ (sigma_bar_ij is not None))
-        if (U_bar_ij is not None):
-            problem.add_macroscopic_stretch_component_penalty_operator(
-                i=i, j=j,
-                U_bar_ij_ini=0., U_bar_ij_fin=U_bar_ij,
-                pen_val=1e6,
-                k_step=k_step)
-        elif (sigma_bar_ij is not None):
-            problem.add_macroscopic_stress_component_constraint_operator(
-                i=i, j=j,
-                sigma_bar_ij_ini=0., sigma_bar_ij_fin=sigma_bar_ij,
-                pf_ini=0., pf_fin=pf,
-                k_step=k_step)
+        for i in range(dim):
+         for j in range (dim):
+            U_bar_ij     = load_params["load_step_" +str(k+1)].get("U_bar_"+str(i)+str(j)    , None)
+            sigma_bar_ij = load_params["load_step_" +str(k+1)].get("sigma_bar_"+str(i)+str(j), None)
+            assert ((U_bar_ij is not None) ^ (sigma_bar_ij is not None))
+            if (U_bar_ij is not None):
+                problem.add_macroscopic_stretch_component_penalty_operator(
+                    i=i, j=j,
+                    U_bar_ij_ini=0., U_bar_ij_fin=U_bar_ij,
+                    pen_val=1e6,
+                    k_step=k_step)
+            elif (sigma_bar_ij is not None):
+                problem.add_macroscopic_stress_component_constraint_operator(
+                    i=i, j=j,
+                    sigma_bar_ij_ini=0., sigma_bar_ij_fin=sigma_bar_ij,
+                    pf_ini=0., pf_fin=pf,
+                    k_step=k_step)
 
     ################################################# Quantities of Interest ###
 
@@ -182,7 +183,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         print_out=res_basename*verbose,
         print_sta=res_basename*verbose,
         write_qois=res_basename+"-qois",
-        write_qois_limited_precision=1,
+        write_qois_limited_precision=False,
         write_sol=res_basename*verbose)
 
     success = integrator.integrate()
