@@ -78,6 +78,7 @@ from .run_HeartSlice_Hyperelasticity import *
 from .run_HeartSlice_Mesh import *
 from .run_HollowBox_Homogenization import *
 from .run_HollowBox_Mesh import *
+from .run_HollowBox_MicroPoroHyperelasticity import *
 from .run_RivlinCube_Elasticity import *
 from .run_RivlinCube_Hyperelasticity import *
 from .run_RivlinCube_Mesh import *

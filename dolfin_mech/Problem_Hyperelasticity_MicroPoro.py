@@ -434,6 +434,43 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 val=0.)
 
 
+
+    def add_deformed_solid_volume_qoi(self):
+
+        self.add_qoi(
+            name="vs",
+            expr=self.kinematics.J * self.dV)
+
+
+
+    def add_deformed_fluid_volume_qoi(self):
+
+        U_bar = self.get_macroscopic_stretch_subsol().subfunc
+        I_bar = dolfin.Identity(self.dim)
+        F_bar = I_bar + U_bar
+        J_bar = dolfin.det(F_bar)
+        v = J_bar * self.V0
+
+        self.add_qoi(
+            name="vf",
+            expr=(v/self.Vs0 - self.kinematics.J) * self.dV)
+
+
+
+    def add_deformed_volume_qoi(self):
+
+        U_bar = self.get_macroscopic_stretch_subsol().subfunc
+        I_bar = dolfin.Identity(self.dim)
+        F_bar = I_bar + U_bar
+        J_bar = dolfin.det(F_bar)
+        v = J_bar * self.V0
+
+        self.add_qoi(
+            name="v",
+            expr=(v/self.Vs0) * self.dV)
+
+
+
     def add_macroscopic_tensor_qois(self,
             basename,
             get_subsol,
@@ -498,8 +535,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             get_subsol=self.get_macroscopic_stretch_subsol)
 
 
-    def add_macroscopic_stress_qois(self,
-                symmetric=False):
+
+    def add_macroscopic_solid_stress_qois(self,
+            symmetric=False):
 
         for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
             if hasattr(operator, "material"):
@@ -544,12 +582,77 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                     name="sigma_bar_XZ",
                     expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
 
-        
-    def add_hydrostatic_pressure_qois(self):
+
+
+    def add_macroscopic_solid_hydrostatic_pressure_qoi(self):
+
         for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
             if hasattr(operator, "material"):
                 material = operator.material
                 break
+
+        U_bar = self.get_macroscopic_stretch_subsol().subfunc
+        I_bar = dolfin.Identity(self.dim)
+        F_bar = I_bar + U_bar
+        J_bar = dolfin.det(F_bar)
+        v = J_bar * self.V0
+
         self.add_qoi(
             name="p_hydro",
-            expr=(material.p_hydro/self.V0 * self.dV))
+            expr=(material.p_hydro * self.kinematics.J)/v * self.dV)
+
+
+
+    def add_macroscopic_stress_qois(self,
+            symmetric=False):
+
+        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+            if hasattr(operator, "material"):
+                material = operator.material
+                break
+
+        for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
+            if hasattr(operator, "tv_pf"):
+                tv_pf = operator.tv_pf
+                break
+
+        U_bar = self.get_macroscopic_stretch_subsol().subfunc
+        I_bar = dolfin.Identity(self.dim)
+        F_bar = I_bar + U_bar
+        J_bar = dolfin.det(F_bar)
+        v = J_bar * self.V0
+
+        self.add_qoi(
+            name="sigma_bar_XX",
+            expr=(material.sigma[0,0] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
+        if (self.dim >= 2):
+            self.add_qoi(
+                name="sigma_bar_YY",
+                expr=(material.sigma[1,1] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
+            if (self.dim >= 3):
+                self.add_qoi(
+                    name="sigma_bar_ZZ",
+                    expr=(material.sigma[2,2] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
+        if (self.dim >= 2):
+            self.add_qoi(
+                name="sigma_bar_XY",
+                expr=(material.sigma[0,1] * self.kinematics.J)/v * self.dV)
+            if not (symmetric): self.add_qoi(
+                name="sigma_bar_YX",
+                expr=(material.sigma[1,0] * self.kinematics.J)/v * self.dV)
+            if (self.dim >= 3):
+                self.add_qoi(
+                    name="sigma_bar_YZ",
+                    expr=(material.sigma[1,2] * self.kinematics.J)/v * self.dV)
+                if not (symmetric): self.add_qoi(
+                    name="sigma_bar_ZY",
+                    expr=(material.sigma[2,1] * self.kinematics.J)/v * self.dV)
+                self.add_qoi(
+                    name="sigma_bar_ZX",
+                    expr=(material.sigma[2,0] * self.kinematics.J)/v * self.dV)
+                if not (symmetric): self.add_qoi(
+                    name="sigma_bar_XZ",
+                    expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
+
+
+
