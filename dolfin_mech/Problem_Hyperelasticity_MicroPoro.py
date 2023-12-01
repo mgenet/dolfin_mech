@@ -551,35 +551,35 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         v = J_bar * self.V0
 
         self.add_qoi(
-            name="sigma_bar_XX",
+            name="sigma_s_bar_XX",
             expr=(material.sigma[0,0] * self.kinematics.J)/v * self.dV)
         if (self.dim >= 2):
             self.add_qoi(
-                name="sigma_bar_YY",
+                name="sigma_s_bar_YY",
                 expr=(material.sigma[1,1] * self.kinematics.J)/v * self.dV)
             if (self.dim >= 3):
                 self.add_qoi(
-                    name="sigma_bar_ZZ",
+                    name="sigma_s_bar_ZZ",
                     expr=(material.sigma[2,2] * self.kinematics.J )/v * self.dV)
         if (self.dim >= 2):
             self.add_qoi(
-                name="sigma_bar_XY",
+                name="sigma_s_bar_XY",
                 expr=(material.sigma[0,1] * self.kinematics.J)/v * self.dV)
             if not (symmetric): self.add_qoi(
-                name="sigma_bar_YX",
+                name="sigma_s_bar_YX",
                 expr=(material.sigma[1,0] * self.kinematics.J)/v * self.dV)
             if (self.dim >= 3):
                 self.add_qoi(
-                    name="sigma_bar_YZ",
+                    name="sigma_s_bar_YZ",
                     expr=(material.sigma[1,2] * self.kinematics.J)/v * self.dV)
                 if not (symmetric): self.add_qoi(
-                    name="sigma_bar_ZY",
+                    name="sigma_s_bar_ZY",
                     expr=(material.sigma[2,1] * self.kinematics.J)/v * self.dV)
                 self.add_qoi(
-                    name="sigma_bar_ZX",
+                    name="sigma_s_bar_ZX",
                     expr=(material.sigma[2,0] * self.kinematics.J)/v * self.dV)
                 if not (symmetric): self.add_qoi(
-                    name="sigma_bar_XZ",
+                    name="sigma_s_bar_XZ",
                     expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
 
 
@@ -600,6 +600,20 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         self.add_qoi(
             name="p_hydro",
             expr=(material.p_hydro * self.kinematics.J)/v * self.dV)
+
+
+
+    def add_fluid_pressure_qoi(self,
+            symmetric=False):
+
+        for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
+            if hasattr(operator, "tv_pf"):
+                tv_pf = operator.tv_pf
+                break
+
+        self.add_qoi(
+            name="p_f",
+            expr=(tv_pf.val)/self.Vs0 * self.dV)
 
 
 
