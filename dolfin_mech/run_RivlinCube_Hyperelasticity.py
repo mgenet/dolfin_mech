@@ -16,20 +16,20 @@ import dolfin_mech as dmech
 ################################################################################
 
 def run_RivlinCube_Hyperelasticity(
-        dim                                    : int  = 3                           ,
-        inverse                                : bool = 0                           ,
-        incomp                                 : bool = 0                           ,
-        multimaterial                          : bool = 0                           ,
-        cube_params                            : dict = {}                          ,
-        mat_params                             : dict = {}                          ,
-        step_params                            : dict = {}                          ,
-        const_params                           : dict = {}                          ,
-        load_params                            : dict = {}                          ,
-        move                                   : dict = {}                          ,
-        get_results                            : bool = 0                           ,
+        dim                                    : int  = 3                               ,
+        inverse                                : bool = 0                               ,
+        incomp                                 : bool = 0                               ,
+        multimaterial                          : bool = 0                               ,
+        cube_params                            : dict = {}                              ,
+        mat_params                             : dict = {}                              ,
+        step_params                            : dict = {}                              ,
+        const_params                           : dict = {}                              ,
+        load_params                            : dict = {}                              ,
+        move                                   : dict = {}                              ,
+        get_results                            : bool = 0                               ,
         res_basename                           : str  = "run_RivlinCube_Hyperelasticity",
-        write_vtus_with_preserved_connectivity : bool = False                       ,
-        verbose                                : bool = 0                           ):
+        write_vtus_with_preserved_connectivity : bool = False                           ,
+        verbose                                : bool = 0                               ):
 
     ################################################################### Mesh ###
 
@@ -123,135 +123,172 @@ def run_RivlinCube_Hyperelasticity(
     if (const_type in ("bloz")):
         problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
 
+    n_steps = step_params.get("n_steps", 1)
+    Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
+    dt_ini_lst = step_params.get("dt_ini_lst", [step_params.get("dt_ini", 1.)/n_steps]*n_steps)
+    dt_min_lst = step_params.get("dt_min_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
+
     load_type = load_params.get("type", "disp")
 
-    Deltat = step_params.get("Deltat", 1.)
-    dt_ini = step_params.get("dt_ini", Deltat)
-    dt_min = step_params.get("dt_min", dt_ini)
-
-    k_step = problem.add_step(
-        Deltat=Deltat,
-        dt_ini=dt_ini,
-        dt_min=dt_min)
-
-    if (load_type == "disp"):
-        u = load_params.get("u", 0.5)
-        problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(0),
-            sub_domains=boundaries_mf,
-            sub_domain_id=xmax_id,
-            val_ini=0., val_fin=u,
-            k_step=k_step)
-    elif (load_type == "volu0"):
-        f = load_params.get("f", 0.5)
-        problem.add_volume_force0_loading_operator(
-            measure=problem.dV,
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "volu"):
-        f = load_params.get("f", 0.5)
-        problem.add_volume_force_loading_operator(
-            measure=problem.dV,
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "surf0"):
-        f = load_params.get("f", 1.)
-        problem.add_surface_force0_loading_operator(
-            measure=problem.dS(xmax_id),
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "surf"):
-        f = load_params.get("f", 1.0)
-        problem.add_surface_force_loading_operator(
-            measure=problem.dS(xmax_id),
-            F_ini=[0.]*dim, F_fin=[f]+[0.]*(dim-1),
-            k_step=k_step)
-    elif (load_type == "pres0"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pres0_multi"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pres0_inertia"):
-        p = load_params.get("p", -0.5)
-        problem.add_inertia_operator(
-            measure=problem.dV,
-            rho_val=1e-2,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmin_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0,P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pres"):
-        p = load_params.get("p", -0.5)
-        problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0, P_fin=p,
-            k_step=k_step)
-    elif (load_type == "pgra0"):
-        X0 = load_params.get("X0", [0.5]*dim)
-        N0 = load_params.get("N0", [1.]+[0.]*(dim-1))
-        P0 = load_params.get("P0", -0.5)
-        DP = load_params.get("DP", -0.25)
-        problem.add_surface_pressure_gradient0_loading_operator(
-            measure=problem.dS(),
-            X0_val=X0,
-            N0_val=N0,
-            P0_ini=0., P0_fin=P0,
-            DP_ini=0., DP_fin=DP,
-            k_step=k_step)
-    elif (load_type == "pgra"):
-        X0 = load_params.get("X0", [0.5]*dim)
-        N0 = load_params.get("N0", [1.]+[0.]*(dim-1))
-        P0 = load_params.get("P0", -0.5)
-        DP = load_params.get("DP", -0.25)
-        problem.add_surface_pressure_gradient_loading_operator(
-            measure=problem.dS(),
-            X0_val=X0,
-            N0_val=N0,
-            P0_ini=0., P0_fin=P0,
-            DP_ini=0., DP_fin=DP,
-            k_step=k_step)
+    if   (load_type == "disp"):
+        u_lst = load_params.get("u_lst", [(k_step+1)*load_params.get("u", +0.5)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("volu0", "volu")):
+        f_lst = load_params.get("f_lst", [(k_step+1)*load_params.get("f", +0.5)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("surf0", "surf")):
+        f_lst = load_params.get("f_lst", [(k_step+1)*load_params.get("f", +1.0)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("pres0", "pres0_multi", "pres0_inertia", "pres")):
+        p_lst = load_params.get("f_lst", [(k_step+1)*load_params.get("f", -0.5)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("pgra0", "pgra")):
+        X0_lst = load_params.get("X0_lst", [load_params.get("X0",      [0.5]* dim   )]*n_steps)
+        N0_lst = load_params.get("N0_lst", [load_params.get("X0", [1.]+[0.0]*(dim-1))]*n_steps)
+        P0_lst = load_params.get("P0_lst", [(k_step+1)*load_params.get("P0", -0.50)/n_steps for k_step in range(n_steps)])
+        DP_lst = load_params.get("DP_lst", [(k_step+1)*load_params.get("P0", -0.25)/n_steps for k_step in range(n_steps)])
     elif (load_type == "tens"):
-        gamma = load_params.get("gamma", 0.01)
-        problem.add_surface_tension_loading_operator(
-            measure=problem.dS,
-            gamma_ini=0., gamma_fin=gamma,
-            k_step=k_step)
+        gamma_lst = load_params.get("gamma_lst", [(k_step+1)*load_params.get("gamma", 0.01)/n_steps for k_step in range(n_steps)])
+            
+    for k_step in range(n_steps):
+
+        Deltat = Deltat_lst[k_step]
+        dt_ini = dt_ini_lst[k_step]
+        dt_min = dt_min_lst[k_step]
+
+        k_step = problem.add_step(
+            Deltat=Deltat,
+            dt_ini=dt_ini,
+            dt_min=dt_min)
+
+        if (load_type == "disp"):
+            u = u_lst[k_step]
+            u_old = u_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_constraint(
+                V=problem.get_displacement_function_space().sub(0),
+                sub_domains=boundaries_mf,
+                sub_domain_id=xmax_id,
+                val_ini=u_old, val_fin=u,
+                k_step=k_step)
+        elif (load_type == "volu0"):
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_volume_force0_loading_operator(
+                measure=problem.dV,
+                F_ini=[f_old]+[0.]*(dim-1), F_fin=[f]+[0.]*(dim-1),
+                k_step=k_step)
+        elif (load_type == "volu"):
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_volume_force_loading_operator(
+                measure=problem.dV,
+                F_ini=[f_old]+[0.]*(dim-1), F_fin=[f]+[0.]*(dim-1),
+                k_step=k_step)
+        elif (load_type == "surf0"):
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_force0_loading_operator(
+                measure=problem.dS(xmax_id),
+                F_ini=[f_old]+[0.]*(dim-1), F_fin=[f]+[0.]*(dim-1),
+                k_step=k_step)
+        elif (load_type == "surf"):
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_force_loading_operator(
+                measure=problem.dS(xmax_id),
+                F_ini=[f_old]+[0.]*(dim-1), F_fin=[f]+[0.]*(dim-1),
+                k_step=k_step)
+        elif (load_type == "pres0"):
+            p = p_lst[k_step]
+            p_old = p_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+        elif (load_type == "pres0_multi"):
+            p = p_lst[k_step]
+            p_old = p_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(ymax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            if (dim==3): problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(zmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+        elif (load_type == "pres0_inertia"):
+            p = p_lst[k_step]
+            p_old = p_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_inertia_operator(
+                measure=problem.dV,
+                rho_val=1e-2,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(xmin_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(ymin_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(ymax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            if (dim==3): problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(zmin_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+            if (dim==3): problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(zmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+        elif (load_type == "pres"):
+            p = p_lst[k_step]
+            p_old = p_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=p_old, P_fin=p,
+                k_step=k_step)
+        elif (load_type == "pgra0"):
+            X0 = X0_lst[k_step]
+            N0 = N0_lst[k_step]
+            P0 = P0_lst[k_step]
+            DP = DP_lst[k_step]
+            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
+            DP_old = DP_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure_gradient0_loading_operator(
+                measure=problem.dS(),
+                X0_val=X0,
+                N0_val=N0,
+                P0_ini=P0_old, P0_fin=P0,
+                DP_ini=DP_old, DP_fin=DP,
+                k_step=k_step)
+        elif (load_type == "pgra"):
+            X0 = X0_lst[k_step]
+            N0 = N0_lst[k_step]
+            P0 = P0_lst[k_step]
+            DP = DP_lst[k_step]
+            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
+            DP_old = DP_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure_gradient_loading_operator(
+                measure=problem.dS(),
+                X0_val=X0,
+                N0_val=N0,
+                P0_ini=P0_old, P0_fin=P0,
+                DP_ini=DP_old, DP_fin=DP,
+                k_step=k_step)
+        elif (load_type == "tens"):
+            gamma = gamma_lst[k_step]
+            gamma_old = gamma_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_tension_loading_operator(
+                measure=problem.dS,
+                gamma_ini=gamma_old, gamma_fin=gamma,
+                k_step=k_step)
 
     ################################################# Quantities of Interest ###
 
@@ -292,5 +329,5 @@ def run_RivlinCube_Hyperelasticity(
 
     integrator.close()
 
-    if get_results:
+    if (get_results):
         return (problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
