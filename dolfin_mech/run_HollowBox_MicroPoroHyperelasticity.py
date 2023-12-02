@@ -29,6 +29,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         step_params={},
         load_params={},
         res_basename="run_HollowBox_MicroPoroHyperelasticity",
+        write_qois_limited_precision=True,
         verbose=0):
 
     assert ((mesh is not None) ^ (mesh_params is not None))
@@ -120,15 +121,15 @@ def run_HollowBox_MicroPoroHyperelasticity(
     Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
     dt_ini_lst = step_params.get("dt_ini_lst", [step_params.get("dt_ini", 1.)/n_steps]*n_steps)
     dt_min_lst = step_params.get("dt_min_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
-    dt_max_lst = step_params.get("dt_max_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
+    dt_max_lst = step_params.get("dt_max_lst", [step_params.get("dt_max", 1.)/n_steps]*n_steps)
 
-    U_bar_ij_lst_lst = [[None for i in range(dim)] for j in range(dim)]
-    sigma_bar_ij_lst_lst = [[None for i in range(dim)] for j in range(dim)]
-    pf_lst = load_params.get("pf_lst", [(k_step+1)*load_params.get("pf", 0)/n_steps for k_step in range(n_steps)])
+    U_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
+    sigma_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
     for i in range(dim):
      for j in range (dim):
-        U_bar_ij_lst_lst[i][j] = load_params.get("U_bar_"+str(i)+str(j)+"_lst", [load_params.get("U_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
-        sigma_bar_ij_lst_lst[i][j] = load_params.get("sigma_bar_"+str(i)+str(j)+"_lst", [load_params.get("sigma_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
+        U_bar_ij_lst[i][j] = load_params.get("U_bar_"+str(i)+str(j)+"_lst", [load_params.get("U_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
+        sigma_bar_ij_lst[i][j] = load_params.get("sigma_bar_"+str(i)+str(j)+"_lst", [load_params.get("sigma_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
+    pf_lst = load_params.get("pf_lst", [(k_step+1)*load_params.get("pf", 0)/n_steps for k_step in range(n_steps)])
 
     for k_step in range(n_steps):
 
@@ -143,7 +144,6 @@ def run_HollowBox_MicroPoroHyperelasticity(
             dt_min=dt_min,
             dt_max=dt_max)
 
-        
         pf = pf_lst[k_step]
         pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
         problem.add_surface_pressure_loading_operator(
@@ -153,12 +153,10 @@ def run_HollowBox_MicroPoroHyperelasticity(
 
         for i in range(dim):
          for j in range (dim):
-            U_bar_ij_lst = U_bar_ij_lst_lst[i][j]
-            U_bar_ij = U_bar_ij_lst[k_step]
-            U_bar_ij_old = U_bar_ij_lst[k_step-1] if (k_step > 0) else 0.
-            sigma_bar_ij_lst = sigma_bar_ij_lst_lst[i][j]
-            sigma_bar_ij = sigma_bar_ij_lst[k_step]
-            sigma_bar_ij_old = sigma_bar_ij_lst[k_step-1] if (k_step > 0) else 0.
+            U_bar_ij = U_bar_ij_lst[i][j][k_step]
+            U_bar_ij_old = U_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
+            sigma_bar_ij = sigma_bar_ij_lst[i][j][k_step]
+            sigma_bar_ij_old = sigma_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
             assert ((U_bar_ij is not None) ^ (sigma_bar_ij is not None))
             if (U_bar_ij is not None):
                 problem.add_macroscopic_stretch_component_penalty_operator(
@@ -170,7 +168,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
                 problem.add_macroscopic_stress_component_constraint_operator(
                     i=i, j=j,
                     sigma_bar_ij_ini=sigma_bar_ij_old, sigma_bar_ij_fin=sigma_bar_ij,
-                    pf_ini=0., pf_fin=pf,
+                    pf_ini=pf_old, pf_fin=pf,
                     k_step=k_step)
 
     ################################################# Quantities of Interest ###
@@ -205,7 +203,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         print_out=res_basename*verbose,
         print_sta=res_basename*verbose,
         write_qois=res_basename+"-qois",
-        write_qois_limited_precision=False,
+        write_qois_limited_precision=write_qois_limited_precision,
         write_sol=res_basename*verbose)
 
     success = integrator.integrate()
