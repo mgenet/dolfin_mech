@@ -180,9 +180,9 @@ def run_HollowBox_MicroPoroHyperelasticity(
     problem.add_deformed_volume_qoi()
     problem.add_macroscopic_stretch_qois()
     problem.add_macroscopic_solid_stress_qois()
-    problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
+    # problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
     problem.add_macroscopic_stress_qois()
-    # problem.add_fluid_pressure_qoi()
+    problem.add_fluid_pressure_qoi()
 
     ################################################################# Solver ###
 
