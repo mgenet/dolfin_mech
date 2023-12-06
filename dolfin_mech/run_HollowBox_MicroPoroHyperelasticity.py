@@ -24,11 +24,14 @@ def run_HollowBox_MicroPoroHyperelasticity(
         dim,
         mesh=None,
         mesh_params=None,
+        displacement_perturbation_degree=1,
+        quadrature_degree=3,
         mat_params={},
         bcs="pbc",
         step_params={},
         load_params={},
         res_basename="run_HollowBox_MicroPoroHyperelasticity",
+        add_p_hydro_and_Sigma_VM_FoI=False,
         write_qois_limited_precision=True,
         verbose=0):
 
@@ -110,8 +113,8 @@ def run_HollowBox_MicroPoroHyperelasticity(
         mesh_bbox=bbox,
         vertices=vertices,
         boundaries_mf=boundaries_mf,
-        displacement_perturbation_degree=1,
-        quadrature_degree=3,
+        displacement_perturbation_degree=displacement_perturbation_degree,
+        quadrature_degree=quadrature_degree,
         solid_behavior=mat_params,
         bcs=bcs)
 
@@ -182,6 +185,14 @@ def run_HollowBox_MicroPoroHyperelasticity(
     problem.add_macroscopic_stress_qois()
     problem.add_fluid_pressure_qoi()
 
+    if (add_p_hydro_and_Sigma_VM_FoI):
+        for operator in problem.operators:
+            if hasattr(operator, "material"):
+                material = operator.material
+                break
+        problem.add_foi(expr=material.p_hydro, fs=problem.sfoi_fs, name="p_hydro", update_type="project")
+        problem.add_foi(expr=material.Sigma_VM, fs=problem.sfoi_fs, name="Sigma_VM", update_type="project")
+
     ################################################################# Solver ###
 
     solver = dmech.NonlinearSolver(
@@ -211,3 +222,5 @@ def run_HollowBox_MicroPoroHyperelasticity(
         "Integration failed. Aborting."
 
     integrator.close()
+
+    return problem

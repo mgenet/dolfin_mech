@@ -322,7 +322,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             k_step=None,
             **kwargs):
 
-        for operator in self.operators:
+        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
             if hasattr(operator, "material"):
                 material = operator.material
                 break

@@ -53,9 +53,9 @@ class HomogenizationProblem():
     def sigma(self, v, i, Eps):
 
         E, nu = self.material_parameters[i]
-        lmbda = E*nu/(1+nu)/(1-2*nu)
-        mu = E/2/(1+nu)
-        return lmbda*dolfin.tr(self.eps(v) + Eps) * dolfin.Identity(self.dim) + 2*mu*(self.eps(v)+Eps)
+        lmbda = dolfin.Constant(E*nu/(1+nu)/(1-2*nu))
+        mu = dolfin.Constant(E/2/(1+nu))
+        return lmbda*dolfin.tr(self.eps(v)+Eps)*dolfin.Identity(self.dim) + 2*mu*(self.eps(v)+Eps)
 
 
 
