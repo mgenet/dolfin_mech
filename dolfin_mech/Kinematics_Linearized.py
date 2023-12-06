@@ -28,6 +28,10 @@ class LinearizedKinematics():
         self.dim = self.u.ufl_shape[0]
         self.I = dolfin.Identity(self.dim)
 
+        self.F     = self.I + dolfin.grad(self.u)
+        self.F     = dolfin.variable(self.F)
+        self.J     = dolfin.det(self.F)
+
         self.epsilon = dolfin.sym(dolfin.grad(self.u))
         self.epsilon = dolfin.variable(self.epsilon)
 

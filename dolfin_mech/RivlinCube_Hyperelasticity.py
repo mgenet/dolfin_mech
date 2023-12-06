@@ -10,6 +10,7 @@
 
 from curses import use_default_colors
 import dolfin
+import meshio
 
 import dolfin_mech as dmech
 
@@ -25,12 +26,26 @@ def RivlinCube_Hyperelasticity(
         step_params={},
         load_params={},
         move={},
+        initialisation_estimation=[],
         get_results=0,
+        const_params={},
         res_basename="RivlinCube_Hyperelasticity",
         estimation_virtual_fields=0,
         verbose=0):
 
     ################################################################### Mesh ###
+
+    u_from_field = False
+    boundary_conditions = []
+    if u_from_field:
+        ### read displacement field form data
+        # for i in range(1, 11):
+        #     number = str(i).zfill(2)
+        mesh_meshio = meshio.read("/Users/peyrault/Seafile/PhD_Alice/Articles/Article_identification_methods/DolfinWarp-Alice/generate_images/square-compx-h=0.1_020.vtu")
+        u_meshio = mesh_meshio.point_data["U"]
+        u_meshio = u_meshio.tolist()
+        u_meshio = [item for sublist in u_meshio for item in sublist[:2]]
+        # cube_params = {"X0":0.2, "Y0":0.2, "X1":0.8, "Y1":0.8, "l":0.1}
 
     if   (dim==2):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
@@ -109,13 +124,30 @@ def RivlinCube_Hyperelasticity(
 
     load_type = load_params.get("type", "disp")
 
-    if estimation_virtual_fields:
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.,0.,0.])
-    elif ("inertia" not in load_type):
+    # if estimation_virtual_fields:
+    #     problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.,0.,0.])
+    # elif ("inertia" not in load_type):
+    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+    #     if (dim==3):
+    #         problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+
+    const_type = const_params.get("type", "blox")
+
+    const_type = "blox"
+
+    if (const_type in ("symx", "sym")):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    if (const_type in ("symy", "sym")) and (dim >= 2):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
-        if (dim==3):
-            problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    if (const_type in ("symz", "sym")) and (dim >= 3):
+        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    if (const_type in ("blox")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
+    if (const_type in ("bloy")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
+    if (const_type in ("bloz")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
 
     Deltat = step_params.get("Deltat", 1.)
     dt_ini = step_params.get("dt_ini", 1.)
@@ -125,6 +157,10 @@ def RivlinCube_Hyperelasticity(
         Deltat=Deltat,
         dt_ini=dt_ini,
         dt_min=dt_min)
+    
+    surface_forces = []
+    volume_forces = []
+
 
     if (load_type == "disp"):
         u = load_params.get("u", 0.5)
@@ -215,6 +251,7 @@ def RivlinCube_Hyperelasticity(
             measure=problem.dS(xmax_id),
             P_ini=0, P_fin=p,
             k_step=k_step)
+        surface_forces.append([p,problem.dS(xmax_id)])
     elif (load_type == "pgra0"):
         X0 = load_params.get("X0", [0.5]*dim)
         N0 = load_params.get("N0", [1.]+[0.]*(dim-1))
@@ -283,7 +320,46 @@ def RivlinCube_Hyperelasticity(
 
     integrator.close()
 
-    
+    # print("computing cost function")
+
+    kinematics = dmech.Kinematics(U=problem.get_displacement_subsol().func)
+
+    parameters = {'E': 1, 'nu':0.3}
+
+    material   = dmech.material_factory(kinematics, mat_params["model"], parameters) #mat_params["parameters"])
+    sigma= material.sigma 
+    N = problem.mesh_normals
+    nf = dolfin.dot(N, dolfin.inv(kinematics.F))
+    nf_norm = dolfin.sqrt(dolfin.inner(nf,nf))
+    sigma_t = dolfin.dot(sigma, nf/nf_norm) + dolfin.Constant(0.3)*nf/nf_norm 
+    Sref = problem.dS(xmax_id)
+
+    norm_sigma_t = (((1/2*dolfin.assemble(dolfin.inner(sigma_t, sigma_t)*kinematics.J*nf_norm*Sref)/dolfin.assemble(dolfin.Constant(1)*kinematics.J*nf_norm*Sref) ))**(1/2))**2
+
+    # print("norm_sigma_t=", norm_sigma_t)
+
+    estimation_gap = False
+    if estimation_gap:
+        print("in estimation gap")
+
+        fe_u = dolfin.VectorElement(
+                family="CG",
+                cell=mesh.ufl_cell(),
+                degree=1)
+            
+        U_fs = dolfin.FunctionSpace(mesh, fe_u)
+        U=dolfin.Function(U_fs)
+
+
+        U.vector().set_local(u_meshio)
+
+        kinematics = dmech.Kinematics(U=U)
+        
+        # kinematics = dmech.LinearizedKinematics(u=problem.get_subsols_func_lst()[0], u_old=None)
+        # print("surface force is", surface_forces)
+        # dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=1, U=problem.get_displacement_subsol().func)
+        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=0, U=U)
+        
 
     if estimation_virtual_fields:
         if inverse:
@@ -295,5 +371,5 @@ def RivlinCube_Hyperelasticity(
 
     return(problem.get_displacement_subsol().func, problem.mesh_V0)
 
-    if get_results:
-        return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
+    # if get_results:
+    #     return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))

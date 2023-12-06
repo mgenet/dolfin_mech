@@ -175,7 +175,6 @@ class Material():
         return dolfin.Constant(C1), dolfin.Constant(C2)
 
 
-
 ################################################################################
 
 

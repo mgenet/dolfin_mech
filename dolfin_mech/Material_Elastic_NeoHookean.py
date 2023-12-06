@@ -46,10 +46,11 @@ class NeoHookeanElasticMaterial(ElasticMaterial):
                 self.Psi   =   self.C1 * (self.kinematics.IC - 3 - 2*dolfin.ln(self.kinematics.J))
                 self.Sigma = 2*self.C1 * (self.kinematics.I - self.kinematics.C_inv) # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
 
-        self.P = dolfin.diff(self.Psi, self.kinematics.F) # MG20220426: Cannot do that for micromechanics problems
-        # self.P = self.kinematics.F * self.Sigma
+        # self.P = dolfin.diff(self.Psi, self.kinematics.F) # MG20220426: Cannot do that for micromechanics problems
+        self.P = self.kinematics.F * self.Sigma
 
         self.sigma = self.P * self.kinematics.F.T / self.kinematics.J
+
 
 
 

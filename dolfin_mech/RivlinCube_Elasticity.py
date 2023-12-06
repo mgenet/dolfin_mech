@@ -10,6 +10,7 @@
 
 from curses import use_default_colors
 import dolfin
+import meshio
 
 import dolfin_mech as dmech
 
@@ -23,12 +24,29 @@ def RivlinCube_Elasticity(
         mat_params={},
         step_params={},
         load_params={},
+        const_params={},
         res_basename="RivlinCube_Elasticity",
         estimation_gap=False,
         initialisation_estimation=[],
+        write_vtus_with_preserved_connectivity=False,
+        U_recalage = {},
         verbose=0):
 
     ################################################################### Mesh ###
+
+    # print("in rivlincube")
+    u_from_field = True
+    if u_from_field:
+        ### read displacement field form data
+        mesh_meshio = meshio.read("/Users/peyrault/Seafile/PhD_Alice/Articles/Article_identification_methods/DolfinWarp-Alice/generate_images/square-compx-h=0.1_020.vtu")
+        u_meshio = mesh_meshio.point_data["U"]
+        u_meshio = u_meshio.tolist()
+        # print("len umeshio", len(u_meshio))
+        # print("u_meshio", u_meshio)
+        u_meshio = [item for sublist in u_meshio for item in sublist[:2]] 
+        # cube_params = {"X0":0.2, "Y0":0.2, "X1":0.8, "Y1":0.8, "Z0":0.2, "Z1": 0.8, "l":0.01}
+        # print("u_meshio final", u_meshio)
+        cube_params = {"X0":0.2, "Y0":0.2, "X1":0.8, "Y1":0.8, "l":0.1}
 
     if   (dim==2):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
@@ -83,6 +101,8 @@ def RivlinCube_Elasticity(
         elastic_behavior = mat_params
         elastic_behaviors = None
 
+    
+
     problem = dmech.ElasticityProblem(
         mesh=mesh,
         domains_mf=domains_mf,
@@ -93,17 +113,36 @@ def RivlinCube_Elasticity(
         w_incompressibility=w_incompressibility,
         elastic_behavior=elastic_behavior,
         elastic_behaviors=elastic_behaviors)
+    
+    print("problem solved")
 
     ########################################## Boundary conditions & Loading ###
 
     load_type = load_params.get("type", "disp")
 
-
     boundary_conditions = []
-    if ("inertia" not in load_type):
+
+    const_type = const_params.get("type", "sym")
+
+    const_type = "blox"
+
+    if (const_type in ("symx", "sym")):
         problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    if (const_type in ("symy", "sym")) and (dim >= 2):
+        problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+    if (const_type in ("symz", "sym")) and (dim >= 3):
+        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+    if (const_type in ("blox")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
+    if (const_type in ("bloy")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
+    if (const_type in ("bloz")):
+        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
+
+    # if ("inertia" not in load_type):
+    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+    #     problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
         # problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
         # if (dim==3):
             # problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
@@ -167,10 +206,9 @@ def RivlinCube_Elasticity(
             k_step=k_step)
         surface_forces.append([[f]+[0.]*(dim-1), problem.dS(xmax_id)])
     elif (load_type == "pres"):
-        p = load_params.get("p", -1.)
-        problem.add_surface_pressure0_loading_operator(
+        p = load_params.get("p", -0.5)
+        problem.add_surface_pressure_loading_operator(
             measure=problem.dS(xmax_id),
-            # measure=problem.dS,
             P_ini=0, P_fin=p,
             k_step=k_step)
         surface_forces.append([p,problem.dS(xmax_id)])
@@ -206,34 +244,44 @@ def RivlinCube_Elasticity(
     if (incomp): problem.add_global_pressure_qoi()
 
     ################################################################# Solver ###
+    print("starting solver")
 
-    solver = dmech.NonlinearSolver(
-        problem=problem,
-        parameters={
-            "sol_tol":[1e-6]*len(problem.subsols),
-            "n_iter_max":32},
-        relax_type="constant",
-        write_iter=0)
+    # solver = dmech.NonlinearSolver(
+    #     problem=problem,
+    #     parameters={
+    #         "sol_tol":[1e-6]*len(problem.subsols),
+    #         "n_iter_max":32},
+    #     relax_type="constant",
+    #     write_iter=0)
+    
+    # print("starting integrator")
 
-    integrator = dmech.TimeIntegrator(
-        problem=problem,
-        solver=solver,
-        parameters={
-            "n_iter_for_accel":4,
-            "n_iter_for_decel":16,
-            "accel_coeff":2,
-            "decel_coeff":2},
-        print_out=res_basename*verbose,
-        print_sta=res_basename*verbose,
-        write_qois=res_basename+"-qois",
-        write_qois_limited_precision=1,
-        write_sol=res_basename*verbose)
+    # integrator = dmech.TimeIntegrator(
+    #     problem=problem,
+    #     solver=solver,
+    #     parameters={
+    #         "n_iter_for_accel":4,
+    #         "n_iter_for_decel":16,
+    #         "accel_coeff":2,
+    #         "decel_coeff":2},
+    #     print_out=res_basename*verbose,
+    #     print_sta=res_basename*verbose,
+    #     write_qois=res_basename+"-qois",
+    #     write_qois_limited_precision=1,
+    #     write_sol=res_basename*verbose,
+    #     write_vtus_with_preserved_connectivity=write_vtus_with_preserved_connectivity)
+    
+    # print("success?")
 
-    success = integrator.integrate()
-    assert (success),\
-        "Integration failed. Aborting."
+    # success = integrator.integrate()
+    # assert (success),\
+    #     "Integration failed. Aborting."
+    
+    # print("success!")
+
     
     if estimation_gap:
+        print("in estimation gap")
         # for foi in problem.fois:
             # if foi.name == "sigma":
                 # sigma_func = foi.func
@@ -244,15 +292,34 @@ def RivlinCube_Elasticity(
         # print("sigma n - t", norm)
         # u = problem.get_subsols_func_lst()[0]
         # print("u estimation=", problem.get_subsols_func_lst()[0].vector())
-        # print("gradu", dolfin.grad(u))
-        kinematics = problem.kinematics
+        # print("gradu", dolfin.grad(u))å
+
+        fe_u = dolfin.VectorElement(
+                family="CG",
+                cell=mesh.ufl_cell(),
+                degree=1)
+            
+        U_fs = dolfin.FunctionSpace(mesh, fe_u)
+        U=dolfin.Function(U_fs)
+        # print("type(U_recalage)", type(U_recalage))
+
+        print("lens", len(u_meshio), len(U.vector().get_local()))
+
+        U.vector().set_local(u_meshio)
+        # for i in range(len(U.vector().get_local())):
+            # print("Urecalage", u_meshio[i])
+            # print("U.vector()", U.vector().get_local()[i])
+
+        kinematics = dmech.LinearizedKinematics(u=U)
+        
         # kinematics = dmech.LinearizedKinematics(u=problem.get_subsols_func_lst()[0], u_old=None)
         # print("surface force is", surface_forces)
-        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=1, U=problem.get_displacement_subsol().func)
+        # dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=1, U=problem.get_displacement_subsol().func)
+        dmech.EquilibriumGap(problem=problem, kinematics=kinematics, material_model=elastic_behavior["model"], material_parameters=elastic_behavior["parameters"], initialisation_estimation=initialisation_estimation, surface_forces=surface_forces, volume_forces=volume_forces, boundary_conditions=boundary_conditions, inverse=1, U=U)
         
         
         
 
-    integrator.close()
+        # integrator.close()
 
     return(problem.get_subsols_func_lst()[0], problem.dV)
