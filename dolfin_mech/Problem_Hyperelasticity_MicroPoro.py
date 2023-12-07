@@ -50,7 +50,11 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 define_spatial_coordinates=1,
                 define_facet_normals=1,
                 compute_bbox=(mesh_bbox is None))
-            self.X_0 = dolfin.Constant(tuple(["0."]*self.dim))
+            self.X_0 = [0.]*self.dim
+            # self.X_0 = dolfin.Constant(self.X_0)
+            for k_dim in range(self.dim):
+                self.X_0[k_dim] = dolfin.assemble(self.X[k_dim] * self.dV)/self.mesh_V0
+            self.X_0 = dolfin.Constant(self.X_0)
             if (mesh_bbox is not None):
                 self.mesh_bbox = mesh_bbox
             d = [0]*self.dim
