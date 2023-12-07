@@ -190,8 +190,8 @@ def run_HollowBox_MicroPoroHyperelasticity(
             if hasattr(operator, "material"):
                 material = operator.material
                 break
-        problem.add_foi(expr=material.p_hydro, fs=problem.sfoi_fs, name="p_hydro", update_type="project")
-        problem.add_foi(expr=material.Sigma_VM, fs=problem.sfoi_fs, name="Sigma_VM", update_type="project")
+        problem.add_foi(expr=material.p_hydro, fs=problem.sfoi_fs, name="p_hydro")
+        problem.add_foi(expr=material.Sigma_VM, fs=problem.sfoi_fs, name="Sigma_VM")
 
     ################################################################# Solver ###
 
