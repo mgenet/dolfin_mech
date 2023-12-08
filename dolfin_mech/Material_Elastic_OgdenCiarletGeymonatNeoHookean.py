@@ -47,6 +47,7 @@ class OgdenCiarletGeymonatNeoHookeanElasticMaterial(ElasticMaterial):
         self.Sigma_VM = dolfin.sqrt(1.5 *dolfin.tr(self.Sigma_dev.T*self.Sigma_dev))
 
 
+
     # def get_free_energy(self, *args, **kwargs):
 
     #     Psi_bulk, Sigma_bulk = self.bulk.get_free_energy(*args, **kwargs)
