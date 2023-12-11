@@ -11,7 +11,7 @@ authors:
     orcid: 0009-0004-1111-8570
   - family-names: Peyraut
     given-names: Alice
-    orcid:
+    orcid: 0009-0000-9445-8060
 title: "dolfin_mech"
 url: https://gitlab.inria.fr/mgenet/dolfin_mech
 doi: 10.5281/zenodo.8010870
