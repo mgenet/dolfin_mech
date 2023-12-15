@@ -369,7 +369,7 @@ def RivlinCube_Hyperelasticity(
 
         dmech.VirtualFields(problem=problem, kinematics=kinematics, material_model=None, material_parameters=mat_params["parameters"], inverse=inverse, U=problem.get_displacement_subsol().func)
 
-    return(problem.get_displacement_subsol().func, problem.mesh_V0)
+    return(problem.get_displacement_subsol().func, problem.dV)
 
     # if get_results:
     #     return(problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
