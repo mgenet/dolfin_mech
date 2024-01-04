@@ -45,6 +45,7 @@ from .Operator_Loading_SurfaceTension import *
 from .Operator_Loading_VolumeForce import *
 from .Operator_MicroPoro_DeformedFluidVolume import *
 from .Operator_MicroPoro_DeformedSolidVolume import *
+from .Operator_MicroPoro_DeformedSurfaceArea import *
 from .Operator_MicroPoro_DeformedTotalVolume import *
 from .Operator_Penalty_DirectionalDisplacement import *
 from .Operator_Penalty_LagrangeMultiplierComponent import *

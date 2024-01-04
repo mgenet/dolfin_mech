@@ -236,6 +236,31 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
     def get_deformed_fluid_volume_subsol(self):
 
         return self.get_subsol(self.get_deformed_fluid_volume_name())
+    
+
+    def get_surface_area_name(self):
+
+        return "S_area"
+
+    def add_surface_area_subsol(self,
+            degree=0,
+            init_val=None):
+            
+        self.add_scalar_subsol(
+            name=self.get_surface_area_name(),
+            family="R",
+            degree=degree,
+            init_val=init_val)
+
+
+    def get_surface_area_subsol(self):
+
+        return self.get_subsol(self.get_surface_area_name())
+
+    def get_surface_area_space(self):
+
+        return self.get_subsol_function_space(name=self.get_surface_area_name())
+
 
 
 
@@ -260,7 +285,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_total_volume_subsol()
         # self.add_deformed_solid_volume_subsol()
         # self.add_deformed_fluid_volume_subsol()
-        # self.add_surface_area_subsol()
+        self.add_surface_area_subsol()
 
 
 
@@ -355,6 +380,22 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
+    
+
+    def add_surface_tension_loading_operator(self,
+            k_step=None,
+            **kwargs):
+
+        operator = dmech.SurfaceTensionLoadingOperator(
+            # U=self.get_displacement_subsol().subfunc,
+            # U_test=self.get_displacement_subsol().dsubtest,
+            kinematics=self.kinematics,
+            N=self.mesh_normals,
+            U_tot_test=self.U_tot_test,
+            S_area = self.get_surface_area_subsol().subfunc,
+            dS=self.dS,
+            **kwargs)
+        return self.add_operator(operator=operator, k_step=k_step)
 
 
 
@@ -398,6 +439,20 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             measure=self.dV)
         self.add_operator(operator=operator, k_step=k_step)
 
+
+
+    def add_surface_area_operator(self,
+            k_step=None,
+            **kwargs):
+
+        operator = dmech.DeformedSurfaceAreaOperator(
+            S_area = self.get_surface_area_subsol().subfunc,
+            S_area_test = self.get_surface_area_subsol().dsubtest,
+            kinematics=self.kinematics,
+            N=self.mesh_normals,
+            dS=self.dS,
+            **kwargs)
+        return self.add_operator(operator=operator, k_step=k_step)
 
 
     def add_kubc(self,

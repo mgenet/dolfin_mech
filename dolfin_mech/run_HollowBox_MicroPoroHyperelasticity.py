@@ -133,6 +133,8 @@ def run_HollowBox_MicroPoroHyperelasticity(
         U_bar_ij_lst[i][j] = load_params.get("U_bar_"+str(i)+str(j)+"_lst", [load_params.get("U_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
         sigma_bar_ij_lst[i][j] = load_params.get("sigma_bar_"+str(i)+str(j)+"_lst", [load_params.get("sigma_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
     pf_lst = load_params.get("pf_lst", [(k_step+1)*load_params.get("pf", 0)/n_steps for k_step in range(n_steps)])
+    gamma = load_params.get("gamma", 0.0)
+    tension_params = load_params.get("tension_params", {})
 
     for k_step in range(n_steps):
 
@@ -173,6 +175,16 @@ def run_HollowBox_MicroPoroHyperelasticity(
                     sigma_bar_ij_ini=sigma_bar_ij_old, sigma_bar_ij_fin=sigma_bar_ij,
                     pf_ini=pf_old, pf_fin=pf,
                     k_step=k_step)
+        
+        problem.add_surface_area_operator(
+            measure=problem.dS(0),
+            k_step=k_step)
+        
+        problem.add_surface_tension_loading_operator(
+            measure=problem.dS(0),
+            gamma_ini=0.0, gamma_fin=gamma,
+            tension_params=tension_params,
+            k_step=k_step)
 
     ################################################# Quantities of Interest ###
 
