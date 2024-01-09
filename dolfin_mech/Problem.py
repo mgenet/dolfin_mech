@@ -597,7 +597,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceTensionLoadingOperator(
-            U=self.get_displacement_subsol().subfunc,
+            # U=self.get_displacement_subsol().subfunc,
             U_test=self.get_displacement_subsol().dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,

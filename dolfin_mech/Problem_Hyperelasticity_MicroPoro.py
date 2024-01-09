@@ -391,9 +391,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             # U_test=self.get_displacement_subsol().dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
-            U_tot_test=self.U_tot_test,
-            S_area = self.get_surface_area_subsol().subfunc,
-            dS=self.dS,
+            U_test=self.U_tot_test,
+            # S_area = self.get_surface_area_subsol().subfunc,
+            # dS=self.dS,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
