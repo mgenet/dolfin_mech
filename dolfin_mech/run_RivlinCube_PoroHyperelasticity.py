@@ -32,11 +32,20 @@ def run_RivlinCube_PoroHyperelasticity(
         verbose=0):
 
     ################################################################### Mesh ###
+    if "path_and_mesh_name" in cube_params:
+        mesh = dolfin.Mesh()
+        mesh_name = str(cube_params["path_and_mesh_name"])
+        dolfin.XDMFFile(mesh_name).read(mesh)
+        if "refine" in cube_params:
+            mesh=dolfin.refine(mesh)
+        boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+        boundaries_mf.set_all(0)
 
-    if   (dim==2):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
-    elif (dim==3):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
+    else:
+        if   (dim==2):
+            mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
+        elif (dim==3):
+            mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
     if move.get("move", False) == True :
         Umove = move.get("U")
