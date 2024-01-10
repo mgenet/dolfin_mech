@@ -11,6 +11,7 @@
 import dolfin
 import matplotlib.pyplot as mpl
 import pandas
+import numpy
 
 import dolfin_mech as dmech
 
@@ -74,6 +75,25 @@ def run_RivlinCube_PoroHyperelasticity(
                 file.write('  <mesh_function type="double" dim="'+str(dim)+'" size="'+str(n_cells)+'">\n')
                 for k_cell in range(n_cells):
                     file.write('    <entity index="'+str(k_cell)+'" value="'+str(porosity_val)+'"/>\n')
+                file.write('  </mesh_function>\n')
+                file.write('</dolfin>\n')
+                file.close()
+            porosity_mf = dolfin.MeshFunction(
+                "double",
+                mesh,
+                porosity_filename)
+        elif (porosity_type == "mesh_function_random_xml"):
+            # print("mesh_function xml")
+            porosity_filename = res_basename+"-poro.xml"
+            n_cells = len(mesh.cells())
+            with open(porosity_filename, "w") as file:
+                file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+                file.write('<dolfin xmlns:dolfin="http://fenicsproject.org">\n')
+                file.write('  <mesh_function type="double" dim="'+str(dim)+'" size="'+str(n_cells)+'">\n')
+                for k_cell in range(n_cells):
+                    value = numpy.random.uniform(low=0.4, high=0.6)
+                            # positive_value = True
+                    file.write('    <entity index="'+str(k_cell)+'" value="'+str(value)+'"/>\n')
                 file.write('  </mesh_function>\n')
                 file.write('</dolfin>\n')
                 file.close()
