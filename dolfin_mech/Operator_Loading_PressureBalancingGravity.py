@@ -37,6 +37,7 @@ class PressureBalancingGravityLoadingOperator(Operator):
             N,
             dS,
             dV,
+            breathing_constant,
             P0_val=None, P0_ini=None, P0_fin=None,
             f_val=None, f_ini=None, f_fin=None):
 
@@ -65,7 +66,7 @@ class PressureBalancingGravityLoadingOperator(Operator):
         x = X + U
         x_tilde = x-x0
 
-        P_tilde = P0 - rho_solid * grad * ( x[0]- x0[0])
+        P_tilde = P0 + dolfin.Constant(rho_solid) * grad * ( x[2]- x0[2]) - dolfin.Constant(breathing_constant)*dolfin.Constant(rho_solid) * grad * ( x[1]- x0[1]) * ( x[1]- x0[1]) 
 
         grads_p = dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p-P_tilde), dolfin.inv(kinematics.F))))
         grads_p_test = dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F)) - n*(dolfin.dot(n,dolfin.dot(dolfin.grad(p_test), dolfin.inv(kinematics.F))))
@@ -112,6 +113,7 @@ class PressureBalancingGravity0LoadingOperator(Operator):
             n,
             dS,
             dV,
+            breathing_constant,
             P0_val=None, P0_ini=None, P0_fin=None,
             f_val=None, f_ini=None, f_fin=None):
 
@@ -132,7 +134,7 @@ class PressureBalancingGravity0LoadingOperator(Operator):
 
         x_tilde = x-dolfin.Constant(x0)
 
-        P_tilde = P0 - rho_solid * grad * ( x[0]- dolfin.Constant(x0[0]))
+        P_tilde = P0 + dolfin.Constant(rho_solid) * grad * ( x[2]- dolfin.Constant(x0[2])) - dolfin.Constant(breathing_constant)*dolfin.Constant(rho_solid) * grad* ( x[1]- dolfin.Constant(x0[1])) * ( x[1]- dolfin.Constant(x0[1])) 
         
         grads_p = dolfin.grad(p-P_tilde) - n*(dolfin.dot(n,dolfin.grad(p-P_tilde)))
         grads_p_test = dolfin.grad(p_test) - n*(dolfin.dot(n,dolfin.grad(p_test)))
