@@ -368,4 +368,6 @@ def run_RivlinCube_PoroHyperelasticity(
             phi=problem.get_foi(name="Phis0").func.vector().get_local()
         else:
             phi=problem.get_foi(name="phis").func.vector().get_local()
-        return(problem.get_displacement_subsol().func,  phi, dolfin.Measure("dx", domain=mesh))
+        deformed_mesh = dolfin.Mesh(mesh)
+        dolfin.ALE.move(deformed_mesh, problem.get_displacement_subsol().func)
+        return(problem.get_displacement_subsol().func,  phi, dolfin.Measure("dx", domain=mesh), dolfin.Measure("dx", domain=deformed_mesh))
