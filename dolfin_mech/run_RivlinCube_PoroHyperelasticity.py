@@ -265,6 +265,7 @@ def run_RivlinCube_PoroHyperelasticity(
             phis=problem.phis,
             P0_ini=0.,
             P0_fin=P0,
+            breathing_constant=load_params.get("H", 0.),
             k_step=k_step)
     elif (load_type == "p_boundary_condition"):
         problem.add_pf_operator(
@@ -284,6 +285,7 @@ def run_RivlinCube_PoroHyperelasticity(
             rho_solid=rho_solid,
             P0_ini=0.,
             P0_fin=P0,
+            breathing_constant=load_params.get("H", 0.),
             k_step=k_step)
 
     ################################################# Quantities of Interest ###
