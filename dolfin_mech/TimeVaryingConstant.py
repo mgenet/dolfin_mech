@@ -34,16 +34,19 @@ class TimeVaryingConstant():
         else:
             assert (0), "Must provide val or val_ini & val_fin. Aborting."
 
-        assert (type(val_ini) in (int, float, list, numpy.ndarray))
+        assert (type(val_ini) in (int, float, list, numpy.ndarray)),\
+             "type(val_ini) (="+str(type(val_ini))+") should be int, float, list or numpy.ndarray. Aborting."
         if (type(val_ini) in (int, float)):
-            assert (type(val_fin) in (int, float))
+            assert (type(val_fin) in (int, float)),\
+             "type(val_fin) (="+str(type(val_fin))+") should be int or float. Aborting."
             self.val_ini = numpy.array([val_ini], dtype=float)
             self.val_fin = numpy.array([val_fin], dtype=float)
             self.val_cur = numpy.array([val_ini], dtype=float)
             self.val_old = numpy.array([val_ini], dtype=float)
             self.set_value = self.set_value_sca
         elif (type(val_ini) in (list, numpy.ndarray)):
-            assert (type(val_fin) in (list, numpy.ndarray))
+            assert (type(val_fin) in (list, numpy.ndarray)),\
+             "type(val_fin) (="+str(type(val_fin))+") should be list or numpy.ndarray. Aborting."
             self.val_ini = numpy.array(val_ini, dtype=float)
             self.val_fin = numpy.array(val_fin, dtype=float)
             self.val_cur = numpy.array(val_ini, dtype=float)
