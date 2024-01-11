@@ -99,7 +99,7 @@ for loads in load_lst:
                     mat_params={"scaling":scaling, "parameters":mat_params},
                     step_params={"dt_min":1e-4},
                     load_params={"type":load},
-                    move = {"move":move, "U":U_move},
+                    move_params={"move":move, "U":U_move},
                     res_basename=res_folder+"/"+res_basename,
                     plot_curves=0,
                     get_results=1,
