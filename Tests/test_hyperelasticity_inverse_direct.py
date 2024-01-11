@@ -2,12 +2,12 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2023                                       ###
+### Created by Alice Peyraut, 2023-2024                                      ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Alice Peyraut, 2023                                                  ###
+### And Martin Genet, 2018-2023                                              ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -71,7 +71,7 @@ for dim in dim_lst:
                 mat_params={"model":"CGNHMR", "parameters":{"E":1., "nu":0.3, "dim":dim}},
                 step_params={"dt_min":0.1},
                 load_params={"type":load},
-                move = {"move":move, "U":U_move},
+                move_params={"move":move, "U":U_move},
                 res_basename=res_folder+"/"+res_basename,
                 inverse=inverse,
                 get_results=1,

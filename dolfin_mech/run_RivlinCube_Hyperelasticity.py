@@ -25,7 +25,7 @@ def run_RivlinCube_Hyperelasticity(
         step_params                            : dict = {}                              ,
         const_params                           : dict = {}                              ,
         load_params                            : dict = {}                              ,
-        move                                   : dict = {}                              ,
+        move_params                            : dict = {}                              ,
         get_results                            : bool = 0                               ,
         res_basename                           : str  = "run_RivlinCube_Hyperelasticity",
         write_vtus_with_preserved_connectivity : bool = False                           ,
@@ -38,8 +38,8 @@ def run_RivlinCube_Hyperelasticity(
     elif (dim==3):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
-    if move.get("move", False) == True :
-        Umove = move.get("U")
+    if move_params.get("move", False) == True :
+        Umove = move_params.get("U")
         dolfin.ALE.move(mesh, Umove)
 
     if (multimaterial):
