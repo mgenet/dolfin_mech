@@ -76,6 +76,7 @@ class SurfaceTensionLoadingOperator(Operator):
 
         
         taus = gamma * P
+        print(gamma)
 
         self.res_form =  dolfin.inner(taus, dolfin.dot(P,(dolfin.grad(U_test)))) *  self.kinematics.J * T * self.measure
 
