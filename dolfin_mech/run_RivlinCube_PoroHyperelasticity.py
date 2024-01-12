@@ -26,7 +26,7 @@ def run_RivlinCube_PoroHyperelasticity(
         mat_params={},
         step_params={},
         load_params={},
-        inertia=0,
+        inertia={"applied": False},
         res_basename="run_RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         get_results=0,
@@ -192,15 +192,16 @@ def run_RivlinCube_PoroHyperelasticity(
         dt_min=dt_min,
         dt_max=dt_max)
     
-    if not inertia:
+    if not inertia["applied"]:
         problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
         problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
         if (dim==3):
             problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     else:
+        rho_val=inertia.get("rho_val", 1e-6)
         problem.add_inertia_operator(
         measure=problem.dV,
-        rho_val=1e-6,
+        rho_val=rho_val,
         k_step=k_step)
 
     load_type = load_params.get("type", "internal")
@@ -370,7 +371,4 @@ def run_RivlinCube_PoroHyperelasticity(
             phi = problem.get_foi(name="Phis0").func.vector().get_local()
         else:
             phi = problem.get_foi(name="phis").func.vector().get_local()
-        deformed_mesh = dolfin.Mesh(mesh)
-        dolfin.ALE.move(deformed_mesh, problem.get_displacement_subsol().func)
-
-        return (problem.get_displacement_subsol().func, phi, dolfin.Measure("dx", domain=mesh), dolfin.Measure("dx", domain=deformed_mesh))
+        return (problem.get_displacement_subsol().func, phi, dolfin.Measure("dx", domain=mesh))
