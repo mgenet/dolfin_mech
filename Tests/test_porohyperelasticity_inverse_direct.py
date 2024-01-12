@@ -89,7 +89,7 @@ for loads in loads_lst:
         res_basename  = sys.argv[0][:-3]
         res_basename += "-inverse="+str(inverse)
 
-        U, phis, dV, dv = dmech.run_RivlinCube_PoroHyperelasticity(
+        U, phis, dV = dmech.run_RivlinCube_PoroHyperelasticity(
             dim=dim,
             inverse=inverse,
             cube_params=cube_params,
