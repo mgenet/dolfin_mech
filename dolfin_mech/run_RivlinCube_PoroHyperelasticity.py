@@ -26,7 +26,7 @@ def run_RivlinCube_PoroHyperelasticity(
         mat_params={},
         step_params={},
         load_params={},
-        inertia={"applied": False},
+        inertia_params={"applied": False},
         res_basename="run_RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         get_results=0,
