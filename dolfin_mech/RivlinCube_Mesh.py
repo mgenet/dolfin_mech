@@ -14,7 +14,8 @@ import dolfin
 
 def RivlinCube_Mesh(
         dim=3,
-        params={}):
+        params={},
+        refine=False):
 
     X0 = params.get("X0", 0.)
     X1 = params.get("X1", 1.)
@@ -41,6 +42,9 @@ def RivlinCube_Mesh(
         mesh = dolfin.BoxMesh(
             dolfin.Point(X0, Y0, Z0), dolfin.Point(X1, Y1, Z1),
             NX, NY, NZ)
+
+    if refine:
+        mesh=dolfin.refine(mesh)
 
     # xdmf_file_mesh = dolfin.XDMFFile("mesh.xdmf")
     # xdmf_file_mesh.write(mesh)

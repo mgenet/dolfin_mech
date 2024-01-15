@@ -35,6 +35,7 @@ def RivlinCube_Hyperelasticity(
 
     ################################################################### Mesh ###
 
+    refine=True
     u_from_field = False
     boundary_conditions = []
     if u_from_field:
@@ -48,9 +49,10 @@ def RivlinCube_Hyperelasticity(
         # cube_params = {"X0":0.2, "Y0":0.2, "X1":0.8, "Y1":0.8, "l":0.1}
 
     if   (dim==2):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params, refine=refine)
     elif (dim==3):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params, refine=refine)
+
 
     if move.get("move", False) == True :
         Umove = move.get("U")
