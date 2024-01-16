@@ -182,111 +182,133 @@ def run_RivlinCube_PoroHyperelasticity(
             gradient_operators=gradient_operators)
 
     ########################################## Boundary conditions & Loading ###
-    Deltat = step_params.get("Deltat", 1.)
-    dt_ini = step_params.get("dt_ini", 1.)
-    dt_min = step_params.get("dt_min", 1.)
-    dt_max = step_params.get("dt_max", 1.)
-    k_step = problem.add_step(
-        Deltat=Deltat,
-        dt_ini=dt_ini,
-        dt_min=dt_min,
-        dt_max=dt_max)
-    
-    if not inertia["applied"]:
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
-        if (dim==3):
-            problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
-    else:
-        rho_val=inertia.get("rho_val", 1e-6)
-        problem.add_inertia_operator(
-        measure=problem.dV,
-        rho_val=rho_val,
-        k_step=k_step)
+    n_steps = step_params.get("n_steps", 1)
+    Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
+    dt_ini_lst = step_params.get("dt_ini_lst", [step_params.get("dt_ini", 1.)/n_steps]*n_steps)
+    dt_min_lst = step_params.get("dt_min_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
 
     load_type = load_params.get("type", "internal")
-    if (load_type == "internal"):
-        pf = load_params.get("pf", +0.5)
-        problem.add_pf_operator(
+
+    if   (load_type == "internal"):
+        pf_lst = load_params.get("pf_lst", [(k_step+1)*load_params.get("pf", +0.5)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("external0", "external")):
+        P_lst = load_params.get("P_lst", [(k_step+1)*load_params.get("P", -0.5)/n_steps for k_step in range(n_steps)])
+    elif (load_type in ("p_boundary_condition0", "p_boundary_condition")):
+        f_lst = load_params.get("f_lst", [(k_step+1)*load_params.get("f", 1e4)/n_steps for k_step in range(n_steps)])
+        P0_lst = load_params.get("P0_lst", [(k_step+1)*load_params.get("P0", -0.50)/n_steps for k_step in range(n_steps)])
+    
+    for k_step in range(n_steps):
+
+        Deltat = Deltat_lst[k_step]
+        dt_ini = dt_ini_lst[k_step]
+        dt_min = dt_min_lst[k_step]
+
+        k_step = problem.add_step(
+            Deltat=Deltat,
+            dt_ini=dt_ini,
+            dt_min=dt_min)
+
+        if (load_type == "internal"):
+            pf = pf_lst[k_step]
+            pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=pf_old, pf_fin=pf,
+                k_step=k_step)
+        elif (load_type == "external"):
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=0., pf_fin=0.,
+                k_step=k_step)
+            P = P_lst[k_step]
+            P_old = P_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+            problem.add_surface_pressure_loading_operator(
+                measure=problem.dS(ymax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+            if (dim==3): problem.add_surface_pressure_loading_operator(
+                measure=problem.dS(zmax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+        elif (load_type == "external0"):
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=0., pf_fin=0.,
+                k_step=k_step)
+            P = P_lst[k_step]
+            P_old = P_lst[k_step-1] if (k_step > 0) else 0.
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(xmax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+            problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(ymax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+            if (dim==3): problem.add_surface_pressure0_loading_operator(
+                measure=problem.dS(zmax_id),
+                P_ini=P_old, P_fin=P,
+                k_step=k_step)
+        elif (load_type == "p_boundary_condition0"):
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=0.,
+                pf_fin=0.,
+                k_step=k_step)
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            P0 = P0_lst[k_step]
+            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
+            rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+            problem.add_pressure_balancing_gravity0_loading_operator(
+                dV=problem.dV,
+                dS=problem.dS,
+                f_ini=[0.]*(dim-1)+[f_old],
+                # f_fin=[f, 0., 0.],
+                f_fin=[0., 0., f],
+                rho_solid=rho_solid,
+                phis=problem.phis,
+                P0_ini=P0_old,
+                P0_fin=P0,
+                breathing_constant=load_params.get("H", 0.),
+                k_step=k_step)
+        elif (load_type == "p_boundary_condition"):
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=0.,
+                pf_fin=0.,
+                k_step=k_step)
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            P0 = P0_lst[k_step]
+            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
+            rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+            problem.add_pressure_balancing_gravity_loading_operator(
+                dV=problem.dV,
+                dS=problem.dS,
+                f_ini=[0.]*(dim-1)+[f_old],
+                # f_fin=[f, 0., 0.],
+                f_fin=[0., 0., f],
+                rho_solid=rho_solid,
+                P0_ini=P0_old,
+                P0_fin=P0,
+                breathing_constant=load_params.get("H", 0.),
+                k_step=k_step)
+        
+        if not inertia_params["applied"]:
+            problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+            problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+            if (dim==3):
+                problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+        else:
+            rho_val=inertia_params.get("rho_val", 1e-6)
+            problem.add_inertia_operator(
             measure=problem.dV,
-            pf_ini=0., pf_fin=pf,
-            k_step=k_step)
-    elif (load_type == "external"):
-        problem.add_pf_operator(
-            measure=problem.dV,
-            pf_ini=0., pf_fin=0.,
-            k_step=k_step)
-        P = load_params.get("P", -0.5)
-        problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-        problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-    elif (load_type == "external0"):
-        problem.add_pf_operator(
-            measure=problem.dV,
-            pf_ini=0., pf_fin=0.,
-            k_step=k_step)
-        P = load_params.get("P", -0.5)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(xmax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-        problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(ymax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-        if (dim==3): problem.add_surface_pressure0_loading_operator(
-            measure=problem.dS(zmax_id),
-            P_ini=0., P_fin=P,
-            k_step=k_step)
-    elif (load_type == "p_boundary_condition0"):
-        problem.add_pf_operator(
-            measure=problem.dV,
-            pf_ini=0.,
-            pf_fin=0.,
-            k_step=k_step)
-        f = load_params.get("f", 1e4)
-        P0 = load_params.get("P0", -0.5)
-        rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
-        problem.add_pressure_balancing_gravity0_loading_operator(
-            dV=problem.dV,
-            dS=problem.dS,
-            f_ini=[0.]*dim,
-            # f_fin=[f, 0., 0.],
-            f_fin=[0., 0., f],
-            rho_solid=rho_solid,
-            phis=problem.phis,
-            P0_ini=0.,
-            P0_fin=P0,
-            breathing_constant=load_params.get("H", 0.),
-            k_step=k_step)
-    elif (load_type == "p_boundary_condition"):
-        problem.add_pf_operator(
-            measure=problem.dV,
-            pf_ini=0.,
-            pf_fin=0.,
-            k_step=k_step)
-        f = load_params.get("f", 1e4)
-        P0 = load_params.get("P0", -0.5)
-        rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
-        problem.add_pressure_balancing_gravity_loading_operator(
-            dV=problem.dV,
-            dS=problem.dS,
-            f_ini=[0.]*dim,
-            # f_fin=[f, 0., 0.],
-            f_fin=[0., 0., f],
-            rho_solid=rho_solid,
-            P0_ini=0.,
-            P0_fin=P0,
-            breathing_constant=load_params.get("H", 0.),
+            rho_val=rho_val,
             k_step=k_step)
 
     ################################################# Quantities of Interest ###
