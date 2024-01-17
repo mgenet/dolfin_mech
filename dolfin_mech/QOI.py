@@ -20,7 +20,8 @@ class QOI():
 
     def __init__(self,
             name,
-            expr,
+            expr=None,
+            expr_lst=None,
             norm=1.,
             constant=0.,
             divide_by_dt=False,
@@ -30,6 +31,7 @@ class QOI():
 
         self.name                     = name
         self.expr                     = expr
+        self.expr_lst                 = expr_lst
         self.norm                     = norm
         self.constant                 = constant
         self.divide_by_dt             = divide_by_dt
@@ -43,15 +45,25 @@ class QOI():
 
 
 
-    def update_assembly(self, dt=None):
+    def update_assembly(self, dt=None, k_step=None, expr=None):
 
         # print(self.name)
         # print(self.expr)
         # print(self.form_compiler_parameters)
+        if (self.expr is not None):
+            self.value = dolfin.assemble(
+                self.expr,
+                form_compiler_parameters=self.form_compiler_parameters)
+        else:
+            if (k_step is None):
+                self.value = dolfin.assemble(
+                    self.expr_lst[0],
+                    form_compiler_parameters=self.form_compiler_parameters)
+            else:
+                self.value = dolfin.assemble(
+                    self.expr_lst[k_step - 1],
+                    form_compiler_parameters=self.form_compiler_parameters)
 
-        self.value = dolfin.assemble(
-            self.expr,
-            form_compiler_parameters=self.form_compiler_parameters)
 
         self.value += self.constant
         self.value /= self.norm
@@ -63,7 +75,7 @@ class QOI():
 
 
 
-    def update_direct(self, dt=None):
+    def update_direct(self, dt=None, k_step=None):
         
         self.value = self.expr(self.point)
 

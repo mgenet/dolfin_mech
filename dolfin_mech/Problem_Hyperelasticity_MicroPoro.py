@@ -662,17 +662,21 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-    def add_fluid_pressure_qoi(self,
-            symmetric=False):
+    def add_fluid_pressure_qoi(self):
+        expr_lst = []
+        for i in range(len(self.steps)):
 
-        for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
-            if hasattr(operator, "tv_pf"):
-                tv_pf = operator.tv_pf
-                break
+            for operator in self.steps[i].operators: # MG20231124: Warning! Only works if there is a single step!!
+                # print(len(self.steps))
+                if hasattr(operator, "tv_pf"):
+                    tv_pf = operator.tv_pf
+                    break
+            expr_lst.append((tv_pf.val)/self.Vs0 * self.dV)
 
         self.add_qoi(
             name="p_f",
-            expr=(tv_pf.val)/self.Vs0 * self.dV)
+            expr_lst=expr_lst)
+            # expr=(tv_pf.val)/self.Vs0 * self.dV)
 
 
 

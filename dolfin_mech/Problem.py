@@ -455,10 +455,10 @@ class Problem():
 
 
 
-    def update_qois(self, dt=None):
+    def update_qois(self, dt=None, k_step=None):
 
         for qoi in self.qois:
-            qoi.update(dt)
+            qoi.update(dt, k_step)
 
 ################################################################## operators ###
 
