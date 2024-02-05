@@ -17,5 +17,5 @@ To setup a system, the simplest is to use [conda](https://conda.io): first insta
 ```
 conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 meshio=5.3 mpi4py=3.1.3 pip python=3.10
 conda activate dolfin_mech
-pip install dolfin_mech numpy=1.24
+pip install dolfin_mech numpy==1.24
 ```
