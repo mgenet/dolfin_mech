@@ -51,7 +51,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 define_facet_normals=1,
                 compute_bbox=(mesh_bbox is None))
             self.X_0 = [0.]*self.dim
-            # self.X_0 = dolfin.Constant(self.X_0)
             for k_dim in range(self.dim):
                 self.X_0[k_dim] = dolfin.assemble(self.X[k_dim] * self.dV)/self.mesh_V0
             self.X_0 = dolfin.Constant(self.X_0)
@@ -387,13 +386,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             **kwargs):
 
         operator = dmech.SurfaceTensionLoadingOperator(
-            # U=self.get_displacement_subsol().subfunc,
-            # U_test=self.get_displacement_subsol().dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             U_test=self.U_tot_test,
-            # S_area = self.get_surface_area_subsol().subfunc,
-            # dS=self.dS,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -730,6 +725,17 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 if not (symmetric): self.add_qoi(
                     name="sigma_bar_XZ",
                     expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
+        
+
+
+    def add_interfacial_surface_qois(self):
+            FmTN = dolfin.dot(dolfin.inv(self.kinematics.F).T, self.mesh_normals)
+            T = dolfin.sqrt(dolfin.inner(FmTN, FmTN))
+            expr= T * self.kinematics.J
+            self.add_qoi(
+                name="S_area",
+                expr=expr*self.dS(0))
+
 
 
 

@@ -200,6 +200,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
     problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
     problem.add_macroscopic_stress_qois()
     problem.add_fluid_pressure_qoi()
+    problem.add_interfacial_surface_qois()
 
     if (add_p_hydro_and_Sigma_VM_FoI):
         for operator in problem.operators:
