@@ -46,13 +46,15 @@ class SurfaceTensionLoadingOperator(Operator):
         P = I - dolfin.outer(n,n)
         
         S_hat = kinematics.J * T
-        
-        d1 = dolfin.Constant(tension_params.get("d1", 0))
-        d2 = dolfin.Constant(tension_params.get("d2", 0))
-        d3 = dolfin.Constant(tension_params.get("d3", 0))
-        
 
-        gamma = gamma * (d1/(1 + (S_hat/d2)**(d3)))
+        surface_dependancy = tension_params.get("surface_dependancy", None)
+        if surface_dependancy == 1:
+            d1 = dolfin.Constant(tension_params.get("d1"))
+            d2 = dolfin.Constant(tension_params.get("d2"))
+            d3 = dolfin.Constant(tension_params.get("d3"))
+
+            gamma = gamma * (d1/(1 + (S_hat/d2)**(d3)))
+
 
         taus = gamma * P
 
