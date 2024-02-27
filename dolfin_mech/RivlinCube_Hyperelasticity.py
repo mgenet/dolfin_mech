@@ -27,15 +27,15 @@ def RivlinCube_Hyperelasticity(
         load_params={},
         move={},
         initialisation_estimation=[],
-        get_results=0,
         const_params={},
+        refine=False,
+        mesh_params={},
         res_basename="RivlinCube_Hyperelasticity",
         estimation_virtual_fields=0,
         verbose=0):
 
     ################################################################### Mesh ###
 
-    refine=True
     u_from_field = False
     boundary_conditions = []
     if u_from_field:
@@ -47,7 +47,32 @@ def RivlinCube_Hyperelasticity(
         u_meshio = u_meshio.tolist()
         u_meshio = [item for sublist in u_meshio for item in sublist[:2]]
         # cube_params = {"X0":0.2, "Y0":0.2, "X1":0.8, "Y1":0.8, "l":0.1}
+    
+    # mesh = mesh_params.get("mesh", False)
+    # if mesh:
+    #     mesh=mesh
+    #     X0 = cube_params.get("X0", 0.)
+    #     X1 = cube_params.get("X1", 1.)
+    #     Y0 = cube_params.get("Y0", 0.)
+    #     Y1 = cube_params.get("Y1", 1.)
 
+    #     xmin_sd = dolfin.CompiledSubDomain("near(x[0], x0) && on_boundary", x0=X0)
+    #     xmax_sd = dolfin.CompiledSubDomain("near(x[0], x0) && on_boundary", x0=X1)
+    #     ymin_sd = dolfin.CompiledSubDomain("near(x[1], x0) && on_boundary", x0=Y0)
+    #     ymax_sd = dolfin.CompiledSubDomain("near(x[1], x0) && on_boundary", x0=Y1)
+
+    #     xmin_id = 1
+    #     xmax_id = 2
+    #     ymin_id = 3
+    #     ymax_id = 4
+
+    #     boundaries_mf = dolfin.MeshFunction("size_t", mesh_for_warp, mesh_for_warp.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+    #     boundaries_mf.set_all(0)
+    #     xmin_sd.mark(boundaries_mf, xmin_id)
+    #     xmax_sd.mark(boundaries_mf, xmax_id)
+    #     ymin_sd.mark(boundaries_mf, ymin_id)
+    #     ymax_sd.mark(boundaries_mf, ymax_id)
+    # else:
     if   (dim==2):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params, refine=refine)
     elif (dim==3):

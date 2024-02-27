@@ -109,7 +109,8 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 pore_behaviors = [pore_behavior]
             self.add_Wpore_operators(pore_behaviors)
 
-            self.add_deformed_volume_operator()    
+            # self.add_deformed_volume_operator()  
+            
 
 
 
@@ -272,10 +273,11 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 self.add_mu_subsol()
                 self.add_center_gravity_direct_problem_subsol()
                 self.add_deformed_volume_subsol()
+                
 
 
     def set_subsols_gradient_inverse(self):
-        
+
             self.add_balanced_gravity_boundary_pressure_subsol()
             self.add_gamma_subsol()
             self.add_lbda_subsol()

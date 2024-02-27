@@ -16,7 +16,6 @@ import sympy
 
 import dolfin_mech as dmech
 import dolfin_warp as dwarp
-import subprocess
 
 ################################################################################
 
@@ -32,11 +31,11 @@ def RivlinCube_PoroHyperelasticity(
         initialisation_estimation={},
         res_basename="RivlinCube_PoroHyperelasticity",
         plot_curves=False,
-        verbose=0,
-        inertia_val = 1e-8,
+        verbose=1,
+        inertia_val = 1e-7,
         multimaterial = 0,
         get_results_fields = 0,
-        mesh_from_file=0,
+        mesh_from_file={},
         get_J =False,
         estimation_gap=False,
         get_invariants = None,
@@ -47,18 +46,28 @@ def RivlinCube_PoroHyperelasticity(
 
 
 
-    if mesh_from_file:
+    try :
+        # print("find_mesh_file")
+        find_mesh_file=mesh_from_file["exists"]
+        # print("find_mesh_file", find_mesh_file)
         mesh = dolfin.Mesh()
-        dolfin.XDMFFile("/Users/peyrault/Documents/Gravity/Tests/Meshes_and_poro_files/Zygot.xdmf").read(mesh)
+        path_mesh=mesh_from_file["path_mesh"]
+        # print("path_mesh", path_mesh)
+        # dolfin.XDMFFile("/Users/peyrault/Documents/Gravity/Tests/Meshes_and_poro_files/Zygot.xdmf").read(mesh)
+        dolfin.XDMFFile(str(path_mesh)).read(mesh)
+        # print("got the mesh!")
         # mesh = dolfin.refine(mesh)
         # mesh = dolfin.refine(mesh)
         boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
         boundaries_mf.set_all(0)
-    else:
+    except:
+        # print("should not be here...")
         if   (dim==2):
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
         elif (dim==3):
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.RivlinCube_Mesh(dim=dim, params=cube_params)
+        
+        
 
 
     if move.get("move", False) == True :
@@ -110,76 +119,76 @@ def RivlinCube_PoroHyperelasticity(
 
 
 
-    if mesh_from_file:
-        domains_mf=None
-        if multimaterial :
-            ymin = mesh.coordinates()[:, 1].min()
-            ymax = mesh.coordinates()[:, 1].max()
-            delta_y = ymax - ymin
-            domains_mf = None
-            tol = 1E-14
-            number_zones = len(mat_params)
-            length_zone = delta_y*0.1
-            domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
-            domains_mf.set_all(0)
-            subdomain_lst = []
-            subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=ymin+length_zone, tol=tol))
-            subdomain_lst[0].mark(domains_mf, 0)
-            for mat_id in range(0, number_zones):
-                subdomain_lst.append(dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=ymin+length_zone*(mat_id+1), tol=tol))
-                subdomain_lst[mat_id].mark(domains_mf, mat_id)
-                mat_params[mat_id]["subdomain_id"] = mat_id
-            # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
-            # boundary_file << domains_mf
-    else:
-        domains_mf=None
-        if multimaterial :
-            domains_mf = None
-            # print(len(mat_params))
-            if len(mat_params)>=2 :
-                tol = 1E-14
-                number_zones = len(mat_params)
-                mid_point = abs(cube_params.get("Y1", 1.)-cube_params.get("Y0", 0.))/number_zones
-                domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
-                if number_zones == 2:
-                    domains_mf.set_all(0)
-                    subdomain_0 = dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=mid_point, tol=tol)
-                    subdomain_1 = dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=mid_point, tol=tol)
-                    subdomain_0.mark(domains_mf, 0)
-                    mat_params[0]["subdomain_id"] = 0
-                    subdomain_1.mark(domains_mf, 1)
-                    mat_params[1]["subdomain_id"] = 1
-                    # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
-                    # boundary_file << domains_mf
-                elif number_zones == 3 :
-                    domains_mf.set_all(0)
-                    # print("creating 3 subdomains...")
-                    y1 = mid_point
-                    y2 = 2*mid_point
-                    # print("y1, y2", y1, y2)
-                    subdomain_0 = dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=y1, tol=tol)
-                    subdomain_1 = dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=y1, tol=tol)
-                    subdomain_2 = dolfin.CompiledSubDomain("x[1] >= y2 - tol",  y2=y2, tol=tol)
-                    subdomain_0.mark(domains_mf, 0)
-                    mat_params[0]["subdomain_id"] = 0
-                    subdomain_1.mark(domains_mf, 1)
-                    mat_params[1]["subdomain_id"] = 1
-                    subdomain_2.mark(domains_mf, 2)
-                    mat_params[2]["subdomain_id"] = 2
-                    # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
-                    # boundary_file << domains_mf
-                else:
-                    y1 = mid_point
-                    domains_mf.set_all(0)
-                    subdomain_lst = []
-                    subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=y1, tol=tol))
-                    subdomain_lst[0].mark(domains_mf, 0)
-                    for mat_id in range(0, number_zones):
-                        subdomain_lst.append(dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=(mat_id+1)*y1, tol=tol))
-                        subdomain_lst[mat_id].mark(domains_mf, mat_id)
-                        mat_params[mat_id]["subdomain_id"] = mat_id
-                    # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
-                    # boundary_file << domains_mf
+    # if mesh_from_file:
+    #     domains_mf=None
+    #     if multimaterial :
+    #         ymin = mesh.coordinates()[:, 1].min()
+    #         ymax = mesh.coordinates()[:, 1].max()
+    #         delta_y = ymax - ymin
+    #         domains_mf = None
+    #         tol = 1E-14
+    #         number_zones = len(mat_params)
+    #         length_zone = delta_y*0.1
+    #         domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
+    #         domains_mf.set_all(0)
+    #         subdomain_lst = []
+    #         subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=ymin+length_zone, tol=tol))
+    #         subdomain_lst[0].mark(domains_mf, 0)
+    #         for mat_id in range(0, number_zones):
+    #             subdomain_lst.append(dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=ymin+length_zone*(mat_id+1), tol=tol))
+    #             subdomain_lst[mat_id].mark(domains_mf, mat_id)
+    #             mat_params[mat_id]["subdomain_id"] = mat_id
+    #         # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
+    #         # boundary_file << domains_mf
+    # else:
+    #     domains_mf=None
+    #     if multimaterial :
+    #         domains_mf = None
+    #         # print(len(mat_params))
+    #         if len(mat_params)>=2 :
+    #             tol = 1E-14
+    #             number_zones = len(mat_params)
+    #             mid_point = abs(cube_params.get("Y1", 1.)-cube_params.get("Y0", 0.))/number_zones
+    #             domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
+    #             if number_zones == 2:
+    #                 domains_mf.set_all(0)
+    #                 subdomain_0 = dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=mid_point, tol=tol)
+    #                 subdomain_1 = dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=mid_point, tol=tol)
+    #                 subdomain_0.mark(domains_mf, 0)
+    #                 mat_params[0]["subdomain_id"] = 0
+    #                 subdomain_1.mark(domains_mf, 1)
+    #                 mat_params[1]["subdomain_id"] = 1
+    #                 # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
+    #                 # boundary_file << domains_mf
+    #             elif number_zones == 3 :
+    #                 domains_mf.set_all(0)
+    #                 # print("creating 3 subdomains...")
+    #                 y1 = mid_point
+    #                 y2 = 2*mid_point
+    #                 # print("y1, y2", y1, y2)
+    #                 subdomain_0 = dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=y1, tol=tol)
+    #                 subdomain_1 = dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=y1, tol=tol)
+    #                 subdomain_2 = dolfin.CompiledSubDomain("x[1] >= y2 - tol",  y2=y2, tol=tol)
+    #                 subdomain_0.mark(domains_mf, 0)
+    #                 mat_params[0]["subdomain_id"] = 0
+    #                 subdomain_1.mark(domains_mf, 1)
+    #                 mat_params[1]["subdomain_id"] = 1
+    #                 subdomain_2.mark(domains_mf, 2)
+    #                 mat_params[2]["subdomain_id"] = 2
+    #                 # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
+    #                 # boundary_file << domains_mf
+    #             else:
+    #                 y1 = mid_point
+    #                 domains_mf.set_all(0)
+    #                 subdomain_lst = []
+    #                 subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 + tol",  y1=y1, tol=tol))
+    #                 subdomain_lst[0].mark(domains_mf, 0)
+    #                 for mat_id in range(0, number_zones):
+    #                     subdomain_lst.append(dolfin.CompiledSubDomain(" x[1] >= y1 - tol",  y1=(mat_id+1)*y1, tol=tol))
+    #                     subdomain_lst[mat_id].mark(domains_mf, mat_id)
+    #                     mat_params[mat_id]["subdomain_id"] = mat_id
+    #                 # boundary_file = dolfin.File("/Users/peyrault/Documents/Gravity/Gravity_cluster/Tests/boundaries.pvd") 
+    #                 # boundary_file << domains_mf
 
   
     
@@ -694,7 +703,7 @@ def RivlinCube_PoroHyperelasticity(
             dV=problem.dV,
             dS=problem.dS,
             f_ini=[0.]*dim,
-            f_fin=[0., 0., f],
+            f_fin=[0., f, 0.],
             rho_solid=rho_solid,
             phis=problem.phis,
             P0_ini=0.,
@@ -709,13 +718,12 @@ def RivlinCube_PoroHyperelasticity(
             k_step=k_step)
         f = load_params.get("f", 1e4)
         P0 = load_params.get("P0", -0.5)
-        print("P0", P0)
         rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
         problem.add_pressure_balancing_gravity_loading_operator(
             dV=problem.dV,
             dS=problem.dS,
             f_ini=[0.]*dim,
-            f_fin=[0, 0., f],
+            f_fin=[0, f, 0],
             rho_solid=rho_solid,
             P0_ini=0.,
             P0_fin=P0,
