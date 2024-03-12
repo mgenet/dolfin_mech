@@ -15,7 +15,7 @@ from .Material_Elastic import ElasticMaterial
 
 ################################################################################
 
-class ExponentialMaterial(ElasticMaterial):
+class ExponentialNeoHookeanElasticMaterial(ElasticMaterial):
 
 
 
