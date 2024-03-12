@@ -445,7 +445,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             S_area_test = self.get_surface_area_subsol().dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
-            dS=self.dS,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -661,8 +660,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         expr_lst = []
         for i in range(len(self.steps)):
 
-            for operator in self.steps[i].operators: # MG20231124: Warning! Only works if there is a single step!!
-                # print(len(self.steps))
+            for operator in self.steps[i].operators: 
                 if hasattr(operator, "tv_pf"):
                     tv_pf = operator.tv_pf
                     break

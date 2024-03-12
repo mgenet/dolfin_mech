@@ -12,7 +12,7 @@ from .Kinematics_Linearized import *
 from .Loading import *
 from .Material import *
 from .Material_Elastic import *
-from .Material_Elastic_Exponential import *
+from .Material_Elastic_ExponentialNeoHookean import *
 from .Material_Elastic_ExponentialOgdenCiarletGeymonat import *
 from .Material_Elastic_Hooke import *
 from .Material_Elastic_Kirchhoff import *
