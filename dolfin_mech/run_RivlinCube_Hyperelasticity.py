@@ -27,6 +27,7 @@ def run_RivlinCube_Hyperelasticity(
         load_params                            : dict = {}                              ,
         mesh_modifs_params                     : dict = {}                              ,
         get_results                            : bool = 0                               ,
+        move    : dict = {},
         res_basename                           : str  = "run_RivlinCube_Hyperelasticity",
         write_vtus_with_preserved_connectivity : bool = False                           ,
         verbose                                : bool = 0                               ):
