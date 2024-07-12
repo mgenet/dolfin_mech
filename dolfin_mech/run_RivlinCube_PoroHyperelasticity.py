@@ -22,11 +22,11 @@ def run_RivlinCube_PoroHyperelasticity(
         inverse=0,
         cube_params={},
         porosity_params={},
-        mesh_modifs_params={},
         mat_params={},
         step_params={},
         load_params={},
-        inertia_params={"applied": False},
+        move={},
+        inertia=0,
         res_basename="run_RivlinCube_PoroHyperelasticity",
         plot_curves=False,
         get_results=0,
@@ -48,8 +48,8 @@ def run_RivlinCube_PoroHyperelasticity(
         elif (dim==3):
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
-    if mesh_modifs_params.get("move", False) == True :
-        Umove = mesh_modifs_params.get("U")
+    if move.get("move", False) == True :
+        Umove = move.get("U")
         dolfin.ALE.move(mesh, Umove)
 
     ################################################################ Porosity ###
