@@ -46,9 +46,9 @@ def run_RivlinCube_Mesh(
             NX, NY, NZ)
 
     if refine:
-        dolfin.File(mesh_filebasename+"coarse"+".xml") << mesh
+        dolfin.File(mesh_filebasename+"coarse.xml") << mesh
         mesh=dolfin.refine(mesh)
-        dolfin.File(mesh_filebasename+"refined"+".xml") << mesh
+        dolfin.File(mesh_filebasename+"refined.xml") << mesh
 
     xdmf_file_mesh = dolfin.XDMFFile(mesh_filebasename+".xdmf")
     xdmf_file_mesh.write(mesh)
