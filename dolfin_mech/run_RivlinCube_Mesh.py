@@ -14,8 +14,7 @@ import dolfin
 
 def run_RivlinCube_Mesh(
         dim    : int  = 3 ,
-        params : dict = {},
-        refine : bool = False):
+        params : dict = {}):
 
     X0 = params.get("X0", 0.)
     X1 = params.get("X1", 1.)
@@ -45,10 +44,8 @@ def run_RivlinCube_Mesh(
             dolfin.Point(X0, Y0, Z0), dolfin.Point(X1, Y1, Z1),
             NX, NY, NZ)
 
-    if refine:
-        dolfin.File(mesh_filebasename+"coarse.xml") << mesh
+    if params.get("refine", False) == True :
         mesh=dolfin.refine(mesh)
-        dolfin.File(mesh_filebasename+"refined.xml") << mesh
 
     xdmf_file_mesh = dolfin.XDMFFile(mesh_filebasename+".xdmf")
     xdmf_file_mesh.write(mesh)
