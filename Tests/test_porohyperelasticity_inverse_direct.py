@@ -94,19 +94,19 @@ for loads in loads_lst:
         res_basename  = sys.argv[0][:-3]
         res_basename += "-inverse="+str(inverse)
 
-        U, phis, V = dmech.run_RivlinCube_PoroHyperelasticity(
-                    dim=dim,
-                    inverse=inverse,
-                    cube_params=cube_params,
-                    porosity_params=porosity,
-                    mat_params={"scaling":scaling, "parameters":mat_params},
-                    step_params={"dt_min":1e-4},
-                    load_params={"type":load},
-                    move_params = {"move":move, "U":U_move},
-                    res_basename=res_folder+"/"+res_basename,
-                    plot_curves=0,
-                    get_results=1,
-                    verbose=0)
+        U, phis, dV = dmech.run_RivlinCube_PoroHyperelasticity(
+            dim=dim,
+            inverse=inverse,
+            cube_params=cube_params,
+            move_params={"move":move, "U":U_move},
+            porosity_params=porosity,
+            mat_params={"scaling":scaling, "parameters":mat_params},
+            load_params={"type":load},
+            step_params={"dt_min":1e-4},
+            res_basename=res_folder+"/"+res_basename,
+            plot_curves=0,
+            get_results=1,
+            verbose=0)
 
         try:
             U_tot
