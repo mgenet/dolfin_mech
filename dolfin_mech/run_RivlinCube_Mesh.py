@@ -44,6 +44,9 @@ def run_RivlinCube_Mesh(
             dolfin.Point(X0, Y0, Z0), dolfin.Point(X1, Y1, Z1),
             NX, NY, NZ)
 
+    if params.get("refine", False) == True :
+        mesh=dolfin.refine(mesh)
+
     xdmf_file_mesh = dolfin.XDMFFile(mesh_filebasename+".xdmf")
     xdmf_file_mesh.write(mesh)
     xdmf_file_mesh.close()
