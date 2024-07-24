@@ -65,7 +65,7 @@ for dim in dim_lst:
             res_basename += "-dim="+str(dim)
             res_basename += "-load="+str(load)
 
-            U, V=dmech.run_RivlinCube_Hyperelasticity(
+            U, dV=dmech.run_RivlinCube_Hyperelasticity(
                 dim=dim,
                 cube_params=cube_params,
                 mat_params={"model":"CGNHMR", "parameters":{"E":1., "nu":0.3, "dim":dim}},
@@ -83,13 +83,13 @@ for dim in dim_lst:
                 U_tot = U.copy(deepcopy=True)
                 move=True
                 U_move=U
-                V_ini = V
+                dV_ini = dV
             else:
                 U_tot.vector()[:] += U.vector()[:]
                 move=False
                 U_move=None
             
-        U_tot_norm = (dolfin.assemble(dolfin.inner(U_tot, U_tot)*V_ini)/2/dolfin.assemble(dolfin.Constant(1)*V))**(1/2)  
+        U_tot_norm = (dolfin.assemble(dolfin.inner(U_tot, U_tot)*dV_ini)/2/dolfin.assemble(dolfin.Constant(1)*dV))**(1/2)  
 
         print("displacement norm", U_tot_norm)
 
