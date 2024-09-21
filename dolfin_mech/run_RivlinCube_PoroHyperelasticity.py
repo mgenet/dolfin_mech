@@ -182,30 +182,62 @@ def run_RivlinCube_PoroHyperelasticity(
     else:
         gradient_operators=None
 
-    if (inverse):
-        problem = dmech.InversePoroHyperelasticityProblem(
-            mesh=mesh,
-            define_facet_normals=1,
-            boundaries_mf=boundaries_mf,
-            displacement_degree=1,
-            porosity_init_val=porosity_val,
-            porosity_init_fun=porosity_fun,
-            skel_behavior=mat_params,
-            bulk_behavior=mat_params,
-            pore_behavior=mat_params,
-            gradient_operators=gradient_operators)
+    if type(mat_params)==list and len(mat_params)>1:
+        if (inverse):
+            problem = dmech.InversePoroHyperelasticityProblem(
+                mesh=mesh,
+                define_facet_normals=1,
+                boundaries_mf=boundaries_mf,
+                domains_mf=domains_mf,
+                displacement_degree=1,
+                quadrature_degree = 3,
+                porosity_init_val=porosity_val,
+                porosity_init_fun=porosity_fun,
+                skel_behaviors=mat_params,
+                bulk_behaviors=mat_params,
+                pore_behaviors=mat_params,
+                gradient_operators=gradient_operators)
+        else:
+            problem = dmech.PoroHyperelasticityProblem(
+                mesh=mesh,
+                define_facet_normals=1,
+                boundaries_mf=boundaries_mf,
+                domains_mf=domains_mf,
+                displacement_degree=1,
+                quadrature_degree = 3,
+                porosity_init_val=porosity_val,
+                porosity_init_fun=porosity_fun,
+                skel_behaviors=mat_params,
+                bulk_behaviors=mat_params,
+                pore_behaviors=mat_params,
+                gradient_operators=gradient_operators)
     else:
-        problem = dmech.PoroHyperelasticityProblem(
-            mesh=mesh,
-            define_facet_normals=1,
-            boundaries_mf=boundaries_mf,
-            displacement_degree=1,
-            porosity_init_val=porosity_val,
-            porosity_init_fun=porosity_fun,
-            skel_behavior=mat_params,
-            bulk_behavior=mat_params,
-            pore_behavior=mat_params,
-            gradient_operators=gradient_operators)
+        if (inverse):
+            problem = dmech.InversePoroHyperelasticityProblem(
+                mesh=mesh,
+                define_facet_normals=1,
+                boundaries_mf=boundaries_mf,
+                displacement_degree=1,
+                porosity_init_val=porosity_val,
+                porosity_init_fun=porosity_fun,
+                quadrature_degree = 3,
+                skel_behavior=mat_params,
+                bulk_behavior=mat_params,
+                pore_behavior=mat_params,
+                gradient_operators=gradient_operators)
+        else:
+            problem = dmech.PoroHyperelasticityProblem(
+                mesh=mesh,
+                define_facet_normals=1,
+                boundaries_mf=boundaries_mf,
+                displacement_degree=1,
+                quadrature_degree = 3,
+                porosity_init_val=porosity_val,
+                porosity_init_fun=porosity_fun,
+                skel_behavior=mat_params,
+                bulk_behavior=mat_params,
+                pore_behavior=mat_params,
+                gradient_operators=gradient_operators)
 
     ########################################## Boundary conditions & Loading ###
     n_steps = step_params.get("n_steps", 1)
@@ -289,7 +321,10 @@ def run_RivlinCube_PoroHyperelasticity(
             f_old = f_lst[k_step-1] if (k_step > 0) else 0.
             P0 = P0_lst[k_step]
             P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
-            rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+            if type(mat_params)==list:
+                rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
+            else:
+                rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
             problem.add_pressure_balancing_gravity0_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
@@ -312,7 +347,10 @@ def run_RivlinCube_PoroHyperelasticity(
             f_old = f_lst[k_step-1] if (k_step > 0) else 0.
             P0 = P0_lst[k_step]
             P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
-            rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+            if type(mat_params)==list:
+                rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
+            else:
+                rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
             problem.add_pressure_balancing_gravity_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
