@@ -75,6 +75,16 @@ def run_RivlinCube_PoroHyperelasticity(
 
     if (porosity_type == "constant"):
         porosity_fun = None
+    elif (porosity_type=="from_file"):
+        porosity_filename = porosity_val
+        porosity_mf = dolfin.MeshFunction(
+            "double",
+            mesh,
+            porosity_filename)       
+        porosity_expr = dolfin.CompiledExpression(getattr(dolfin.compile_cpp_code(dmech.get_ExprMeshFunction_cpp_pybind()), "MeshExpr")(), mf=porosity_mf, degree=0)
+        porosity_fs = dolfin.FunctionSpace(mesh, 'DG', 0)
+        porosity_fun = dolfin.interpolate(porosity_expr, porosity_fs)
+        porosity_val = None
     elif (porosity_type.startswith("mesh_function")):
         if (porosity_type == "mesh_function_constant"):
             porosity_mf = dolfin.MeshFunction(
@@ -107,7 +117,7 @@ def run_RivlinCube_PoroHyperelasticity(
                 file.write('<dolfin xmlns:dolfin="http://fenicsproject.org">\n')
                 file.write('  <mesh_function type="double" dim="'+str(dim)+'" size="'+str(n_cells)+'">\n')
                 for k_cell in range(n_cells):
-                    value = numpy.random.uniform(low=0.4, high=0.6)
+                    value = abs(numpy.random.uniform(low=0.2, high=0.4))
                             # positive_value = True
                     file.write('    <entity index="'+str(k_cell)+'" value="'+str(value)+'"/>\n')
                 file.write('  </mesh_function>\n')
