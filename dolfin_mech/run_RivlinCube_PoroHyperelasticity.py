@@ -35,11 +35,27 @@ def run_RivlinCube_PoroHyperelasticity(
     ################################################################### Mesh ###
 
     if ("path_and_mesh_name" in cube_params):
-        mesh = dolfin.Mesh()
-        mesh_name = str(cube_params["path_and_mesh_name"])
-        dolfin.XDMFFile(mesh_name).read(mesh)
+        if type(cube_params["path_and_mesh_name"])==type(dolfin.Mesh()):
+            mesh=cube_params["path_and_mesh_name"]
+        else:
+            mesh = dolfin.Mesh()
+            mesh_name = str(cube_params["path_and_mesh_name"])
+            dolfin.XDMFFile(mesh_name).read(mesh)
         if ("refine" in cube_params):
             mesh=dolfin.refine(mesh)
+        if ("domains" in cube_params):
+            # mvc = dolfin.MeshValueCollection("size_t", mesh, 3)
+            # with dolfin.XDMFFile(mesh) as infile:
+            #     infile.read(mvc, "part_id")
+            # domains_mf = dolfin.cpp.mesh.MeshFunctionSizet(mesh, mvc)
+            domains_mf=cube_params["domains"]
+            if len(mat_params)>1:
+                zone=0
+                for mat_id in range(2, 2+len(mat_params)):  ### by default, the zones are numbered from 2
+                    mat_params[zone]["subdomain_id"] = mat_id
+                    zone+=1
+        else: 
+            domains_mf=None   
         boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
         boundaries_mf.set_all(0)
     else:
