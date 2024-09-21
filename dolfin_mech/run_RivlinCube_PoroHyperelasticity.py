@@ -267,9 +267,9 @@ def run_RivlinCube_PoroHyperelasticity(
             problem.add_pressure_balancing_gravity0_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
-                f_ini=[0.]*(dim-1)+[f_old],
+                f_ini=[0., f_old, 0.],
                 # f_fin=[f, 0., 0.],
-                f_fin=[0., 0., f],
+                f_fin=[0., f, 0],
                 rho_solid=rho_solid,
                 phis=problem.phis,
                 P0_ini=P0_old,
@@ -290,9 +290,9 @@ def run_RivlinCube_PoroHyperelasticity(
             problem.add_pressure_balancing_gravity_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
-                f_ini=[0.]*(dim-1)+[f_old],
+                f_ini=[0., f_old, 0.],
                 # f_fin=[f, 0., 0.],
-                f_fin=[0., 0., f],
+                f_fin=[0., f, 0.],
                 rho_solid=rho_solid,
                 P0_ini=P0_old,
                 P0_fin=P0,
