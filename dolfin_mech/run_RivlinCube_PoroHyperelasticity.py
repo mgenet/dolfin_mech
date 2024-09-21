@@ -390,7 +390,7 @@ def run_RivlinCube_PoroHyperelasticity(
         parameters={
             "sol_tol":[1e-6]*len(problem.subsols),
             "n_iter_max":32},
-        relax_type="constant",
+        relax_type="backtracking",
         write_iter=0)
 
     integrator = dmech.TimeIntegrator(
