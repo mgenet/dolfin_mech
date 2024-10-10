@@ -48,6 +48,23 @@ def run_RivlinCube_PoroHyperelasticity(
         elif (dim==3):
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
+    domains_mf = None
+    if ("generic_zones" in cube_params):
+        if len(mat_params)>1 :
+            ymin = mesh.coordinates()[:, 1].min()
+            ymax = mesh.coordinates()[:, 1].max()
+            delta_y = ymax - ymin
+            tol = 1E-14
+            number_zones = len(mat_params)
+            length_zone = delta_y/number_zones
+            domains_mf = dolfin.MeshFunction('size_t', mesh, mesh.topology().dim())
+            domains_mf.set_all(0)
+            subdomain_lst = []
+            for mat_id in range(number_zones-1, -1, -1):
+                subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 - tol",  y1=ymax-length_zone*(number_zones-1-mat_id), tol=tol))
+                subdomain_lst[number_zones-1-mat_id].mark(domains_mf, mat_id)
+                mat_params[mat_id]["subdomain_id"] = mat_id
+
     if move_params.get("move", False) == True :
         Umove = move_params.get("U")
         dolfin.ALE.move(mesh, Umove)
@@ -181,14 +198,14 @@ def run_RivlinCube_PoroHyperelasticity(
         pore_behavior=mat_params
         pore_behaviors=[]
     
-    print("skel_behavior", skel_behavior, skel_behaviors)
-
     if (inverse):
         problem = dmech.InversePoroHyperelasticityProblem(
             mesh=mesh,
             define_facet_normals=1,
             boundaries_mf=boundaries_mf,
+            domains_mf = domains_mf,
             displacement_degree=1,
+            quadrature_degree = 6,
             porosity_init_val=porosity_val,
             porosity_init_fun=porosity_fun,
             skel_behavior=skel_behavior,
@@ -203,7 +220,9 @@ def run_RivlinCube_PoroHyperelasticity(
             mesh=mesh,
             define_facet_normals=1,
             boundaries_mf=boundaries_mf,
+            domains_mf = domains_mf,
             displacement_degree=1,
+            quadrature_degree = 6,
             porosity_init_val=porosity_val,
             porosity_init_fun=porosity_fun,
             skel_behavior=skel_behavior,
