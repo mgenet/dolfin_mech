@@ -133,7 +133,7 @@ class PressureBalancingGravity0LoadingOperator(Operator):
             val=P0_val, val_ini=P0_ini, val_fin=P0_fin)
         P0 = self.tv_P0.val
 
-        self.tv_grad_x = dmech.TimeVaryingConstant(
+        self.tv_grad = dmech.TimeVaryingConstant(
             val=None, val_ini=f_ini[1], val_fin=f_fin[1]) #### AP2023 - depends on the orientation of gravity: here, g = [0., 0., 9.81e3]
         grad = self.tv_grad.val
 
