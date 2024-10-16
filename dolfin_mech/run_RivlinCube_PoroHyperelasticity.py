@@ -47,9 +47,19 @@ def run_RivlinCube_PoroHyperelasticity(
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
         elif (dim==3):
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
+    
+
 
     domains_mf = None
-    if ("generic_zones" in cube_params):
+    if ("domains" in cube_params):
+        mvc = dolfin.MeshValueCollection("size_t", mesh, 3)
+        with dolfin.XDMFFile(mesh_name) as infile:
+            infile.read(mvc, "part_id")
+        domains_mf = dolfin.cpp.mesh.MeshFunctionSizet(mesh, mvc)
+        number_zones = len(mat_params)
+        for mat_id in range(number_zones-1, -1, -1):
+            mat_params[mat_id]["subdomain_id"] = mat_id + 2
+    elif ("generic_zones" in cube_params):
         if len(mat_params)>1 :
             ymin = mesh.coordinates()[:, 1].min()
             ymax = mesh.coordinates()[:, 1].max()
@@ -64,6 +74,8 @@ def run_RivlinCube_PoroHyperelasticity(
                 subdomain_lst.append(dolfin.CompiledSubDomain("x[1] <= y1 - tol",  y1=ymax-length_zone*(number_zones-1-mat_id), tol=tol))
                 subdomain_lst[number_zones-1-mat_id].mark(domains_mf, mat_id)
                 mat_params[mat_id]["subdomain_id"] = mat_id
+
+    print("mat_params", mat_params)
 
     if move_params.get("move", False) == True :
         Umove = move_params.get("U")
