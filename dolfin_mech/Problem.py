@@ -455,10 +455,10 @@ class Problem():
 
 
 
-    def update_qois(self, dt=None):
+    def update_qois(self, dt=None, k_step=None):
 
         for qoi in self.qois:
-            qoi.update(dt)
+            qoi.update(dt, k_step)
 
 ################################################################## operators ###
 
@@ -597,7 +597,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceTensionLoadingOperator(
-            U=self.get_displacement_subsol().subfunc,
+            # U=self.get_displacement_subsol().subfunc,
             U_test=self.get_displacement_subsol().dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,

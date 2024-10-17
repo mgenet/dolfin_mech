@@ -18,11 +18,11 @@ from .Operator import Operator
 class SurfaceTensionLoadingOperator(Operator):
 
     def __init__(self,
-            U,
-            U_test,
             kinematics,
             N,
             measure,
+            U_test,
+            tension_params={},
             gamma_val=None, gamma_ini=None, gamma_fin=None):
 
         self.measure = measure
@@ -31,10 +31,34 @@ class SurfaceTensionLoadingOperator(Operator):
             val=gamma_val, val_ini=gamma_ini, val_fin=gamma_fin)
         gamma = self.tv_gamma.val
 
+        self.N = N
+        self.kinematics=kinematics
+
+        self.tv_gamma = dmech.TimeVaryingConstant(
+            val=gamma_val, val_ini=gamma_ini, val_fin=gamma_fin)
+        gamma = self.tv_gamma.val
+        
+        dim = U_test.ufl_shape[0]
+        I = dolfin.Identity(dim)
         FmTN = dolfin.dot(dolfin.inv(kinematics.F).T, N)
         T = dolfin.sqrt(dolfin.inner(FmTN, FmTN))
-        Pi = gamma * T * kinematics.J * self.measure
-        self.res_form = dolfin.derivative(Pi, U, U_test)
+        n = FmTN/T
+        P = I - dolfin.outer(n,n)
+        
+        S_hat = kinematics.J * T
+
+        surface_dependancy = tension_params.get("surface_dependancy", None)
+        if surface_dependancy == 1:
+            d1 = dolfin.Constant(tension_params.get("d1"))
+            d2 = dolfin.Constant(tension_params.get("d2"))
+            d3 = dolfin.Constant(tension_params.get("d3"))
+
+            gamma = gamma * (d1/(1 + (S_hat/d2)**(d3)))
+
+
+        taus = gamma * P
+
+        self.res_form =  dolfin.inner(taus, dolfin.dot(P,(dolfin.grad(U_test)))) *  self.kinematics.J * T * self.measure
 
 
 
@@ -42,6 +66,8 @@ class SurfaceTensionLoadingOperator(Operator):
             t_step):
 
         self.tv_gamma.set_value_at_t_step(t_step)
+
+
 
 ################################################################################
 
