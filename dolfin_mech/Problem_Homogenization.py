@@ -198,8 +198,7 @@ class HomogenizationProblem():
 
         class BoundaryX0(dolfin.SubDomain):
             def inside(self,x,on_boundary):
-                # return on_boundary and dolfin.near(x[0],xmin,tol)
-                return on_boundary and dolfin.near(x[0],vv[0,0] + x[1]*a2[0]/vv[3,1],tol)
+                return on_boundary and dolfin.near(x[0],vv[0,0]+x[1]*a2[0]/vv[3,1],tol)
 
         class BoundaryY0(dolfin.SubDomain):
             def inside(self,x,on_boundary):
@@ -208,7 +207,7 @@ class HomogenizationProblem():
         class BoundaryX1(dolfin.SubDomain):
             def inside(self,x,on_boundary):
                 # return on_boundary and dolfin.near(x[0],xmax,tol)
-                return on_boundary and dolfin.near(x[0],vv[1,0] + x[1]*a2[0]/vv[3,1],tol)
+                return on_boundary and dolfin.near(x[0],vv[1,0]+x[1]*a2[0]/vv[3,1],tol)
 
         class BoundaryY1(dolfin.SubDomain):
             def inside(self,x,on_boundary):
@@ -217,7 +216,6 @@ class HomogenizationProblem():
         if (self.dim ==3):
             class BoundaryZ0(dolfin.SubDomain):
                 def inside(self,x,on_boundary):
-                    # return on_boundary and dolfin.near(x[0],xmax,tol)
                     return on_boundary and dolfin.near(x[2],zmin,tol)
 
             class BoundaryZ1(dolfin.SubDomain):
