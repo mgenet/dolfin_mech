@@ -52,7 +52,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         a1 = vertices[1,:]-vertices[0,:] # first vector generating periodicity
         a2 = vertices[3,:]-vertices[0,:] # second vector generating periodicity
         # check if UC vertices form indeed a parallelogram
-        tol = 1E-8
+        tol = 1e-8
         assert numpy.linalg.norm(vertices[2, :]-vertices[3, :] - a1) <= tol
         assert numpy.linalg.norm(vertices[2, :]-vertices[1, :] - a2) <= tol
     elif (dim==3):    
@@ -69,7 +69,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
 
     ################################################## Subdomains & Measures ###
 
-    tol = 1E-8
+    tol = 1e-8
     xmin_sd = dolfin.CompiledSubDomain("near(x[0], x0, tol) && on_boundary", x0=xmin, tol=tol)
     xmax_sd = dolfin.CompiledSubDomain("near(x[0], x0, tol) && on_boundary", x0=xmax, tol=tol)
     ymin_sd = dolfin.CompiledSubDomain("near(x[1], x0, tol) && on_boundary", x0=ymin, tol=tol)

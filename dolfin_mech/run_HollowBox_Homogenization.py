@@ -8,8 +8,10 @@
 ###                                                                          ###
 ################################################################################
 
-import dolfin_mech as dmech
+import dolfin
+
 import myPythonLibrary as mypy
+import dolfin_mech     as dmech
 
 ################################################################################
 
@@ -24,7 +26,7 @@ def run_HollowBox_Homogenization(
 
     ################################################################### Mesh ###
 
-    assert ((mesh is not None) ^ (mesh_params is not None))
+    assert ((mesh is not None) or (mesh_params is not None))
     if (mesh is None):
         mesh = dmech.run_HollowBox_Mesh(
             params=mesh_params)
@@ -40,6 +42,14 @@ def run_HollowBox_Homogenization(
         vol = (xmax - xmin)*(ymax - ymin)*(zmax - zmin)
         bbox = [xmin, xmax, ymin, ymax, zmin, zmax]
 
+    V_0 = vol
+    dV = dolfin.Measure(
+        "dx",
+        domain=mesh)
+    V_s0 = dolfin.assemble(dolfin.Constant(1.) * dV)
+    Phi_s0 = V_s0/V_0
+    print("Phi_s0 = "+str(Phi_s0))
+
     ################################################################ Problem ###
 
     homogenization_problem = dmech.HomogenizationProblem(
@@ -48,7 +58,7 @@ def run_HollowBox_Homogenization(
         mat_params=mat_params,
         vol=vol,
         bbox=bbox)
-    [mu_, lmbda_] = homogenization_problem.get_lambda_and_mu()
+    [lmbda_, mu_] = homogenization_problem.get_lambda_and_mu()
     kappa_ = homogenization_problem.get_kappa()
 
     E_ = mu_*(3*lmbda_ + 2*mu_)/(lmbda_ + mu_)

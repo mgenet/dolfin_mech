@@ -55,7 +55,7 @@ class PeriodicSubDomain(dolfin.SubDomain):
             if (self.dim >= 3):
                 self.tol += (self.zmax - self.zmin)**2
             self.tol = (self.tol)**(1/2)
-            self.tol *= 1e-2
+            self.tol *= 1e-3
         else:
             self.tol = tol
        
@@ -81,9 +81,8 @@ class PeriodicSubDomain(dolfin.SubDomain):
         self.vv = vertices
         self.a1 = self.vv[1,:]-self.vv[0,:] # first vector generating periodicity
         self.a2 = self.vv[3,:]-self.vv[0,:] # second vector generating periodicity
-        # check if UC vertices form indeed a parallelogram
-        assert np.linalg.norm(self.vv[2,:] - self.vv[3,:] - self.a1) <= self.tol
-        assert np.linalg.norm(self.vv[2,:] - self.vv[1,:] - self.a2) <= self.tol
+        assert np.linalg.norm(self.vv[2,:] - self.vv[3,:] - self.a1) <= self.tol # check if UC vertices form indeed a parallelogram
+        assert np.linalg.norm(self.vv[2,:] - self.vv[1,:] - self.a2) <= self.tol # check if UC vertices form indeed a parallelogram
 
 
 
@@ -96,7 +95,7 @@ class PeriodicSubDomain(dolfin.SubDomain):
         # return True if on left or bottom boundary AND NOT on one of the
         # bottom-right or top-left vertices
         return bool((dolfin.near(x[0], self.vv[0,0] + x[1]*self.a2[0]/self.vv[3,1], self.tol) or
-                    dolfin.near(x[1], self.vv[0,1] + x[0]*self.a1[1]/self.vv[1,0], self.tol)) and
+                     dolfin.near(x[1], self.vv[0,1] + x[0]*self.a1[1]/self.vv[1,0], self.tol)) and
                     (not ((dolfin.near(x[0], self.vv[1,0], self.tol) and dolfin.near(x[1], self.vv[1,1], self.tol)) or
                     (dolfin.near(x[0], self.vv[3,0], self.tol) and dolfin.near(x[1], self.vv[3,1], self.tol)))) and on_boundary)
 
