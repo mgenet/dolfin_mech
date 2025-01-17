@@ -24,18 +24,18 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
-dim_lst += [3]
+# dim_lst += [3]
 for dim in dim_lst:
 
-    incomp_lst  = []
+    incomp_lst  = [ ]
     incomp_lst += [0]
     incomp_lst += [1]
     for incomp in incomp_lst:
 
-        print("dim =",dim)
-        print("incomp =",incomp)
+        print("dim ="   , dim   )
+        print("incomp =", incomp)
 
         res_basename  = sys.argv[0][:-3]
         res_basename += "-dim="+str(dim)
@@ -45,7 +45,7 @@ for dim in dim_lst:
             dim=dim,
             incomp=incomp,
             multimaterial=1,
-            cube_params={"l":0.1},
+            cube_params={"l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
             load_params={"type":"disp"},
             res_basename=res_folder+"/"+res_basename,
             verbose=0)

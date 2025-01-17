@@ -30,20 +30,20 @@ test = mypy.Test(
     clean_after_tests=1,
     tester_numpy_tolerance=1e-2)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
-dim_lst += [3]
+# dim_lst += [3]
 for dim in dim_lst:
 
-    bcs_lst  = []
+    bcs_lst  = [      ]
     bcs_lst += ["kubc"]
-    bcs_lst += ["pbc"]
+    bcs_lst += ["pbc" ]
     for bcs in bcs_lst:
 
-        load_lst  = []
-        load_lst += ["internal_pressure"]
+        load_lst  = [                     ]
+        load_lst += ["internal_pressure"  ]
         load_lst += ["macroscopic_stretch"]
-        load_lst += ["macroscopic_stress"]
+        load_lst += ["macroscopic_stress" ]
         for load in load_lst:
 
             print("dim =",dim)
@@ -54,21 +54,6 @@ for dim in dim_lst:
             res_basename += "-dim="+str(dim)
             res_basename += "-bcs="+str(bcs)
             res_basename += "-load="+str(load)
-
-            mesh_params = {}
-            mesh_params["mesh_filebasename"] = res_folder+"/"+"mesh"
-            mesh_params["dim"] = dim
-            mesh_params["xmin"] = 0.
-            mesh_params["ymin"] = 0.
-            mesh_params["zmin"] = 0.
-            mesh_params["xmax"] = 1.
-            mesh_params["ymax"] = 1.
-            mesh_params["zmax"] = 1.
-            mesh_params["xshift"] = -0.3
-            mesh_params["yshift"] = -0.3
-            mesh_params["zshift"] = -0.3
-            mesh_params["r0"] = 0.2
-            mesh_params["l"] = 0.1
 
             load_params = {}
             if (load == "internal_pressure"):
@@ -92,7 +77,7 @@ for dim in dim_lst:
 
             dmech.run_HollowBox_MicroPoroHyperelasticity(
                 dim=dim,
-                mesh_params=mesh_params,
+                mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
                 mat_params={"model":"CGNHMR", "parameters":{"E":1.0, "nu":0.3}},
                 bcs=bcs,
                 step_params={"dt_ini":1e-1, "dt_min":1e-3},

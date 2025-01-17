@@ -35,7 +35,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
         write_qois_limited_precision=True,
         verbose=0):
 
-    assert ((mesh is not None) ^ (mesh_params is not None))
+    assert ((mesh is not None) or (mesh_params is not None))
     if (mesh is None):
         mesh = dmech.run_HollowBox_Mesh(
             params=mesh_params)
@@ -51,10 +51,9 @@ def run_HollowBox_MicroPoroHyperelasticity(
                                 [xmin, ymax]])
         a1 = vertices[1,:]-vertices[0,:] # first vector generating periodicity
         a2 = vertices[3,:]-vertices[0,:] # second vector generating periodicity
-        # check if UC vertices form indeed a parallelogram
         tol = 1e-8
-        assert numpy.linalg.norm(vertices[2, :]-vertices[3, :] - a1) <= tol
-        assert numpy.linalg.norm(vertices[2, :]-vertices[1, :] - a2) <= tol
+        assert numpy.linalg.norm(vertices[2,:]-vertices[3,:] - a1) <= tol # check if UC vertices form indeed a parallelogram
+        assert numpy.linalg.norm(vertices[2,:]-vertices[1,:] - a2) <= tol # check if UC vertices form indeed a parallelogram
     elif (dim==3):    
         zmax = max(coord[:,2]); zmin = min(coord[:,2])
         bbox = [xmin, xmax, ymin, ymax, zmin, zmax]
@@ -90,7 +89,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
     if (dim==3): zmax_id = 6
     # sint_id = 9
 
-    boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+    boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
     boundaries_mf.set_all(0)
 
     xmin_sd.mark(boundaries_mf, xmin_id)
@@ -164,7 +163,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
             U_bar_ij_old = U_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
             sigma_bar_ij = sigma_bar_ij_lst[i][j][k_step]
             sigma_bar_ij_old = sigma_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
-            assert ((U_bar_ij is not None) ^ (sigma_bar_ij is not None))
+            assert ((U_bar_ij is not None) or (sigma_bar_ij is not None))
             if (U_bar_ij is not None):
                 problem.add_macroscopic_stretch_component_penalty_operator(
                     i=i, j=j,

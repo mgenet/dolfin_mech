@@ -24,12 +24,12 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
 dim_lst += [3]
 for dim in dim_lst:
 
-    PS_lst  = []
+    PS_lst = []
     if (dim == 2):
         PS_lst += [0]
         PS_lst += [1]
@@ -37,7 +37,7 @@ for dim in dim_lst:
         PS_lst += [0]
     for PS in PS_lst:
 
-        incomp_lst  = []
+        incomp_lst = []
         if (PS == 0):
             incomp_lst += [0]
             incomp_lst += [1]

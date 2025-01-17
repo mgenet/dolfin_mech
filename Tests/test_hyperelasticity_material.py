@@ -24,12 +24,12 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
 dim_lst += [3]
 for dim in dim_lst:
 
-    incomp_lst  = []
+    incomp_lst  = [ ]
     incomp_lst += [0]
     incomp_lst += [1]
     for incomp in incomp_lst:
@@ -38,19 +38,19 @@ for dim in dim_lst:
             "E":1.,
             "nu":0.5*(incomp)+0.3*(1-incomp)}
 
-        mat_lst  = []
+        mat_lst = []
         if (incomp):
-            mat_lst += ["NH"]
-            mat_lst += ["NH_bar"]
-            mat_lst += ["NHMR"]
+            mat_lst += ["NH"      ]
+            mat_lst += ["NH_bar"  ]
+            mat_lst += ["NHMR"    ]
             mat_lst += ["NHMR_bar"]
-            mat_lst += ["SVK_dev"]
+            mat_lst += ["SVK_dev" ]
         else:
-            mat_lst += ["CGNH"]
-            mat_lst += ["CGNH_bar"]
-            mat_lst += ["CGNHMR"]
+            mat_lst += ["CGNH"      ]
+            mat_lst += ["CGNH_bar"  ]
+            mat_lst += ["CGNHMR"    ]
             mat_lst += ["CGNHMR_bar"]
-            mat_lst += ["SVK"]
+            mat_lst += ["SVK"       ]
         for mat in mat_lst:
 
             print("dim =",dim)

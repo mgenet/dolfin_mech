@@ -42,15 +42,9 @@ test = mypy.Test(
 
 dim = 3
 
-inverse_lst  = []
-inverse_lst += [1]
-inverse_lst += [0]
-
-loads_lst  = []
+loads_lst  = [                                                 ]
 loads_lst += [["p_boundary_condition", "p_boundary_condition0"]]
-loads_lst += [["external", "external0"]]
-
-print("loads_lst:", loads_lst)
+loads_lst += [["external"            , "external0"            ]]
 
 for loads in loads_lst:
     print("loads:", loads)
@@ -59,21 +53,25 @@ for loads in loads_lst:
         del phis
     except:
         pass
+
     try:
         del U_tot
     except:
         pass
 
+    inverse_lst  = [ ]
+    inverse_lst += [1]
+    inverse_lst += [0]
     for inverse in inverse_lst:
 
-        porosity_lst  = []
+        porosity_lst = []
     
         scaling = "linear"
 
         load = loads[-inverse]
 
-        print("inverse =", inverse)
-        print("load =", load)
+        print("inverse =",inverse)
+        print("load =",load)
 
         try:
             phis
@@ -86,18 +84,13 @@ for loads in loads_lst:
             move = True
             U_move = U
 
-        if (load=="p_boundary_condition") or (load=="p_boundary_condition0"):
-            cube_params = {"X1":1, "Y1":1, "Z1":1, "l": 0.1} #### AP2023 - necessary for convergence
-        else:
-            cube_params = {}
-
         res_basename  = sys.argv[0][:-3]
         res_basename += "-inverse="+str(inverse)
 
         U, phis, dV = dmech.run_RivlinCube_PoroHyperelasticity(
             dim=dim,
             inverse=inverse,
-            cube_params=cube_params,
+            cube_params={"l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
             move_params={"move":move, "U":U_move},
             porosity_params=porosity,
             mat_params={"scaling":scaling, "parameters":mat_params},
@@ -118,7 +111,7 @@ for loads in loads_lst:
     U_tot_norm = (dolfin.assemble(dolfin.inner(U_tot, U_tot)*dV)/2/dolfin.assemble(dolfin.Constant(1)*dV))**(1/2)
     print("U_tot_norm:", U_tot_norm)
 
-    assert (U_tot_norm/cube_params.get("X1", 1.) < 1e-2),\
+    assert (U_tot_norm < 1e-2),\
         "Warning! Did not find the initial geometry. Aborting."
     
     test.test(res_basename)

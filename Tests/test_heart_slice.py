@@ -24,7 +24,7 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-incomp_lst  = []
+incomp_lst  = [ ]
 incomp_lst += [0]
 incomp_lst += [1]
 for incomp in incomp_lst:
@@ -37,7 +37,7 @@ for incomp in incomp_lst:
         "E":1.,
         "nu":0.5*(incomp)+0.3*(1-incomp)}
 
-    load_lst  = []
+    load_lst  = [      ]
     load_lst += ["disp"]
     load_lst += ["pres"]
     for load in load_lst:

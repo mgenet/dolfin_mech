@@ -24,22 +24,22 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
 dim_lst += [3]
 for dim in dim_lst:
 
-    load_lst  = []
-    load_lst += ["disp"]
+    load_lst  = [       ]
+    load_lst += ["disp" ]
     load_lst += ["volu0"]
-    load_lst += ["volu"]
+    load_lst += ["volu" ]
     load_lst += ["surf0"]
-    load_lst += ["surf"]
+    load_lst += ["surf" ]
     load_lst += ["pres0"]
-    load_lst += ["pres"]
+    load_lst += ["pres" ]
     load_lst += ["pgra0"]
-    load_lst += ["pgra"]
-    load_lst += ["tens"]
+    load_lst += ["pgra" ]
+    load_lst += ["tens" ]
     for load in load_lst:
 
         print("dim =",dim)

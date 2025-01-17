@@ -41,7 +41,7 @@ def run_RivlinCube_Elasticity(
         mat1_id = 1
         mat2_id = 2
 
-        domains_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+        domains_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
         domains_mf.set_all(0)
         mat1_sd.mark(domains_mf, mat1_id)
         mat2_sd.mark(domains_mf, mat2_id)

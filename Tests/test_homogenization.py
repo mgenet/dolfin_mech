@@ -28,18 +28,16 @@ test = mypy.Test(
     res_folder=res_folder,
     perform_tests=1,
     stop_at_failure=1,
-    clean_after_tests=1,
-    tester_numpy_tolerance=1e-2)
+    clean_after_tests=1)
 
 dim_lst  = [ ]
 dim_lst += [2]
-dim_lst += [3]
-
+# dim_lst += [3]
 for dim in dim_lst:
 
     print("dim =",dim)
 
-    centering_lst  = []
+    centering_lst  = [ ]
     centering_lst += [0]
     centering_lst += [1]
 

@@ -24,14 +24,14 @@ test = mypy.Test(
     stop_at_failure=1,
     clean_after_tests=1)
 
-dim_lst  = []
+dim_lst  = [ ]
 dim_lst += [2]
 dim_lst += [3]
 for dim in dim_lst:
 
-    load_lst  = []
-    load_lst += ["pres0"]
-    load_lst += ["pres0_multi"]
+    load_lst  = [               ]
+    load_lst += ["pres0"        ]
+    load_lst += ["pres0_multi"  ]
     load_lst += ["pres0_inertia"]
     for load in load_lst:
 
@@ -53,7 +53,7 @@ for dim in dim_lst:
             cube_params  = {"mesh_filebasename":res_folder+"/"+"mesh"}        ,
             mat_params   = {"model":"CGNHMR", "parameters":{"E":1., "nu":0.3}},
             step_params  = {"dt_min":0.1}                                     ,
-            const_params = const_params                                  ,
+            const_params = const_params                                       ,
             load_params  = {"type":load}                                      ,
             res_basename = res_folder+"/"+res_basename                        ,
             verbose      = 0                                                  )

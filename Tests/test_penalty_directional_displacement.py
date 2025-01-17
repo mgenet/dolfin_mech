@@ -28,9 +28,9 @@ def test_directional_displacement_penalty(
     ################################################################### Mesh ###
 
     if   (dim==2):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id = dmech.run_RivlinCube_Mesh(dim=dim, params={"mesh_filebasename":res_folder+"/"+"mesh"})
     elif (dim==3):
-        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim)
+        mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params={"mesh_filebasename":res_folder+"/"+"mesh"})
 
     if   (dim==2):
         x0_sd = dolfin.CompiledSubDomain("near(x[0], x0) && near(x[1], y0)", x0=1/2, y0=1/2)
@@ -39,7 +39,7 @@ def test_directional_displacement_penalty(
 
     x0_id = 1
 
-    x0_mf = dolfin.MeshFunction("size_t", mesh, 0) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+    x0_mf = dolfin.MeshFunction("size_t", mesh, 0) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
     x0_mf.set_all(0)
     x0_sd.mark(x0_mf, x0_id)
 
@@ -154,22 +154,22 @@ if (__name__ == "__main__"):
         stop_at_failure=1,
         clean_after_tests=1)
 
-    dim_lst  = []
+    dim_lst  = [ ]
     dim_lst += [2]
     dim_lst += [3]
     for dim in dim_lst:
 
-        incomp_lst  = []
+        incomp_lst  = [ ]
         incomp_lst += [0]
         incomp_lst += [1]
         for incomp in incomp_lst:
 
             if (incomp == 0):
-                pointwise_lst  = []
+                pointwise_lst  = [ ]
                 pointwise_lst += [0]
                 pointwise_lst += [1]
             elif (incomp == 1):
-                pointwise_lst  = []
+                pointwise_lst  = [ ]
                 pointwise_lst += [0]
                 # pointwise_lst += [1] # MG20211219: vertex integrals only work if solution only has dofs on vertices…
             for pointwise in pointwise_lst:

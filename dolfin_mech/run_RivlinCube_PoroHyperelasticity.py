@@ -40,7 +40,7 @@ def run_RivlinCube_PoroHyperelasticity(
         dolfin.XDMFFile(mesh_name).read(mesh)
         if ("refine" in cube_params):
             mesh=dolfin.refine(mesh)
-        boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+        boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
         boundaries_mf.set_all(0)
     else:
         if   (dim==2):

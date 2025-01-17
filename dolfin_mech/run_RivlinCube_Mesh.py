@@ -69,7 +69,7 @@ def run_RivlinCube_Mesh(
     if (dim==3): zmin_id = 5
     if (dim==3): zmax_id = 6
 
-    boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unisgned int, but more robust wrt architecture and os
+    boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
     boundaries_mf.set_all(0)
     xmin_sd.mark(boundaries_mf, xmin_id)
     xmax_sd.mark(boundaries_mf, xmax_id)
