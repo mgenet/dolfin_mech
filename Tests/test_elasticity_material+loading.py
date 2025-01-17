@@ -78,6 +78,7 @@ for dim in dim_lst:
                 dmech.run_RivlinCube_Elasticity(
                     dim=dim,
                     incomp=incomp,
+                    cube_params={"mesh_filebasename":res_folder+"/"+"mesh"},
                     mat_params={"model":mat_model, "parameters":mat_params},
                     load_params={"type":load},
                     res_basename=res_folder+"/"+res_basename,

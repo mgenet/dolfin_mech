@@ -51,7 +51,7 @@ for incomp in incomp_lst:
 
         dmech.run_HeartSlice_Hyperelasticity(
             incomp=incomp,
-            mesh_params={"X0":0.5, "Y0":0.5, "Ri":0.2, "Re":0.4, "l":0.05, "mesh_filebasename":res_folder+"/mesh"},
+            mesh_params={"X0":0.5, "Y0":0.5, "Ri":0.2, "Re":0.4, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"},
             mat_params={"model":mat_model, "parameters":mat_params},
             step_params={"dt_ini":1/10, "dt_min":1/100},
             load_params={"type":load},

@@ -56,7 +56,7 @@ for dim in dim_lst:
             res_basename += "-load="+str(load)
 
             mesh_params = {}
-            mesh_params["mesh_filebasename"] = res_folder+"/mesh"
+            mesh_params["mesh_filebasename"] = res_folder+"/"+"mesh"
             mesh_params["dim"] = dim
             mesh_params["xmin"] = 0.
             mesh_params["ymin"] = 0.

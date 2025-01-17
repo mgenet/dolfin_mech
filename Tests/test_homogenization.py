@@ -60,7 +60,7 @@ for dim in dim_lst:
 
         dmech.run_HollowBox_Homogenization(
             dim=dim,
-            mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":xshift, "yshift":yshift, "zshift":zshift, "r0":1/5, "l":1/20, "mesh_filebasename":res_folder+"/mesh"},
+            mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":xshift, "yshift":yshift, "zshift":zshift, "r0":1/5, "l":1/20, "mesh_filebasename":res_folder+"/"+"mesh"},
             mat_params={"E":1.0, "nu":0.3},
             res_basename=res_folder+"/"+res_basename,
             verbose=0)
