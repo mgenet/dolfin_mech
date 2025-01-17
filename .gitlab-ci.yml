@@ -2,7 +2,7 @@ stages:
   - test
   - deploy
 
-tests-on-ubuntu-20.04:
+tests-on-ubuntu-20.04-with-apt: # MG20250117: This leads to seg fault while manipulating vtk objects…
   stage: test
   only:
     - devel
@@ -10,15 +10,15 @@ tests-on-ubuntu-20.04:
   # except: # MG20220815: Keep this for memory
   #   - PreOperators # MG20220413: this branch is outdated
   #   - CylindricalModel # MG20211221: this branch is outdated
+  when: manual
   tags:
     - ci.inria.fr
     - large
-  image: registry.gitlab.inria.fr/inria-ci/docker/ubuntu:20.04
+  image: ubuntu:20.04
+  # image: registry.gitlab.inria.fr/inria-ci/docker/ubuntu:20.04
   # image: quay.io/fenicsproject/stable:latest # MG20211221: somehow this does not work
   # image: python $ MG20211221: this seems to be debian not ubuntu, which is necessary for ppa install
   script:
-    # - uname -a
-    # - conda env list # MG20211221: conda not available in python image
     - apt update; apt upgrade -y
     - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y git gnuplot python3-matplotlib python3-numpy python3-pandas python3-pip python-is-python3 # MG20220814: environment variables are needed to prevent tzdata installation hanging while waiting timezone info, cf. https://anonoz.github.io/tech/2020/04/24/docker-build-stuck-tzdata.html
     - apt update; apt install -y software-properties-common; add-apt-repository -y ppa:fenics-packages/fenics; apt update; apt install -y fenics; export DISPLAY=0:0
@@ -32,15 +32,16 @@ tests-on-ubuntu-20.04:
     - pip install git+https://gitlab.inria.fr/mgenet/myVTKPythonLibrary.git
     - cd Tests; ln -s ../dolfin_mech; make
 
-tests-on-ubuntu-22.04:
+tests-on-ubuntu-22.04-with-apt:
   stage: test
   only:
     - devel
     - /^devel-.*/
+  when: manual
   tags:
     - ci.inria.fr
     - large
-  image: registry.gitlab.inria.fr/inria-ci/docker/ubuntu:22.04
+  image: ubuntu:22.04
   script:
     - apt update; apt upgrade -y
     - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y git gnuplot python3-matplotlib python3-numpy python3-pandas python3-pip python-is-python3 # MG20220814: environment variables are needed to prevent tzdata installation hanging while waiting timezone info, cf. https://anonoz.github.io/tech/2020/04/24/docker-build-stuck-tzdata.html
@@ -53,6 +54,60 @@ tests-on-ubuntu-22.04:
     - pip install numpy==1.24.3 # MG20230103: apparently numpy >= 1.25 does not work anymore with the old version of scipy (and probably other stuff) present in Ubuntu 22.04 apt repo
     - pip install git+https://gitlab.inria.fr/mgenet/myPythonLibrary.git
     - pip install git+https://gitlab.inria.fr/mgenet/myVTKPythonLibrary.git
+    - cd Tests; ln -s ../dolfin_mech; make
+
+tests-on-ubuntu-20.04:
+  stage: test
+  only:
+    - devel
+    - /^devel-.*/
+  tags:
+    - ci.inria.fr
+    - large
+  image: ubuntu:20.04
+  script:
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt upgrade -y
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y build-essential gcc-multilib git gnuplot libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama1 libxft-dev wget xvfb
+    # - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y libopenblas-base; export OMP_NUM_THREADS="1" # MG20221201: This seems to fail in Ubuntu 20.04
+    - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh; bash Miniconda3-latest-Linux-x86_64.sh -b -p /root/miniconda; eval "$(/root/miniconda/bin/conda shell.bash hook)"; conda init
+    - conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 meshio=5.3 mpi4py=3.1.3 numpy=1.24 pip python=3.10; conda activate dolfin_mech
+    - pip install gmsh git+https://gitlab.inria.fr/mgenet/myPythonLibrary.git git+https://gitlab.inria.fr/mgenet/myVTKPythonLibrary.git
+    - cd Tests; ln -s ../dolfin_mech; make
+
+tests-on-ubuntu-22.04:
+  stage: test
+  only:
+    - devel
+    - /^devel-.*/
+  tags:
+    - ci.inria.fr
+    - large
+  image: ubuntu:22.04
+  script:
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt upgrade -y
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y build-essential gcc-multilib git gnuplot libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama1 libxft-dev wget xvfb
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y libopenblas-base; export OMP_NUM_THREADS="1"
+    - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh; bash Miniconda3-latest-Linux-x86_64.sh -b -p /root/miniconda; eval "$(/root/miniconda/bin/conda shell.bash hook)"; conda init
+    - conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 meshio=5.3 mpi4py=3.1.3 numpy=1.24 pip python=3.10; conda activate dolfin_mech
+    - pip install gmsh git+https://gitlab.inria.fr/mgenet/myPythonLibrary.git git+https://gitlab.inria.fr/mgenet/myVTKPythonLibrary.git
+    - cd Tests; ln -s ../dolfin_mech; make
+
+tests-on-ubuntu-24.04:
+  stage: test
+  only:
+    - devel
+    - /^devel-.*/
+  tags:
+    - ci.inria.fr
+    - large
+  image: ubuntu:24.04
+  script:
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt upgrade -y
+    - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y build-essential gcc-multilib git gnuplot libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama1 libxft-dev wget xvfb
+    # - apt update; DEBIAN_FRONTEND=noninteractive TZ=Europe/Paris apt install -y libopenblas-base; export OMP_NUM_THREADS="1" # MG20241017: Not present in Ubuntu 24.04
+    - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh; bash Miniconda3-latest-Linux-x86_64.sh -b -p /root/miniconda;  eval "$(/root/miniconda/bin/conda shell.bash hook)"; conda init
+    - conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 meshio=5.3 mpi4py=3.1.3 numpy=1.24 pip python=3.10; conda activate dolfin_mech
+    - pip install gmsh git+https://gitlab.inria.fr/mgenet/myPythonLibrary.git git+https://gitlab.inria.fr/mgenet/myVTKPythonLibrary.git
     - cd Tests; ln -s ../dolfin_mech; make
 
 pypi:
