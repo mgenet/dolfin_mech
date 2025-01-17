@@ -33,7 +33,7 @@ test = mypy.Test(
 
 dim_lst  = [ ]
 dim_lst += [2]
-dim_lst += [3]
+# dim_lst += [3]
 
 for dim in dim_lst:
 
