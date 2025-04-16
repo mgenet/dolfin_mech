@@ -21,5 +21,5 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    install_requires=["gmsh", "matplotlib", "meshio", "myPythonLibrary", "myVTKPythonLibrary", "numpy", "pandas", "vtk"],
+    install_requires=["gmsh", "matplotlib", "meshio", "numpy", "pandas", "vtk", "myPythonLibrary", "myVTKPythonLibrary", "vtkpython_cbl"],
 )
