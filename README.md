@@ -1,3 +1,7 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8010870.svg?style=flat-square)](https://doi.org/10.5281/zenodo.8010870)
+[![PyPi Version](https://img.shields.io/pypi/v/dolfin-mech.svg?style=flat-square)](https://pypi.org/project/dolfin-mech)
+[![PyPI Downloads](https://static.pepy.tech/badge/dolfin-mech)](https://pepy.tech/projects/dolfin-mech)
+
 # dolfin_mech
 
 A set of FEniCS-based python tools for Computational Mechanics.
