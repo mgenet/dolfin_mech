@@ -1,12 +1,13 @@
 on:
   push:
     branches:
-      - devel
-      - 'devel-*'
+    - devel
+    - 'devel-*'
 
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -16,38 +17,38 @@ jobs:
         shell: bash -el {0}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@main
 
-      - name: Install Miniconda
-        uses: conda-incubator/setup-miniconda@v3
+    - name: Install Miniconda
+      uses: conda-incubator/setup-miniconda@v3
 
-      - name: Set up Conda environment
-        run: |
-          conda create -y -c conda-forge -n dolfin_mech \
-            fenics=2019.1.0 \
-            matplotlib=3.5 \
-            meshio=5.3 \
-            mpi4py=3.1.3 \
-            numpy=1.24 \
-            pandas=1.3 \
-            pip \
-            python=3.10 \
-            vtk=9.2
-          conda activate dolfin_mech
+    - name: Set up Conda environment
+      run: |
+        conda create -y -c conda-forge -n dolfin_mech \
+          fenics=2019.1.0 \
+          matplotlib=3.5 \
+          meshio=5.3 \
+          mpi4py=3.1.3 \
+          numpy=1.24 \
+          pandas=1.3 \
+          pip \
+          python=3.10 \
+          vtk=9.2
+        conda activate dolfin_mech
 
-      - name: Install Python libraries
-        run: |
-          conda activate dolfin_mech
-          pip install \
-            gmsh \
-            git+https://github.com/mgenet/myPythonLibrary.git \
-            git+https://github.com/mgenet/myVTKPythonLibrary.git \
-            git+https://github.com/mgenet/vtkpython_cbl.git \
+    - name: Install Python libraries
+      run: |
+        conda activate dolfin_mech
+        pip install \
+          gmsh \
+          git+https://github.com/mgenet/myPythonLibrary.git \
+          git+https://github.com/mgenet/myVTKPythonLibrary.git \
+          git+https://github.com/mgenet/vtkpython_cbl.git \
 
-      - name: Run tests
-        run: |
-          conda activate dolfin_mech
-          cd Tests
-          ln -s ../dolfin_mech
-          make
+    - name: Run tests
+      run: |
+        conda activate dolfin_mech
+        cd Tests
+        ln -s ../dolfin_mech
+        make
