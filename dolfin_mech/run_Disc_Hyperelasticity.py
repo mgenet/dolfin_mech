@@ -80,29 +80,29 @@ def run_Disc_Hyperelasticity(
             # X_sd = dolfin.AutoSubDomain(lambda x, on_boundary: dolfin.near(x[0], X[0], eps=1e-3) and dolfin.near(x[1], X[1], eps=1e-3)) # MG20220813: OMG this behaves so weird!
             X_sd = dolfin.CompiledSubDomain("near(x[0], x0) && near(x[1], y0)", x0=X[0], y0=X[1])
             problem.add_constraint(
-                V=problem.get_displacement_function_space(),
+                V=problem.displacement_subsol.fs,
                 sub_domain=X_sd,
                 val_ini=[0.,0.], val_fin=U,
                 k_step=k_step,
                 method="pointwise")
     elif (load_type == "pres"):
         problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(1),
+            V=problem.displacement_subsol.fs.sub(1),
             sub_domain=x1_sd,
             val=0.,
             method="pointwise")
         problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(0),
+            V=problem.displacement_subsol.fs.sub(0),
             sub_domain=x2_sd,
             val=0.,
             method="pointwise")
         problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(1),
+            V=problem.displacement_subsol.fs.sub(1),
             sub_domain=x3_sd,
             val=0.,
             method="pointwise")
         problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(0),
+            V=problem.displacement_subsol.fs.sub(0),
             sub_domain=x4_sd,
             val=0.,
             method="pointwise")

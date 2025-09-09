@@ -18,7 +18,7 @@ from .Operator import Operator
 class PfPoroOperator(Operator):
 
     def __init__(self,
-            Phis_test,
+            unknown_porosity_test,
             measure,
             pf_val=None, pf_ini=None, pf_fin=None):
 
@@ -28,7 +28,7 @@ class PfPoroOperator(Operator):
             val=pf_val, val_ini=pf_ini, val_fin=pf_fin)
         self.pf = self.tv_pf.val
 
-        self.res_form = dolfin.inner(self.pf, Phis_test) * self.measure
+        self.res_form = dolfin.inner(self.pf, unknown_porosity_test) * self.measure
 
 
 

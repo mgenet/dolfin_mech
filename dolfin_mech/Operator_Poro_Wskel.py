@@ -20,9 +20,9 @@ class WskelPoroOperator(Operator):
     def __init__(self,
             kinematics,
             U_test,
-            Phis0,
             material_parameters,
             material_scaling,
+            Phis0,
             measure):
 
         self.kinematics = kinematics
@@ -46,9 +46,9 @@ class InverseWskelPoroOperator(Operator):
     def __init__(self,
             kinematics,
             u_test,
-            phis0,
             material_parameters,
             material_scaling,
+            phis0,
             measure):
 
         self.kinematics = kinematics

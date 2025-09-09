@@ -21,7 +21,7 @@ class WporePoroOperator(Operator):
             kinematics,
             Phis0,
             Phis,
-            Phis_test,
+            unknown_porosity_test,
             material_parameters,
             material_scaling,
             measure):
@@ -29,7 +29,7 @@ class WporePoroOperator(Operator):
         self.kinematics = kinematics
         self.solid_material = dmech.WporeLungElasticMaterial(
             Phif=self.kinematics.J - Phis,
-            Phif0=1-Phis0,
+            Phif0=1. - Phis0,
             parameters=material_parameters)
         self.material = dmech.PorousElasticMaterial(
             solid_material=self.solid_material,
@@ -37,7 +37,7 @@ class WporePoroOperator(Operator):
             Phis0=Phis0)
         self.measure = measure
 
-        self.res_form = - self.material.dWporedPhif * Phis_test * self.measure
+        self.res_form = - self.material.dWporedPhif * unknown_porosity_test * self.measure
 
 ################################################################################
 
@@ -47,7 +47,7 @@ class InverseWporePoroOperator(Operator):
             kinematics,
             phis,
             phis0,
-            phis0_test,
+            unknown_porosity_test,
             material_parameters,
             material_scaling,
             measure):
@@ -63,4 +63,4 @@ class InverseWporePoroOperator(Operator):
             Phis0=self.kinematics.J * phis0)
         self.measure = measure
 
-        self.res_form = - self.material.dWporedPhif * phis0_test * self.measure
+        self.res_form = - self.material.dWporedPhif * unknown_porosity_test * self.measure

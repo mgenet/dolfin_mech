@@ -34,12 +34,12 @@ def run_RivlinCube_PoroHyperelasticity(
 
     ################################################################### Mesh ###
 
-    if ("path_and_mesh_name" in cube_params):
+    if ("path_and_file_name" in cube_params):
         mesh = dolfin.Mesh()
-        mesh_name = str(cube_params["path_and_mesh_name"])
-        dolfin.XDMFFile(mesh_name).read(mesh)
-        if ("refine" in cube_params):
-            mesh=dolfin.refine(mesh)
+        mesh_filename = str(cube_params["path_and_file_name"])
+        dolfin.XDMFFile(mesh_filename).read(mesh)
+        if cube_params.get("refine", False):
+            mesh = dolfin.refine(mesh)
         boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim()-1) # MG20180418: size_t looks like unsigned int, but more robust wrt architecture and os
         boundaries_mf.set_all(0)
     else:
@@ -49,8 +49,8 @@ def run_RivlinCube_PoroHyperelasticity(
             mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
     domains_mf = None
-    if ("generic_zones" in cube_params):
-        if len(mat_params)>1 :
+    if cube_params.get("generic_zones", False):
+        if (len(mat_params) > 1):
             ymin = mesh.coordinates()[:, 1].min()
             ymax = mesh.coordinates()[:, 1].max()
             delta_y = ymax - ymin
@@ -65,14 +65,15 @@ def run_RivlinCube_PoroHyperelasticity(
                 subdomain_lst[number_zones-1-mat_id].mark(domains_mf, mat_id)
                 mat_params[mat_id]["subdomain_id"] = mat_id
 
-    if move_params.get("move", False) == True :
-        Umove = move_params.get("U")
-        dolfin.ALE.move(mesh, Umove)
+    if move_params.get("move", False):
+        U = move_params.get("U")
+        dolfin.ALE.move(mesh, U)
 
     ################################################################ Porosity ###
 
-    porosity_type = porosity_params.get("type", "constant")
-    porosity_val  = porosity_params.get("val", 0.5)
+    porosity_known = porosity_params.get("known", "phis" if (inverse == 1) else "Phis0")
+    porosity_type  = porosity_params.get("type", "constant")
+    porosity_val   = porosity_params.get("val", 0.5)
 
     if (porosity_type == "constant"):
         porosity_fun = None
@@ -174,29 +175,28 @@ def run_RivlinCube_PoroHyperelasticity(
         porosity_val = None
 
     ################################################################ Problem ###
+
     load_type = load_params.get("type", "internal")
 
-    if load_type=="p_boundary_condition0":
-        gradient_operators="inverse"
-    elif load_type=="p_boundary_condition":
-        gradient_operators="direct"
+    if (load_type in ("p_boundary_condition0", "p_boundary_condition")):
+        w_pressure_balancing_gravity = 1
     else:
-        gradient_operators=None
+        w_pressure_balancing_gravity = 0
 
     if (type(mat_params) == list):
-        skel_behavior=None
-        skel_behaviors=mat_params
-        bulk_behavior=None
-        bulk_behaviors=mat_params
-        pore_behavior=None
-        pore_behaviors=mat_params
+        skel_behavior = None
+        skel_behaviors = mat_params
+        bulk_behavior = None
+        bulk_behaviors = mat_params
+        pore_behavior = None
+        pore_behaviors = mat_params
     else:
-        skel_behavior=mat_params
-        skel_behaviors=[]
-        bulk_behavior=mat_params
-        bulk_behaviors=[]
-        pore_behavior=mat_params
-        pore_behaviors=[]
+        skel_behavior = mat_params
+        skel_behaviors = []
+        bulk_behavior = mat_params
+        bulk_behaviors = []
+        pore_behavior = mat_params
+        pore_behaviors = []
     
     if (inverse):
         problem = dmech.InversePoroHyperelasticityProblem(
@@ -205,7 +205,8 @@ def run_RivlinCube_PoroHyperelasticity(
             boundaries_mf=boundaries_mf,
             domains_mf = domains_mf,
             displacement_degree=1,
-            quadrature_degree = 6,
+            quadrature_degree=6, #MG20250905: Why?! Otherwise 2k integration points in 3D…
+            porosity_known=porosity_known,
             porosity_init_val=porosity_val,
             porosity_init_fun=porosity_fun,
             skel_behavior=skel_behavior,
@@ -214,7 +215,7 @@ def run_RivlinCube_PoroHyperelasticity(
             bulk_behaviors=bulk_behaviors,
             pore_behavior=pore_behavior,
             pore_behaviors=pore_behaviors,
-            gradient_operators=gradient_operators)
+            w_pressure_balancing_gravity=w_pressure_balancing_gravity)
     else:
         problem = dmech.PoroHyperelasticityProblem(
             mesh=mesh,
@@ -222,7 +223,8 @@ def run_RivlinCube_PoroHyperelasticity(
             boundaries_mf=boundaries_mf,
             domains_mf = domains_mf,
             displacement_degree=1,
-            quadrature_degree = 6,
+            quadrature_degree=6, #MG20250905: Why?! Otherwise 2k integration points in 3D…
+            porosity_known=porosity_known,
             porosity_init_val=porosity_val,
             porosity_init_fun=porosity_fun,
             skel_behavior=skel_behavior,
@@ -231,7 +233,7 @@ def run_RivlinCube_PoroHyperelasticity(
             bulk_behaviors=bulk_behaviors,
             pore_behavior=pore_behavior,
             pore_behaviors=pore_behaviors,
-            gradient_operators=gradient_operators)
+            w_pressure_balancing_gravity=w_pressure_balancing_gravity)
 
     ########################################## Boundary conditions & Loading ###
     
@@ -306,32 +308,6 @@ def run_RivlinCube_PoroHyperelasticity(
                 measure=problem.dS(zmax_id),
                 P_ini=P_old, P_fin=P,
                 k_step=k_step)
-        elif (load_type == "p_boundary_condition0"):
-            problem.add_pf_operator(
-                measure=problem.dV,
-                pf_ini=0.,
-                pf_fin=0.,
-                k_step=k_step)
-            f = f_lst[k_step]
-            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
-            P0 = P0_lst[k_step]
-            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
-            if type(mat_params)==list:
-                rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
-            else:
-                rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
-            problem.add_pressure_balancing_gravity0_loading_operator(
-                dV=problem.dV,
-                dS=problem.dS,
-                f_ini=[0., f_old, 0.],
-                # f_fin=[f, 0., 0.],
-                f_fin=[0., f, 0],
-                rho_solid=rho_solid,
-                phis=problem.phis,
-                P0_ini=P0_old,
-                P0_fin=P0,
-                breathing_constant=load_params.get("H", 0.),
-                k_step=k_step)
         elif (load_type == "p_boundary_condition"):
             problem.add_pf_operator(
                 measure=problem.dV,
@@ -346,7 +322,6 @@ def run_RivlinCube_PoroHyperelasticity(
                 rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
             else:
                 rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
-
             problem.add_pressure_balancing_gravity_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
@@ -358,12 +333,37 @@ def run_RivlinCube_PoroHyperelasticity(
                 P0_fin=P0,
                 breathing_constant=load_params.get("H", 0.),
                 k_step=k_step)
+        elif (load_type == "p_boundary_condition0"):
+            problem.add_pf_operator(
+                measure=problem.dV,
+                pf_ini=0.,
+                pf_fin=0.,
+                k_step=k_step)
+            f = f_lst[k_step]
+            f_old = f_lst[k_step-1] if (k_step > 0) else 0.
+            P0 = P0_lst[k_step]
+            P0_old = P0_lst[k_step-1] if (k_step > 0) else 0.
+            if (type(mat_params) == list):
+                rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
+            else:
+                rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+            problem.add_pressure_balancing_gravity0_loading_operator(
+                dV=problem.dV,
+                dS=problem.dS,
+                f_ini=[0., f_old, 0.],
+                f_fin=[0., f    , 0.],
+                rho_solid=rho_solid,
+                phis=problem.phis,
+                P0_ini=P0_old,
+                P0_fin=P0,
+                breathing_constant=load_params.get("H", 0.),
+                k_step=k_step)
         
         if not inertia_params["applied"]:
-            problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
-            problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+            problem.add_constraint(V=problem.displacement_subsol.fs.sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+            problem.add_constraint(V=problem.displacement_subsol.fs.sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
             if (dim==3):
-                problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+                problem.add_constraint(V=problem.displacement_subsol.fs.sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
         else:
             rho_val=inertia_params.get("rho_val", 1e-6)
             problem.add_inertia_operator(
@@ -448,9 +448,9 @@ def run_RivlinCube_PoroHyperelasticity(
         qois_data.plot(x="pf", y=all_porosities, ax=qois_axes, ylim=[0,1], ylabel="porosity")
         qois_fig.savefig(res_basename+"-porosities-vs-pressure.pdf")
     
-    if get_results:
-        if inverse:
+    if (get_results):
+        if (inverse):
             phi = problem.get_foi(name="Phis0").func.vector().get_local()
         else:
             phi = problem.get_foi(name="phis").func.vector().get_local()
-        return (problem.get_displacement_subsol().func, phi, dolfin.Measure("dx", domain=mesh))
+        return (problem.displacement_subsol.func, phi, dolfin.Measure("dx", domain=mesh))

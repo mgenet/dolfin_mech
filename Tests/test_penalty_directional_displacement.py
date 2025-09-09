@@ -101,7 +101,7 @@ def test_directional_displacement_penalty(
         dt_min=1.)
 
     problem.add_constraint(
-        V=problem.get_displacement_function_space().sub(0),
+        V=problem.displacement_subsol.fs.sub(0),
         sub_domains=boundaries_mf,
         sub_domain_id=xmax_id,
         val_ini=0., val_fin=1.,

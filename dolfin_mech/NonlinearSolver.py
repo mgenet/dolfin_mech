@@ -245,8 +245,8 @@ class NonlinearSolver():
             dolfin.assign(
                 self.problem.get_subsols_dfunc_lst(),
                 self.problem.dsol_func)
-            # for subsol_name,subsol in self.problem.subsols.items():
-            #     self.printer.print_var("d"+subsol_name+"_func",subsol.dfunc.vector().get_local())
+            # for subsol in self.problem.subsols:
+            #     self.printer.print_var("d"+subsol.name+"_func",subsol.dfunc.vector().get_local())
 
         if (0):
             rinfo12 = self.linear_solver.ksp().getPC().getFactorMatrix().getMumpsRinfog(12)
@@ -261,6 +261,8 @@ class NonlinearSolver():
             self.printer.print_sci("jac_det",self.jac_det)
 
         return True
+
+
 
     def assemble_linear_system(self):
 
@@ -373,7 +375,8 @@ class NonlinearSolver():
             self.printer.print_sci("res_err_rel",self.res_err_rel)
 
 
-    def eigen_solve():
+
+    def eigen_solve(self):
 
         jac_eigensolver = dolfin.SLEPcEigenSolver(
             dolfin.as_backend_type(self.jac_mat))
@@ -426,8 +429,8 @@ class NonlinearSolver():
 
     def compute_dsol_norm(self):
 
-        self.dsubsol_norm_lst = [subsol.dfunc.vector().norm("l2") for subsol in self.problem.subsols.values()]
-        for (k_subsol,subsol) in enumerate(self.problem.subsols.values()):
+        self.dsubsol_norm_lst = [subsol.dfunc.vector().norm("l2") for subsol in self.problem.subsols]
+        for (k_subsol,subsol) in enumerate(self.problem.subsols):
             self.printer.print_sci("d"+subsol.name+"_norm",self.dsubsol_norm_lst[k_subsol])
 
 
@@ -586,16 +589,16 @@ class NonlinearSolver():
             dolfin.assign(
                 self.problem.get_subsols_func_lst(),
                 self.problem.sol_func)
-            # for subsol_name,subsol in self.problem.subsols.items()):
-            #     self.printer.print_var(subsol_name+"_func",subsol.func.vector().get_local())
+            # for subsol in self.problem.subsols):
+            #     self.printer.print_var(subsol.name+"_func",subsol.func.vector().get_local())
 
 
 
     def compute_sol_norm(self):
 
-        self.subsol_norm_lst = [subsol.func.vector().norm("l2") for subsol in self.problem.subsols.values()]
-        self.subsol_norm_old_lst = [subsol.func_old.vector().norm("l2") for subsol in self.problem.subsols.values()]
-        for (k_subsol,subsol) in enumerate(self.problem.subsols.values()):
+        self.subsol_norm_lst = [subsol.func.vector().norm("l2") for subsol in self.problem.subsols]
+        self.subsol_norm_old_lst = [subsol.func_old.vector().norm("l2") for subsol in self.problem.subsols]
+        for (k_subsol,subsol) in enumerate(self.problem.subsols):
             self.printer.print_sci(subsol.name+"_norm"    ,self.subsol_norm_lst[k_subsol]    )
             self.printer.print_sci(subsol.name+"_norm_old",self.subsol_norm_old_lst[k_subsol])
 
@@ -608,7 +611,7 @@ class NonlinearSolver():
             ref=max(
                 self.subsol_norm_lst[k_subsol],
                 self.subsol_norm_old_lst[k_subsol])) for k_subsol in range(len(self.problem.subsols))]
-        for (k_subsol,subsol) in enumerate(self.problem.subsols.values()):
+        for (k_subsol,subsol) in enumerate(self.problem.subsols):
             self.printer.print_sci(subsol.name+"_err",self.subsol_err_lst[k_subsol])
 
 
