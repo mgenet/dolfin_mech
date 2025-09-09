@@ -101,13 +101,13 @@ class TimeIntegrator():
             if (self.write_vtus):
                 dmech.write_VTU_file(
                     filebasename=self.write_sol_filebasename,
-                    function=self.problem.get_displacement_subsol().subfunc,
+                    function=self.problem.displacement_subsol.subfunc,
                     time=0,
                     preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 
             self.write_xmls = bool(write_xmls)
             if (self.write_xmls):
-                dolfin.File(self.write_sol_filebasename+"_"+str(0).zfill(3)+".xml") << self.problem.get_displacement_subsol().subfunc
+                dolfin.File(self.write_sol_filebasename+"_"+str(0).zfill(3)+".xml") << self.problem.displacement_subsol.subfunc
 
 
 
@@ -194,12 +194,12 @@ class TimeIntegrator():
                         if (self.write_vtus):
                             dmech.write_VTU_file(
                                 filebasename=self.write_sol_filebasename,
-                                function=self.problem.get_displacement_subsol().subfunc,
+                                function=self.problem.displacement_subsol.subfunc,
                                 time=k_t_tot,
                                 preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 
                         if (self.write_xmls):
-                            dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.get_displacement_subsol().subfunc
+                            dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.displacement_subsol.subfunc
 
                     if (self.write_qois):
                         self.problem.update_qois(dt, k_step)

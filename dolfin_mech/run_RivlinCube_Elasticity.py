@@ -98,17 +98,17 @@ def run_RivlinCube_Elasticity(
     const_type = const_params.get("type", "sym")
 
     if (const_type in ("symx", "sym")):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
     if (const_type in ("symy", "sym")) and (dim >= 2):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
     if (const_type in ("symz", "sym")) and (dim >= 3):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     if (const_type in ("blox")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
     if (const_type in ("bloy")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
     if (const_type in ("bloz")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
 
     load_type = load_params.get("type", "disp")
 
@@ -124,7 +124,7 @@ def run_RivlinCube_Elasticity(
     if (load_type == "disp"):
         u = load_params.get("u", 1.)
         problem.add_constraint(
-            V=problem.get_displacement_function_space().sub(0),
+            V=problem.displacement_subsol.fs.sub(0),
             sub_domains=boundaries_mf,
             sub_domain_id=xmax_id,
             val_ini=0., val_fin=u,

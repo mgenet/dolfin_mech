@@ -27,21 +27,11 @@ class InverseHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-    def get_displacement_name(self):
-        return "u"
-
-
-
-    def get_pressure_name(self):
-        return "p"
-
-
-
     def set_kinematics(self):
 
         self.kinematics = dmech.InverseKinematics(
-            u=self.get_displacement_subsol().subfunc,
-            u_old=self.get_displacement_subsol().func_old)
+            u=self.displacement_subsol.subfunc,
+            u_old=self.displacement_subsol.func_old)
 
         self.add_foi(expr=self.kinematics.F, fs=self.mfoi_fs, name="F")
         self.add_foi(expr=self.kinematics.J, fs=self.sfoi_fs, name="J")
@@ -57,7 +47,7 @@ class InverseHyperelasticityProblem(HyperelasticityProblem):
 
         operator = dmech.LinearizedElasticityOperator(
             kinematics=self.kinematics,
-            u_test=self.get_displacement_subsol().dsubtest,
+            u_test=self.displacement_subsol.dsubtest,
             material_model=material_model,
             material_parameters=material_parameters,
             measure=self.get_subdomain_measure(subdomain_id))

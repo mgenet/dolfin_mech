@@ -39,6 +39,7 @@ class PorousElasticMaterial(ElasticMaterial):
             # if (hasattr(self.material,       "sigma")): self.sigma       = self.material.sigma
             # if (hasattr(self.material, "dWbulkdPhis")): self.dWbulkdPhis = self.material.dWbulkdPhis
         elif (scaling == "linear"):
+            assert (Phis0 is not None)
             scaling = Phis0
             # self.Psi   = Phis0 * self.material.Psi
             # if (hasattr(self.material,       "Sigma")): self.Sigma       = Phis0 * self.material.Sigma

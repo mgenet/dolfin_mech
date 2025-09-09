@@ -35,115 +35,84 @@ class HyperelasticityProblem(Problem):
 
         self.w_incompressibility = w_incompressibility
 
-        if (mesh is not None):
-            self.set_mesh(
-                mesh=mesh,
-                define_facet_normals=define_facet_normals)
+        self.set_mesh(
+            mesh=mesh,
+            define_facet_normals=define_facet_normals)
 
-            self.set_measures(
-                domains=domains_mf,
-                boundaries=boundaries_mf,
-                points=points_mf)
+        self.set_measures(
+            domains=domains_mf,
+            boundaries=boundaries_mf,
+            points=points_mf)
 
-            self.set_subsols(
-                displacement_degree=displacement_degree,
-                pressure_degree=pressure_degree)
-            self.set_solution_finite_element()
-            self.set_solution_function_space()
-            self.set_solution_functions()
+        self.set_subsols(
+            displacement_degree=displacement_degree,
+            pressure_degree=pressure_degree)
 
-            self.set_quadrature_degree(
-                quadrature_degree=quadrature_degree)
+        self.set_solution_finite_element()
+        self.set_solution_function_space()
+        self.set_solution_functions()
 
-            self.set_foi_finite_elements_DG(
-                degree=foi_degree)
-            self.set_foi_function_spaces()
+        self.set_quadrature_degree(
+            quadrature_degree=quadrature_degree)
 
-            self.set_kinematics()
+        self.set_foi_finite_elements_DG(
+            degree=foi_degree)
+        self.set_foi_function_spaces()
 
-            assert (elastic_behavior is     None) or (elastic_behaviors is     None)
-            assert (elastic_behavior is not None) or (elastic_behaviors is not None)
-            if (elastic_behavior is not None):
-                elastic_behaviors = [elastic_behavior]
+        self.set_kinematics()
 
-            self.add_elasticity_operators(
-                elastic_behaviors=elastic_behaviors)
+        assert (elastic_behavior is     None) or (elastic_behaviors is     None)
+        assert (elastic_behavior is not None) or (elastic_behaviors is not None)
+        if (elastic_behavior is not None):
+            elastic_behaviors = [elastic_behavior]
 
-
-
-    def get_displacement_name(self):
-        return "U"
+        self.add_elasticity_operators(
+            elastic_behaviors=elastic_behaviors)
 
 
 
     def add_displacement_subsol(self,
-            degree):
+            name=None,
+            degree=1):
 
+        if (name is not None):
+            self.displacement_name = name
+        else:
+            self.displacement_name = "u" if ("Inverse" in str(self)) else "U"
         self.displacement_degree = degree
-        self.add_vector_subsol(
-            name=self.get_displacement_name(),
+        self.displacement_subsol = self.add_vector_subsol(
+            name=self.displacement_name,
             family="CG",
             degree=self.displacement_degree)
 
 
 
-    def get_displacement_subsol(self):
-
-        return self.get_subsol(self.get_displacement_name())
-
-
-
-    def get_displacement_function_space(self):
-
-        if (len(self.subsols) == 1):
-            return self.sol_fs
-        else:
-            return self.get_subsol_function_space(name=self.get_displacement_name())
-
-
-
-    def get_pressure_name(self):
-        return "P"
-
-
-
     def add_pressure_subsol(self,
-            degree):
+            name=None,
+            degree=0):
 
+        if (name is not None):
+            self.pressure_name = name
+        else:
+            self.pressure_name = "p" if ("Inverse" in str(self)) else "P"
         self.pressure_degree = degree
-        if (degree == 0):
-            self.add_scalar_subsol(
-                name=self.get_pressure_name(),
+        if (self.pressure_degree == 0):
+            self.pressure_subsol = self.add_scalar_subsol(
+                name=self.pressure_name,
                 family="DG",
                 degree=0)
         else:
-            self.add_scalar_subsol(
-                name=self.get_pressure_name(),
+            self.pressure_subsol = self.add_scalar_subsol(
+                name=self.pressure_name,
                 family="CG",
                 degree=self.pressure_degree)
-
-
-
-    def get_pressure_subsol(self):
-
-        assert (self.w_incompressibility),\
-            "There is no pressure subsol. Aborting."
-        return self.get_subsol(self.get_pressure_name())
-
-
-
-    def get_pressure_function_space(self):
-
-        assert (self.w_incompressibility),\
-            "There is no pressure function space. Aborting."
-        return self.get_subsol_function_space(name=self.get_pressure_name())
 
 
 
     def set_subsols(self,
             displacement_degree=1,
             pressure_degree=None):
-
+        
         self.add_displacement_subsol(
             degree=displacement_degree)
 
@@ -176,19 +145,21 @@ class HyperelasticityProblem(Problem):
 
 
 
-    def set_kinematics(self):
+    def set_kinematics(self,
+            add_fois=True):
 
         self.kinematics = dmech.Kinematics(
-            U=self.get_displacement_subsol().subfunc,
-            U_old=self.get_displacement_subsol().func_old,
+            U=self.displacement_subsol.subfunc,
+            U_old=self.displacement_subsol.func_old,
             Q_expr=self.Q_expr)
 
-        self.add_foi(expr=self.kinematics.F, fs=self.mfoi_fs, name="F")
-        self.add_foi(expr=self.kinematics.J, fs=self.sfoi_fs, name="J")
-        self.add_foi(expr=self.kinematics.C, fs=self.mfoi_fs, name="C")
-        self.add_foi(expr=self.kinematics.E, fs=self.mfoi_fs, name="E")
-        if (self.Q_expr is not None):
-            self.add_foi(expr=self.kinematics.E_loc, fs=self.mfoi_fs, name="E_loc")
+        if (add_fois):
+            self.add_foi(expr=self.kinematics.F, fs=self.mfoi_fs, name="F")
+            self.add_foi(expr=self.kinematics.J, fs=self.sfoi_fs, name="J")
+            self.add_foi(expr=self.kinematics.C, fs=self.mfoi_fs, name="C")
+            self.add_foi(expr=self.kinematics.E, fs=self.mfoi_fs, name="E")
+            if (self.Q_expr is not None):
+                self.add_foi(expr=self.kinematics.E_loc, fs=self.mfoi_fs, name="E_loc")
 
 
 
@@ -208,8 +179,8 @@ class HyperelasticityProblem(Problem):
             subdomain_id=None):
 
         operator = dmech.HyperElasticityOperator(
-            U=self.get_displacement_subsol().subfunc,
-            U_test=self.get_displacement_subsol().dsubtest,
+            U=self.displacement_subsol.subfunc,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             material_model=material_model,
             material_parameters=material_parameters,
@@ -223,8 +194,8 @@ class HyperelasticityProblem(Problem):
 
         operator = dmech.HyperHydrostaticPressureOperator(
             kinematics=self.kinematics,
-            U_test=self.get_displacement_subsol().dsubtest,
-            P=self.get_pressure_subsol().subfunc,
+            U_test=self.displacement_subsol.dsubtest,
+            P=self.pressure_subsol.subfunc,
             measure=self.get_subdomain_measure(subdomain_id))
         return self.add_operator(operator)
 
@@ -235,7 +206,7 @@ class HyperelasticityProblem(Problem):
 
         operator = dmech.HyperIncompressibilityOperator(
             kinematics=self.kinematics,
-            P_test=self.get_pressure_subsol().dsubtest,
+            P_test=self.pressure_subsol.dsubtest,
             measure=self.get_subdomain_measure(subdomain_id))
         return self.add_operator(operator)
 
@@ -270,7 +241,7 @@ class HyperelasticityProblem(Problem):
 
         self.add_qoi(
             name=name,
-            expr=self.get_displacement_subsol().subfunc[component],
+            expr=self.displacement_subsol.subfunc[component],
             point=coordinates,
             update_type="direct")
 
@@ -283,7 +254,7 @@ class HyperelasticityProblem(Problem):
 
         self.add_qoi(
             name=name,
-            expr=self.get_displacement_subsol().subfunc[component],
+            expr=self.displacement_subsol.subfunc[component],
             constant=coordinates[component],
             point=coordinates,
             update_type="direct")
