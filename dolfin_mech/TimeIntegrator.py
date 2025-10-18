@@ -91,6 +91,7 @@ class TimeIntegrator():
             self.functions_to_write += self.problem.get_subsols_func_old_lst()
             self.functions_to_write += self.problem.get_fois_func_lst()
 
+
             self.xdmf_file_sol = dmech.XDMFFile(
                 filename=self.write_sol_filebasename+".xdmf",
                 functions=self.functions_to_write)
@@ -98,10 +99,15 @@ class TimeIntegrator():
 
             self.write_vtus                             = bool(write_vtus)
             self.write_vtus_with_preserved_connectivity = bool(write_vtus_with_preserved_connectivity)
+
             if (self.write_vtus):
+                print(self.write_sol_filebasename)
+                print(self.problem.get_displacement_subsol().subfunc[0])
+                print(self.problem.get_displacement_subsol().subfunc[1])
                 dmech.write_VTU_file(
+                    
                     filebasename=self.write_sol_filebasename,
-                    function=self.problem.get_displacement_subsol().subfunc,
+                    function=self.problem.get_displacement_subsol().func,
                     time=0,
                     preserve_connectivity=self.write_vtus_with_preserved_connectivity)
 

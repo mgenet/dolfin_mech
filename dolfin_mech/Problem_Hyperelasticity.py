@@ -143,6 +143,7 @@ class HyperelasticityProblem(Problem):
     def set_subsols(self,
             displacement_degree=1,
             pressure_degree=None):
+        print(">>> USING parent set_subsols <<<")
 
         self.add_displacement_subsol(
             degree=displacement_degree)

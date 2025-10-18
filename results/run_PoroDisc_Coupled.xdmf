@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="mesh" GridType="Uniform">
+        <Topology NumberOfElements="34026" TopologyType="Triangle" NodesPerElement="3">
+          <DataItem Dimensions="34026 3" NumberType="UInt" Format="HDF">run_PoroDisc_Coupled.h5:/Mesh/0/mesh/topology</DataItem>
+        </Topology>
+        <Geometry GeometryType="XY">
+          <DataItem Dimensions="18157 2" Format="HDF">run_PoroDisc_Coupled.h5:/Mesh/0/mesh/geometry</DataItem>
+        </Geometry>
+        <Time Value="0" />
+        <Attribute Name="U_bar" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/0</DataItem>
+        </Attribute>
+        <Attribute Name="U_tilde" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="18157 3" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/1</DataItem>
+        </Attribute>
+        <Attribute Name="pressure" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="18157 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/2</DataItem>
+        </Attribute>
+        <Attribute Name="S_area" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/3</DataItem>
+        </Attribute>
+        <Attribute Name="Phis" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/4</DataItem>
+        </Attribute>
+        <Attribute Name="U_bar_old" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/5</DataItem>
+        </Attribute>
+        <Attribute Name="U_tilde_old" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="18157 3" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/6</DataItem>
+        </Attribute>
+        <Attribute Name="pressure_old" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="18157 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/7</DataItem>
+        </Attribute>
+        <Attribute Name="S_area_old" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/8</DataItem>
+        </Attribute>
+        <Attribute Name="Phis_old" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/9</DataItem>
+        </Attribute>
+        <Attribute Name="U_bar" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="18157 3" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/10</DataItem>
+        </Attribute>
+        <Attribute Name="U_tot" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="18157 3" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/11</DataItem>
+        </Attribute>
+        <Attribute Name="F_tot" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/12</DataItem>
+        </Attribute>
+        <Attribute Name="J_tot" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/13</DataItem>
+        </Attribute>
+        <Attribute Name="C_tot" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/14</DataItem>
+        </Attribute>
+        <Attribute Name="E_tot" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/15</DataItem>
+        </Attribute>
+        <Attribute Name="Phis0" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/16</DataItem>
+        </Attribute>
+        <Attribute Name="Phif0" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/17</DataItem>
+        </Attribute>
+        <Attribute Name="Phif" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/18</DataItem>
+        </Attribute>
+        <Attribute Name="phis" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/19</DataItem>
+        </Attribute>
+        <Attribute Name="phif" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/20</DataItem>
+        </Attribute>
+        <Attribute Name="Sigma_skel" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/21</DataItem>
+        </Attribute>
+        <Attribute Name="sigma_skel" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/22</DataItem>
+        </Attribute>
+        <Attribute Name="dWbulkdPhis" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/23</DataItem>
+        </Attribute>
+        <Attribute Name="Sigma_bulk" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/24</DataItem>
+        </Attribute>
+        <Attribute Name="sigma_bulk" AttributeType="Tensor" Center="Cell">
+          <DataItem Dimensions="34026 9" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/25</DataItem>
+        </Attribute>
+        <Attribute Name="pressure" AttributeType="Scalar" Center="Cell">
+          <DataItem Dimensions="34026 1" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/26</DataItem>
+        </Attribute>
+        <Attribute Name="DarcyVelocity" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="18157 3" Format="HDF">run_PoroDisc_Coupled.h5:/VisualisationVector/27</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>

@@ -19,6 +19,7 @@ class WskelPoroOperator(Operator):
 
     def __init__(self,
             kinematics,
+            U,
             U_test,
             Phis0,
             material_parameters,
@@ -36,7 +37,7 @@ class WskelPoroOperator(Operator):
         self.measure = measure
 
         dE_test = dolfin.derivative(
-            self.kinematics.E, self.kinematics.U, U_test)
+            self.kinematics.E, U, U_test)
         self.res_form = dolfin.inner(self.material.Sigma, dE_test) * self.measure
 
 ################################################################################

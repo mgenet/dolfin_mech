@@ -16,12 +16,12 @@ import numpy
 import dolfin_mech as dmech
 from .Problem_Hyperelasticity import HyperelasticityProblem
 from .Operator_DarcyFlow import DarcyFlowOperator
-
+from .Operator_WbulkPoroFlow import WbulkPoroFlowOperator
 ################################################################################
 
-class PoroHyperelasticityProblem(HyperelasticityProblem):
+class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
-
+    
 
     def __init__(self,
             mesh=None,
@@ -42,9 +42,9 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             pore_behavior=None,
             pore_behaviors=[],
             gradient_operators=None):
-
+        
         HyperelasticityProblem.__init__(self)
-
+        
         if (mesh is not None):
             self.set_mesh(
                 mesh=mesh,
@@ -54,13 +54,19 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 domains=domains_mf,
                 boundaries=boundaries_mf,
                 points=points_mf)
-
             self.set_subsols(
                 displacement_degree=displacement_degree,
                 porosity_degree=porosity_degree,
                 porosity_init_val=porosity_init_val,
                 porosity_init_fun=porosity_init_fun)
             
+              #NEW: Add pressure field
+            self.add_scalar_subsol(
+                name="pressure",
+                family="CG",
+                degree=1)
+
+
             assert (porosity_init_val is None) or (porosity_init_fun is None)
             if gradient_operators=="direct":
                 self.Phis0 = porosity_init_val if (porosity_init_fun is None) else porosity_init_fun ### AP2023 - defined here to initialise subsol center of gravity
@@ -106,8 +112,21 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
                 "Cannot provide both pore_behavior & pore_behaviors. Aborting."
             if (pore_behavior is not None):
                 pore_behaviors = [pore_behavior]
+
+            # self.add_Wbulk_flow_operator(
+            # bulk_behaviors,
+            # "no",  
+            # subdomain_id=None)
+
+
             self.add_Wpore_operators(pore_behaviors)
 
+            self.add_Darcy_operator(
+                K_l=dolfin.Constant(1),
+                rho_l=dolfin.Constant(1),
+                Theta_0=dolfin.Constant(0.0))
+            self.add_pf_operator()
+            
 
 
     def get_porosity_name(self):
@@ -243,27 +262,22 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-def set_subsols(self,
-        displacement_degree=1,
-        porosity_degree=None,
-        porosity_init_val=None,
-        porosity_init_fun=None):
+    def set_subsols(self,
+            displacement_degree=1,
+            porosity_degree=None,
+            porosity_init_val=None,
+            porosity_init_fun=None):
+        #print(">>> USING subclass set_subsols <<<")
+        self.add_displacement_subsol(degree=displacement_degree)
 
-    self.add_displacement_subsol(degree=displacement_degree)
+        if (porosity_degree is None):
+            porosity_degree = displacement_degree - 1
+        self.add_porosity_subsol(
+            degree=porosity_degree,
+            init_val=porosity_init_val,
+            init_fun=porosity_init_fun)
 
-    if (porosity_degree is None):
-        porosity_degree = displacement_degree - 1
-    self.add_porosity_subsol(
-        degree=porosity_degree,
-        init_val=porosity_init_val,
-        init_fun=porosity_init_fun)
-
-    #NEW: Add pressure field
-    self.add_scalar_subsol(
-        name="pressure",
-        family="CG",
-        degree=1)
-
+      
 
 
     def set_subsols_gradient_direct(self):
@@ -377,8 +391,6 @@ def set_subsols(self,
             self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv, fs=self.mfoi_fs, name="Sigma_bulk"+suffix)
             self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.I, fs=self.mfoi_fs, name="sigma_bulk"+suffix)
 
-
-
     def add_Wpore_operator(self,
             material_parameters,
             material_scaling,
@@ -410,36 +422,83 @@ def set_subsols(self,
     def add_pf_operator(self,
             k_step=None,
             **kwargs):
-
-        operator = dmech.PfPoroOperator(
-            Phis_test=self.get_porosity_subsol().dsubtest,
+        
+        operator = dmech.PfFieldOperator(pressure= self.get_subsol("pressure").subfunc,
+            Phis_test=self.get_porosity_subsol().dsubtest, measure= self.get_subdomain_measure(None),
             **kwargs)
         self.add_operator(
             operator=operator,
             k_step=k_step)
-        self.add_foi(expr=operator.pf, fs=self.sfoi_fs, name="pf")
+        
+        self.add_foi(expr=operator.pf, fs=self.sfoi_fs, name="pressure")
+        
 
+    # def add_pf_operator(self,
+    #         k_step=None,
+    #         **kwargs):
+
+    #     operator = dmech.PfPoroOperator(
+    #         Phis_test=self.get_porosity_subsol().dsubtest,
+    #         **kwargs)
+    #     self.add_operator(
+    #         operator=operator,
+    #         k_step=k_step)
+    #     self.add_foi(expr=operator.pf, fs=self.sfoi_fs, name="pf")
+
+    # def add_Darcy_operator(self,
+    #         K_l,
+    #         rho_l,
+    #         Theta_0,
+    #         subdomain_id=None,
+    #         k_step=None):
+
+    #     p       = self.get_subsol("pressure").subfunc
+    #     p_test  = self.get_subsol("pressure").dsubtest
+    #     measure = self.get_subdomain_measure(subdomain_id)
+
+    #     operator = DarcyFlowOperator(
+    #         p=p,
+    #         p_test=p_test,
+    #         K_l=K_l,
+    #         rho_l=rho_l,
+    #         Theta_0=Theta_0,
+    #         measure=measure)
+
+    #     return self.add_operator(operator=operator, k_step=k_step)
 
     def add_Darcy_operator(self,
-            K_l,
-            rho_l,
-            Theta_0,
-            subdomain_id=None,
-            k_step=None):
+        K_l,
+        rho_l,
+        Theta_in,
+        Theta_out,
+        subdomain_id=None,
+        inlet_id=None,
+        outlet_id=None,
+        k_step=None):
+    
+        p      = self.get_subsol("pressure").subfunc
+        p_test = self.get_subsol("pressure").dsubtest
 
-        p       = self.get_subsol("pressure").subfunc
-        p_test  = self.get_subsol("pressure").dsubtest
-        measure = self.get_subdomain_measure(subdomain_id)
+        dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
+        dx_in   = self.get_subdomain_measure(inlet_id)          # dx(inlet_id) for source
+        dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
+
+
+        
 
         operator = DarcyFlowOperator(
             p=p,
             p_test=p_test,
             K_l=K_l,
             rho_l=rho_l,
-            Theta_0=Theta_0,
-            measure=measure)
+            Theta_in=Theta_in,
+            Theta_out=Theta_out,
+            dx=dx,
+            dx_in=dx_in,
+            dx_out=dx_out
+        )
 
-        return self.add_operator(operator=operator, k_step=k_step)
+        return self.add_operator(operator=operator)
 
 
     def add_pressure_balancing_gravity0_loading_operator(self,
@@ -590,3 +649,9 @@ def set_subsols(self,
         self.add_qoi(
             name="pf",
             expr=sum([operator.pf*operator.measure for step in self.steps for operator in step.operators if hasattr(operator, "pf")]))
+
+
+    def add_pressure_field(self):
+        p = self.get_subsol("pressure").subfunc
+        fs = self.get_subsol_function_space("pressure")
+        self.add_foi(expr=p, fs=fs, name="pressure")

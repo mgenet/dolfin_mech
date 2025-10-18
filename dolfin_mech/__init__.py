@@ -89,3 +89,6 @@ from .run_RivlinCube_Hyperelasticity import *
 from .run_RivlinCube_Mesh import *
 from .run_RivlinCube_PoroHyperelasticity import *
 from .write_VTU_file import *
+
+from .Operator_DarcyFlow import *
+from .Problem_Hyperelasticity_PoroFlow import *
