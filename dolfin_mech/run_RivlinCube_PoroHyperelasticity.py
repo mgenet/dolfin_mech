@@ -482,8 +482,9 @@ def run_RivlinCube_PoroHyperelasticity(
         qois_fig.savefig(res_basename+"-porosities-vs-pressure.pdf")
     
     if (get_results):
-        if (inverse):
-            phi = problem.get_foi(name="Phis0").func.vector().get_local()
-        else:
+        if (porosity_known == "Phis0"):
             phi = problem.get_foi(name="phis").func.vector().get_local()
+        elif (porosity_known == "phis"):
+            phi = problem.get_foi(name="Phis0").func.vector().get_local()
+
         return (problem.displacement_subsol.func, phi, dolfin.Measure("dx", domain=mesh))
