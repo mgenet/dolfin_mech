@@ -322,12 +322,25 @@ def run_RivlinCube_PoroHyperelasticity(
                 rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
             else:
                 rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+
+            f_direction = load_params.get("f_direction", "z")
+            if (f_direction == "x"):
+                f_ini = [f_old, 0., 0.]
+                f_fin = [f, 0., 0.]
+
+            elif (f_direction == "y"):
+                f_ini = [0., f_old, 0.]
+                f_fin = [0., f, 0.]
+
+            elif (f_direction == "z"):
+                f_ini = [0., 0., f_old]
+                f_fin = [0., 0., f]
+
             problem.add_pressure_balancing_gravity_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
-                f_ini=[0., f_old, 0],
-                # f_fin=[f, 0., 0.],
-                f_fin=[0., f, 0],
+                f_ini=f_ini,
+                f_fin=f_fin,
                 rho_solid=rho_solid,
                 P0_ini=P0_old,
                 P0_fin=P0,
@@ -347,11 +360,25 @@ def run_RivlinCube_PoroHyperelasticity(
                 rho_solid = mat_params[0].get("parameters").get("rho_solid", 1e-6)
             else:
                 rho_solid = mat_params.get("parameters").get("rho_solid", 1e-6)
+
+            f_direction = load_params.get("f_direction", "z")
+            if (f_direction == "x"):
+                f_ini = [f_old, 0., 0.]
+                f_fin = [f, 0., 0.]
+
+            elif (f_direction == "y"):
+                f_ini = [0., f_old, 0.]
+                f_fin = [0., f, 0.]
+
+            elif (f_direction == "z"):
+                f_ini = [0., 0., f_old]
+                f_fin = [0., 0., f]
+
             problem.add_pressure_balancing_gravity0_loading_operator(
                 dV=problem.dV,
                 dS=problem.dS,
-                f_ini=[0., f_old, 0.],
-                f_fin=[0., f    , 0.],
+                f_ini=f_ini,
+                f_fin=f_fin,
                 rho_solid=rho_solid,
                 phis=problem.phis,
                 P0_ini=P0_old,
