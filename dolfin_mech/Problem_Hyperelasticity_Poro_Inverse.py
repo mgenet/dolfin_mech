@@ -73,7 +73,7 @@ class InversePoroHyperelasticityProblem(PoroHyperelasticityProblem):
 
     def add_local_porosity_fois(self):
 
-        if (self.porosity_known == "phis"): self.add_foi(
+        self.add_foi(
             expr=self.phis,
             fs=self.porosity_subsol.fs.collapse(),
             name="phis")
