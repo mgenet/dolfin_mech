@@ -129,6 +129,12 @@ def run_RivlinCube_PoroHyperelasticity(
                 "double",
                 mesh,
                 porosity_filename)
+        elif (porosity_type == "mesh_function_from_xml"):
+            porosity_filename = porosity_params.get("porosity_filename")
+            porosity_mf = dolfin.MeshFunction(
+                "double",
+                mesh,
+                porosity_filename)
         porosity_expr = dolfin.CompiledExpression(getattr(dolfin.compile_cpp_code(dmech.get_ExprMeshFunction_cpp_pybind()), "MeshExpr")(), mf=porosity_mf, degree=0)
         porosity_fs = dolfin.FunctionSpace(mesh, 'DG', 0)
         porosity_fun = dolfin.interpolate(porosity_expr, porosity_fs)
