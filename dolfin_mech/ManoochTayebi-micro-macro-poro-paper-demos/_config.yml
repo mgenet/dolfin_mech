@@ -1,0 +1,51 @@
+############################################################## Book settings ###
+
+title: Welcome to [Manoochehrtayebi, Bel-Brunon & Genet, Submitted]'s demos!
+author: Martin Genet
+logo: logo.png
+copyright: "2023"
+only_build_toc_files: true
+
+######################################################### Execution settings ###
+
+execute:
+  execute_notebooks: off
+  # execute_notebooks: force
+
+############################################################# Parse settings ###
+
+parse:
+  myst_enable_extensions:
+    - amsmath
+    - dollarmath
+  myst_dmath_double_inline: true # MG20230531: option is ignored, cf. https://github.com/executablebooks/jupyter-book/issues/1738
+
+############################################################## HTML settings ###
+
+html:
+  use_repository_button: true
+  use_issues_button: false
+
+############################################################# LaTeX settings ###
+
+latex:
+  latex_engine: pdflatex  # pdflatex, xelatex (recommended for unicode), luatex, platex, uplatex
+  use_jupyterbook_latex: true
+  # latex_documents:
+  #   targetname: "book.tex"
+
+# bibtex_bibfiles:
+#   - "references.bib"
+
+############################################################# Launch settings ###
+
+repository:
+  url: https://github.com/ManoochTayebi/micro-macro-poro-paper-demos # MG20230527: Somehow only GitHub works, cf. https://github.com/orgs/executablebooks/discussions/1018
+  path_to_book: .
+  branch: master
+
+launch_buttons:
+  notebook_interface: classic  # jupyterlab, classic
+  binderhub_url: https://mybinder.org
+  # colab_url: https://colab.research.google.com
+  # jupyterhub_url: https://jupytercloud.idcs.polytechnique.fr/jupyter

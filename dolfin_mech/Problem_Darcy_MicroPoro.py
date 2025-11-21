@@ -177,7 +177,6 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
             #     self.add_hydrostatic_pressure_operator()
             #     self.add_incompressibility_operator()
 
-
             assert (porosity_init_val is None) or (porosity_init_fun is None)
             self.init_known_porosity(
                 porosity_init_val=porosity_init_val,
@@ -205,29 +204,6 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
                 "Cannot provide both pore_behavior & pore_behaviors. Aborting."
             if (pore_behavior is not None):
                 pore_behaviors = [pore_behavior]
-            #self.add_pf_operator( pf_ini=0.2, pf_fin=0.2,
-            #   )
-            self.add_pf_operator(
-               )
-            # self.add_Darcy_operator(
-            #      K_l=dolfin.Constant(1),
-            #      rho_l=dolfin.Constant(1),
-            #      Theta_in=dolfin.Constant(0.0),
-            #      Theta_out=dolfin.Constant(0.0))
-
-
-            # self.add_Darcy_operator(kinematics=self.kinematics,
-            #     K_l=dolfin.Constant(1.0) * dolfin.Identity(2),
-            #     rho_l=dolfin.Constant(1),
-            #     Theta_in=dolfin.Constant(1000000000000.0),
-            #     Theta_out=dolfin.Constant(1000.0),
-            #     subdomain_id=None,    # where grad(p)·grad(p) is integrated
-            #     inlet_id=3,
-            #     outlet_id=4)
-
-
-
-
 
             ##################################
 
@@ -248,6 +224,12 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
                     sub_domain=pinpoint_sd,
                     method='pointwise')
                 
+                self.add_constraint(
+                    V=self.get_subsol_function_space("pressure"),
+                    val=0.0,
+                    sub_domain=dmech.PinpointSubDomain(coords=mesh.coordinates()[-1], tol=1e-3),
+                    method='pointwise')
+
 
 ################################################################################
 # porosity functions ################################################################################
@@ -346,32 +328,15 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
 
 
 
-    def add_pf_operator(self,
-            k_step=None,
-            **kwargs):
-        
-        operator = PfFieldOperator(pressure= self.get_subsol("pressure").subfunc,
-            Phis_test=self.get_porosity_subsol().dsubtest, measure= self.get_subdomain_measure(None),
-            **kwargs)
-        self.add_operator(
-            operator=operator,
-            k_step=k_step)
-        
-        self.add_foi(expr=operator.pf, fs=self.sfoi_fs, name="pressure")
-
     # def add_pf_operator(self,
     #         k_step=None,
     #         **kwargs):
-
-    #     operator = dmech.PfPoroOperator(
-    #         Phis_test=self.get_porosity_subsol().dsubtest,measure= self.get_subdomain_measure(None),
+    #     operator = PfFieldOperator(p_tot=self.p_tot,pressure= self.get_subsol("pressure").subfunc,
+    #         Phis_test=self.get_porosity_subsol().dsubtest, measure= self.get_subdomain_measure(None),
     #         **kwargs)
     #     self.add_operator(
     #         operator=operator,
     #         k_step=k_step)
-    #     self.add_foi(expr=operator.pf, fs=self.sfoi_fs, name="pf")
-
-
 
     def get_porosity_name(self):
         return "Phis"
@@ -427,7 +392,6 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
         dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
 
 
-
     # -----------------------------------------
 
 
@@ -436,22 +400,110 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
             p=p,
             p_test=p_test,
             K_l=K_l,
+            X=self.X,
+            X_0 = self.X_0,
             rho_l=rho_l,
             Theta_in=Theta_in,
             Theta_out=Theta_out,
             dx=dx,
             dx_in=dx_in,
-            dx_out=dx_out
+            dx_out=dx_out,
+            p_bar=dolfin.Constant(1.0),
+            grad_p_bar_val=None, 
+            grad_p_bar_x_ini=1, 
+            grad_p_bar_x_fin=4,
+            grad_p_bar_y_ini=1, 
+            grad_p_bar_y_fin=4,
+            Phis_test=self.get_porosity_subsol().dsubtest
         )
-        self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
-        self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
 
-        return self.add_operator(operator=operator)
+        p_grad_expr = operator.grad_p_bar
+        p_tot_expr  = operator.p_tot
+
+        p_fs = self.get_subsol_function_space("pressure").collapse()
+        #V_vec = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
+
+        p_grad_expr_value = dolfin.dot(p_grad_expr , self.X-self.X_0)
+
+        self.add_foi(expr=p_grad_expr_value, fs=p_fs, name="p_grad_new", update_type="project")
+        self.add_foi(expr=p_tot_expr,  fs=p_fs, name="p_tot_new", update_type="project")
+        self.add_foi(expr=p,  fs=p_fs, name="p_tilde_new", update_type="project")
+
+        k_l = (1.0 / kinematics.J) * kinematics.F * K_l * kinematics.F.T  
+        v_local = - dolfin.grad(p_tot_expr)
+        v_local_expr = - dolfin.dot(k_l, dolfin.grad(p_tot_expr))
+
+        v_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
+        self.add_foi(
+                expr=v_local_expr,
+                fs=v_fs,
+                name="DarcyVelocity_local",
+                update_type="project"
+            )
+
+        self.add_foi(
+                expr=v_local,
+                fs=v_fs,
+                name="PressureGradient_local",
+                update_type="project"
+            )
+        
+        Area = dolfin.assemble(1.0 * dx)
+
+        self.add_qoi(name="q_avg_x", expr=v_local[0] * dx, norm=Area)
+        self.add_qoi(name="q_avg_y", expr=v_local[1] * dx, norm=Area)
+        
+
+
+
+        return self.add_operator(operator=operator,
+            k_step=k_step)
     
     def add_pressure_field(self):
         p = self.get_subsol("pressure").subfunc
         fs = self.get_subsol_function_space("pressure")
-        self.add_foi(expr=p, fs=fs, name="pressure")
+        #self.add_foi(expr=p, fs=fs, name="pressure")
+
+    def compute_macro_flow(self):
+        """
+        Compute macroscopic Darcy velocity and permeability tensor component
+        from the current micro-solution.
+        """
+        # Local variables
+        p_tilde = self.get_subsol("pressure").subfunc
+    
+        #K_l = perm_material.K_ref(self.kinematics.J, self.get_porosity_subsol().subfunc)
+        K_l=dolfin.Constant(1.0) * dolfin.Identity(2)
+        grad_p_bar_vec = self.grad_p_bar
+
+        # Local Darcy velocity field
+        v_local = - dolfin.as_tensor(
+            [sum(K_l[i, j] * (dolfin.grad(p_tilde)[j] + grad_p_bar_vec[j]) for j in range(self.dim))
+            for i in range(self.dim)]
+        )
+
+        # Average over the RVE domain
+        #v_macro = dolfin.assemble(v_local * self.dV) / self.mesh_V0
+        v_macro = numpy.zeros(self.dim)
+        for i in range(self.dim):
+            v_macro[i] = dolfin.assemble(v_local[i] * self.dV) / self.mesh_V0
+
+
+        # Convert to numpy
+        v_macro_np = numpy.array(v_macro)
+        grad_p_bar_np = numpy.array(grad_p_bar_vec.values())
+
+        # Macro permeability estimate (column)
+        K_macro_col = - v_macro_np / grad_p_bar_np
+
+        print("\n=== MACRO FLOW RESULTS ===")
+        print(f"grad_p_bar = {grad_p_bar_np}")
+        print(f"macro Darcy velocity = {v_macro_np}")
+        print(f"estimated K_macro_col = {K_macro_col}")
+        print("===========================\n")
+
+        return v_macro_np, K_macro_col
+
     
 ################################################
     #Material definitions

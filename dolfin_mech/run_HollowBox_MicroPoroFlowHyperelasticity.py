@@ -55,6 +55,21 @@ def run_HollowBox_MicroPoroFlow(
         add_p_hydro_and_Sigma_VM_FoI=False,
         write_qois_limited_precision=True,
         verbose=0):
+    
+        # ------------------------- Mesh ------------------------- #
+    mesh = dolfin.Mesh()
+    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+        infile.read(mesh)
+
+    boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+    points_mf = dolfin.MeshFunction("size_t", mesh, 0)
+    try:
+        with dolfin.XDMFFile("./mesh/mesh-2D_rectangle_w_voronoi_inclusions.xdmf") as infile:
+            infile.read(boundaries_mf, "boundaries")
+            infile.read(points_mf, "points")
+    except:
+        boundaries_mf = None
+        points_mf = None
 
     assert ((mesh is not None) or (mesh_params is not None))
     if (mesh is None):
@@ -134,7 +149,7 @@ def run_HollowBox_MicroPoroFlow(
 
     domains_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim())
     domains_mf.set_all(0)  # default domain
-    r = 0.15  # adjust as needed
+    r = 0.05  # adjust as needed
 
     # inlet_center = [0.13, 0.5]
     # outlet_center = [0.42, 0.0]
@@ -250,6 +265,17 @@ def run_HollowBox_MicroPoroFlow(
             gamma_ini=gamma_old, gamma_fin=gamma,
             tension_params=tension_params,
             k_step=k_step)
+
+        problem.add_Darcy_operator(kinematics=problem.kinematics,
+                K_l=dolfin.Constant(1.0) * dolfin.Identity(2),
+                rho_l=dolfin.Constant(1),
+                Theta_in=dolfin.Constant(0.0),
+                Theta_out=dolfin.Constant(0.0),
+                subdomain_id=None,    # where grad(p)·grad(p) is integrated
+                inlet_id=3,
+                outlet_id=4,
+                k_step=k_step)
+
         
         ######################################################## constaints ###
         x_min = mesh.coordinates()[:, 0].min()
@@ -276,44 +302,37 @@ def run_HollowBox_MicroPoroFlow(
         #     val=0.0)
 
 
-        problem.add_constraint(
-        V=pressure_space,
-        sub_domain=top_line,
-        val=1.0)
+        # problem.add_constraint(
+        # V=pressure_space,
+        # sub_domain=top_line,
+        # val=1.0)
 
 
-        problem.add_constraint(
-        V=pressure_space,
-        sub_domain=bot_line,
-        val=-1.0)
+        # problem.add_constraint(
+        # V=pressure_space,
+        # sub_domain=bot_line,
+        # val=-1.0)
 
         
 
 
 
-        problem.add_Darcy_operator(kinematics=problem.kinematics,
-            K_l=dolfin.Constant(1.0) * dolfin.Identity(dim),
-            rho_l=dolfin.Constant(1),
-            Theta_in=dolfin.Constant(100.0),
-            Theta_out=dolfin.Constant(100.0),
-            subdomain_id=None,    # where grad(p)·grad(p) is integrated
-            inlet_id=3,
-            outlet_id=4,
-            k_step=k_step)
+
 
 ################################################################ Fields of Interest ###
     # Darcy velocity expression
     #velocity_expr = - problem.rho_l * problem.K_l * dolfin.grad(p)
-    p = problem.get_subsol("pressure").subfunc
-    velocity_expr = -  dolfin.grad(p)
+    # p = problem.get_subsol("p_tot").subfunc
+    # velocity_expr = -  dolfin.grad(p)
 
-    # Function space: vector CG space
-    velocity_fs = dolfin.VectorFunctionSpace(problem.mesh, "CG", 1)
+    # # Function space: vector CG space
+    # velocity_fs = dolfin.VectorFunctionSpace(problem.mesh, "CG", 1)
 
-    # Register as a Field Of Interest
-    problem.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
+    # # Register as a Field Of Interest
+    # problem.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
 
 
+    #v_macro, K_macro_col = problem.compute_macro_flow()
 
 
 
@@ -327,9 +346,10 @@ def run_HollowBox_MicroPoroFlow(
     problem.add_deformed_volume_qoi()
     problem.add_macroscopic_stretch_qois()
     problem.add_macroscopic_solid_stress_qois()
+
     #problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
-    problem.add_macroscopic_stress_qois()
     problem.add_fluid_pressure_qoi()
+    problem.add_macroscopic_stress_qois()
     problem.add_interfacial_surface_qois()
 
     if (add_p_hydro_and_Sigma_VM_FoI):
@@ -339,6 +359,7 @@ def run_HollowBox_MicroPoroFlow(
                 break
         problem.add_foi(expr=material.p_hydro, fs=problem.sfoi_fs, name="p_hydro")
         problem.add_foi(expr=material.Sigma_VM, fs=problem.sfoi_fs, name="Sigma_VM")
+
 
     ################################################################# Solver ###
 
@@ -375,80 +396,83 @@ def run_HollowBox_MicroPoroFlow(
 
 ####################################################################### test ###
 
-res_folder = sys.argv[0][:-3]
-test = mypy.Test(
-    res_folder=res_folder,
-    perform_tests=0,
-    stop_at_failure=1,
-    clean_after_tests=0,
-    tester_numpy_tolerance=1e-2)
+# res_folder = sys.argv[0][:-3]
+# test = mypy.Test(
+#     res_folder=res_folder,
+#     perform_tests=0,
+#     stop_at_failure=1,
+#     clean_after_tests=0,
+#     tester_numpy_tolerance=1e-2)
 
-dim_lst  = [ ]
-dim_lst += [2]
-# dim_lst += [3]
-for dim in dim_lst:
+# dim_lst  = [ ]
+# dim_lst += [2]
+# # dim_lst += [3]
+# for dim in dim_lst:
 
-    bcs_lst  = [      ]
-    bcs_lst += ["kubc"]
-    bcs_lst += ["pbc" ]
-    for bcs in bcs_lst:
+#     bcs_lst  = [      ]
+#     #bcs_lst += ["kubc"]
+#     bcs_lst += ["pbc" ]
+#     for bcs in bcs_lst:
 
-        load_lst  = [                     ]
-        load_lst += ["internal_pressure"  ]
-        load_lst += ["macroscopic_stretch"]
-        load_lst += ["macroscopic_stress" ]
-        for load in load_lst:
+#         load_lst  = [                     ]
+#         load_lst += ["internal_pressure"  ]
+#         load_lst += ["macroscopic_stretch"]
+#         load_lst += ["macroscopic_stress" ]
+        
+#         for load in load_lst:
 
-            print("dim =",dim)
-            print("bcs =",bcs)
-            print("load =",load)
+#             print("dim =",dim)
+#             print("bcs =",bcs)
+#             print("load =",load)
 
-            #res_basename  = sys.argv[0][:-3]
-            res_basename = "-dim="+str(dim)
-            res_basename += "-bcs="+str(bcs)
-            res_basename += "-load="+str(load)
+#             #res_basename  = sys.argv[0][:-3]
+#             res_basename = "-dim="+str(dim)
+#             res_basename += "-bcs="+str(bcs)
+#             res_basename += "-load="+str(load)
 
-            load_params = {}
-            if (load == "internal_pressure"):
-                load_params["pf"] = +0.2
-                for i in range(dim):
-                 for j in range (dim):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-            elif (load == "macroscopic_stretch"):
-                load_params["pf"] = 0.
-                load_params["U_bar_00"] = 0.5
-                for i in range(dim):
-                 for j in range (dim):
-                  if ((i != 0) or (j != 0)):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-            elif (load == "macroscopic_stress"):
-                load_params["pf"] = 0.
-                for i in range(dim):
-                 for j in range (dim):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-                load_params["sigma_bar_00"] = 0.5
+#             load_params = {}
+#             if (load == "internal_pressure"):
+#                 load_params["pf"] = +0.2
+#                 for i in range(dim):
+#                  for j in range (dim):
+#                     load_params["sigma_bar_"+str(i)+str(j)] = 0.
+#             elif (load == "macroscopic_stretch"):
+#                 load_params["pf"] = 0.
+#                 load_params["U_bar_00"] = 0.5
+#                 for i in range(dim):
+#                  for j in range (dim):
+#                   if ((i != 0) or (j != 0)):
+#                     load_params["sigma_bar_"+str(i)+str(j)] = 0.
+#             elif (load == "macroscopic_stress"):
+#                 load_params["pf"] = 0.
+#                 for i in range(dim):
+#                  for j in range (dim):
+#                     load_params["sigma_bar_"+str(i)+str(j)] = 0.
+#                 load_params["sigma_bar_00"] = 0.5
 
-            mat_params = {
-                "alpha":0.16,
-                "gamma":0.5,
-                "c1":0.2,
-                "c2":0.4,
-                "kappa":1e2,
-                "eta":1e-5}
+            
+
+#             mat_params = {
+#                 "alpha":0.16,
+#                 "gamma":0.5,
+#                 "c1":0.2,
+#                 "c2":0.4,
+#                 "kappa":1e2,
+#                 "eta":1e-5}
 
 
-            run_HollowBox_MicroPoroFlow(
-                dim=dim,
-                mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.04, "mesh_filebasename":res_folder+"/"+"mesh"},
-                mat_params=mat_params,
-                bcs=bcs,
-                step_params={"dt_ini":1e-1, "dt_min":1e-3},
-                load_params=load_params,
-                res_basename=res_folder+"/"+res_basename,
-                #res_basename=res_basename,
-                verbose=1)
+#             run_HollowBox_MicroPoroFlow(
+#                 dim=dim,
+#                 mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.04, "mesh_filebasename":res_folder+"/"+"mesh"},
+#                 mat_params=mat_params,
+#                 bcs=bcs,
+#                 step_params={"dt_ini":1e-1, "dt_min":1e-3},
+#                 load_params=load_params,
+#                 res_basename=res_folder+"/"+res_basename,
+#                 #res_basename=res_basename,
+#                 verbose=1)
 
-            test.test(res_basename)
+#             test.test(res_basename)
 
 ###############################################################################
 ## TEST CODE FINISHED

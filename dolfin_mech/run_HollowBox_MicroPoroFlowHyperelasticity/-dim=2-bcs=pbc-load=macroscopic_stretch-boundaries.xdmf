@@ -3,14 +3,14 @@
 <Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
   <Domain>
     <Grid Name="mesh" GridType="Uniform">
-      <Topology NumberOfElements="2037" TopologyType="PolyLine" NodesPerElement="2">
-        <DataItem Dimensions="2037 2" NumberType="UInt" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/mesh/topology</DataItem>
+      <Topology NumberOfElements="10575" TopologyType="PolyLine" NodesPerElement="2">
+        <DataItem Dimensions="10575 2" NumberType="UInt" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/mesh/topology</DataItem>
       </Topology>
       <Geometry GeometryType="XY">
-        <DataItem Dimensions="723 2" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/mesh/geometry</DataItem>
+        <DataItem Dimensions="3665 2" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/mesh/geometry</DataItem>
       </Geometry>
       <Attribute Name="f" AttributeType="Scalar" Center="Cell">
-        <DataItem Dimensions="2037 1" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/values</DataItem>
+        <DataItem Dimensions="10575 1" Format="HDF">-dim=2-bcs=pbc-load=macroscopic_stretch-boundaries.h5:/MeshFunction/0/values</DataItem>
       </Attribute>
     </Grid>
   </Domain>

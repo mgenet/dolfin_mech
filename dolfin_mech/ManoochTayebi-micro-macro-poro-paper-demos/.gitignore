@@ -1,0 +1,14 @@
+.DS_Store
+.ipynb_checkpoints
+_build
+__pycache__
+Fig5-hexagonal-seeds.dat
+*.h5
+*.msh
+*.out
+*.pdf
+*.sta
+*.vtk
+*.xdmf
+*.xml
+*-qois.dat

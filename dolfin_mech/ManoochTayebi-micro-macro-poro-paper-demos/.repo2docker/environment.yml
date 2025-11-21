@@ -1,0 +1,48 @@
+################################################################################
+###                                                                          ###
+### Created by Martin Genet                                                  ###
+###                                                                          ###
+### École Polytechnique, Palaiseau, France                                   ###
+###                                                                          ###
+################################################################################
+
+name: notebook
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+# python
+  - mpi4py=3.1.3
+  - numpy=1.23.1
+  - python=3.10
+  - scipy=1.9.0
+  - seaborn=0.13.0
+  - sympy=1.10.1
+
+# jupyter
+  - ipywidgets=8.0.1
+  - jupyter=1.0.0
+  - jupyter_contrib_nbextensions=0.7
+  - jupyter_nbextensions_configurator=0.6
+  - jupyterlab=3.5.0
+  - notebook=6.4.12
+
+# computing stuff
+  - fenics=2019.1.0
+  - gmsh=4.11
+  - meshio=5.3
+
+# plotting stuff
+  - matplotlib=3.7
+
+  - pip=22.2.2
+  - pip:
+  # computing stuff
+    - gmsh==4.11
+    - meshio==5.3
+
+  # mechanics stuff
+    - dolfin_mech==2023.12.8
+    - micro_poro_structure_generator==2023.12.8

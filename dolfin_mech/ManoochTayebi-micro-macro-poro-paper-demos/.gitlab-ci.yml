@@ -1,0 +1,65 @@
+################################################################################
+###                                                                          ###
+### Created by Martin Genet                                                  ###
+###                                                                          ###
+### École Polytechnique, Palaiseau, France                                   ###
+###                                                                          ###
+################################################################################
+
+stages:
+  - build
+  - deploy
+
+build_docker:
+  stage: build
+  tags:
+    - ci.inria.fr
+    - large
+  image: ubuntu:20.04
+  script:
+    - apt update; apt install -y python3 python3-pip mercurial git ca-certificates curl gnupg lsb-release
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - DEBIAN_FRONTEND=noninteractive apt install -y tzdata
+    - apt update; apt install -y docker-ce docker-ce-cli containerd.io
+    - docker images
+    - docker rmi -f $CI_REGISTRY_IMAGE || true
+    - docker images --filter="reference=$CI_REGISTRY_IMAGE" --format="{{.Repository}}:{{.Tag}}" | xargs docker rmi || true
+    - docker images
+    - docker image prune -f
+    - docker images
+    - python3 -m pip install jupyter-repo2docker
+    - repo2docker --no-run --user-id 1000 --user-name jovyan --image-name $CI_REGISTRY_IMAGE .repo2docker
+    - docker images
+    - docker image tag $CI_REGISTRY_IMAGE $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker images
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker logout $CI_REGISTRY
+
+build_jupyterbook:
+  stage: build
+  image: python:slim
+  tags:
+    - ci.inria.fr
+  script:
+    - pip install -U jupyter-book
+    - jupyter-book clean .
+    - jupyter-book build .
+  artifacts:
+    paths:
+      - _build/
+
+pages: # MG202306003: Apparently this has to be named pages…
+  stage: deploy
+  image: busybox:latest
+  tags:
+    - ci.inria.fr
+  script:
+    - mv _build/html public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
