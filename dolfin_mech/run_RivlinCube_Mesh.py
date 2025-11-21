@@ -36,7 +36,7 @@ def run_RivlinCube_Mesh(
 
     if (dim==2):
         mesh = dolfin.RectangleMesh(
-            dolfin.Point(X0, Y0, 0.), dolfin.Point(Y1, Y1, 0.),
+            dolfin.Point(X0, Y0, 0.), dolfin.Point(X1, Y1, 0.),
             NX, NY,
             "crossed")
     elif (dim==3):

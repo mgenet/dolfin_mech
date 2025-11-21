@@ -22,7 +22,7 @@ class WbulkPoroOperator(Operator):
             U_test,
             Phis0,
             Phis,
-            Phis_test,
+            unknown_porosity_test,
             material_parameters,
             material_scaling,
             measure):
@@ -44,7 +44,7 @@ class WbulkPoroOperator(Operator):
             self.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv,
             dE_test) * self.measure
 
-        self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
+        self.res_form += self.material.dWbulkdPhis * unknown_porosity_test * self.measure
 
 ################################################################################
 
@@ -55,7 +55,7 @@ class InverseWbulkPoroOperator(Operator):
             u_test,
             phis,
             phis0,
-            phis0_test,
+            unknown_porosity_test,
             material_parameters,
             material_scaling,
             measure):
@@ -74,4 +74,4 @@ class InverseWbulkPoroOperator(Operator):
         epsilon_test = dolfin.sym(dolfin.grad(u_test))
         self.res_form = self.material.dWbulkdPhis * dolfin.tr(epsilon_test) * self.measure
 
-        self.res_form += self.material.dWbulkdPhis * phis0_test * self.measure
+        self.res_form += self.material.dWbulkdPhis * unknown_porosity_test * self.measure

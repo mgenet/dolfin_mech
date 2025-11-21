@@ -38,9 +38,9 @@ def run_RivlinCube_Hyperelasticity(
     elif (dim==3):
         mesh, boundaries_mf, xmin_id, xmax_id, ymin_id, ymax_id, zmin_id, zmax_id = dmech.run_RivlinCube_Mesh(dim=dim, params=cube_params)
 
-    if move_params.get("move", False) == True :
-        Umove = move_params.get("U")
-        dolfin.ALE.move(mesh, Umove)
+    if move_params.get("move", False):
+        U = move_params.get("U")
+        dolfin.ALE.move(mesh, U)
 
     if (multimaterial):
         mat1_sd = dolfin.CompiledSubDomain("x[0] <= x0", x0=0.5)
@@ -111,17 +111,17 @@ def run_RivlinCube_Hyperelasticity(
     const_type = const_params.get("type", "sym")
 
     if (const_type in ("symx", "sym")):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(0), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=0.)
     if (const_type in ("symy", "sym")) and (dim >= 2):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(1), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=0.)
     if (const_type in ("symz", "sym")) and (dim >= 3):
-        problem.add_constraint(V=problem.get_displacement_function_space().sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
+        problem.add_constraint(V=problem.displacement_subsol.fs.sub(2), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=0.)
     if (const_type in ("blox")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=xmin_id, val=[0.]*dim)
     if (const_type in ("bloy")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=ymin_id, val=[0.]*dim)
     if (const_type in ("bloz")):
-        problem.add_constraint(V=problem.get_displacement_function_space(), sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
+        problem.add_constraint(V=problem.displacement_subsol.fs, sub_domains=boundaries_mf, sub_domain_id=zmin_id, val=[0.]*dim)
 
     n_steps = step_params.get("n_steps", 1)
     Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
@@ -161,7 +161,7 @@ def run_RivlinCube_Hyperelasticity(
             u = u_lst[k_step]
             u_old = u_lst[k_step-1] if (k_step > 0) else 0.
             problem.add_constraint(
-                V=problem.get_displacement_function_space().sub(0),
+                V=problem.displacement_subsol.fs.sub(0),
                 sub_domains=boundaries_mf,
                 sub_domain_id=xmax_id,
                 val_ini=u_old, val_fin=u,
@@ -330,4 +330,4 @@ def run_RivlinCube_Hyperelasticity(
     integrator.close()
 
     if (get_results):
-        return (problem.get_displacement_subsol().func, dolfin.Measure("dx", domain=mesh))
+        return (problem.displacement_subsol.func, dolfin.Measure("dx", domain=mesh))

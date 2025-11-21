@@ -8,7 +8,6 @@
 ###                                                                          ###
 ################################################################################
 
-import collections
 import dolfin
 
 import dolfin_mech as dmech
@@ -21,7 +20,7 @@ class Problem():
 
     def __init__(self):
 
-        self.subsols = collections.OrderedDict()
+        self.subsols = []
 
         self.operators = []
         self.constraints = []
@@ -54,7 +53,7 @@ class Problem():
         self.mesh_V0 = dolfin.assemble(dolfin.Constant(1) * self.dV)
 
         if (define_spatial_coordinates):
-            if "Inverse" in str(self):
+            if ("Inverse" in str(self)):
                 self.x = dolfin.SpatialCoordinate(self.mesh)
             else:
                 self.X = dolfin.SpatialCoordinate(self.mesh)
@@ -172,7 +171,7 @@ class Problem():
             name=name,
             *args,
             **kwargs)
-        self.subsols[name] = subsol
+        self.subsols += [subsol]
         return subsol
 
 
@@ -189,11 +188,12 @@ class Problem():
             cell=self.mesh.ufl_cell(),
             degree=degree)
 
-        self.add_subsol(
+        subsol = self.add_subsol(
             name=name,
             fe=fe,
             init_val=init_val,
             init_fun=init_fun)
+        return subsol
 
 
 
@@ -208,10 +208,11 @@ class Problem():
             cell=self.mesh.ufl_cell(),
             degree=degree)
 
-        self.add_subsol(
+        subsol = self.add_subsol(
             name=name,
             fe=fe,
             init_val=init_val)
+        return subsol
 
 
 
@@ -228,26 +229,20 @@ class Problem():
             degree=degree,
             symmetry=symmetry)
 
-        self.add_subsol(
+        subsol = self.add_subsol(
             name=name,
             fe=fe,
             init_val=init_val)
-
-
-
-    def get_subsol(self,
-            name):
-
-        return self.subsols[name]
+        return subsol
 
 
 
     def set_solution_finite_element(self):
 
         if (len(self.subsols) == 1):
-            self.sol_fe = list(self.subsols.values())[0].fe
+            self.sol_fe = self.subsols[0].fe
         else:
-            self.sol_fe = dolfin.MixedElement([subsol.fe for subsol in self.subsols.values()])
+            self.sol_fe = dolfin.MixedElement([subsol.fe for subsol in self.subsols])
         # print(self.sol_fe)
 
 
@@ -260,14 +255,11 @@ class Problem():
             self.sol_fe,
             constrained_domain=constrained_domain) # MG: element keyword don't work here…
 
-
-
-    def get_subsol_function_space(self,
-            name):
-
-        index = list(self.subsols.keys()).index(name)
-        # print(str(name)+" index = "+str(index))
-        return self.sol_fs.sub(index)
+        if (len(self.subsols) == 1):
+            self.subsols[0].fs = self.sol_fs
+        else:
+            for (k_subsol,subsol) in enumerate(self.subsols):
+                subsol.fs = self.sol_fs.sub(k_subsol)
 
 
 
@@ -294,7 +286,7 @@ class Problem():
             funcs_old = dolfin.Function(self.sol_fs).split(deepcopy=1)
             dfuncs    = dolfin.Function(self.sol_fs).split(deepcopy=1)
 
-        for (k_subsol,subsol) in enumerate(self.subsols.values()):
+        for (k_subsol,subsol) in enumerate(self.subsols):
             subsol.subfunc  = subfuncs[k_subsol]
             subsol.dsubtest = dsubtests[k_subsol]
             subsol.dsubtria = dsubtrias[k_subsol]
@@ -306,7 +298,7 @@ class Problem():
             subsol.dfunc = dfuncs[k_subsol]
             subsol.dfunc.rename("d"+subsol.name, "d"+subsol.name)
 
-        for (k_subsol,subsol) in enumerate(self.subsols.values()):
+        for (k_subsol,subsol) in enumerate(self.subsols):
             subsol.init()
         if (len(self.subsols) > 1):
             dolfin.assign(
@@ -320,19 +312,19 @@ class Problem():
 
     def get_subsols_func_lst(self):
 
-        return [subsol.func for subsol in self.subsols.values()]
+        return [subsol.func for subsol in self.subsols]
 
 
 
     def get_subsols_func_old_lst(self):
 
-        return [subsol.func_old for subsol in self.subsols.values()]
+        return [subsol.func_old for subsol in self.subsols]
 
 
 
     def get_subsols_dfunc_lst(self):
 
-        return [subsol.dfunc for subsol in self.subsols.values()]
+        return [subsol.dfunc for subsol in self.subsols]
 
 
 
@@ -483,7 +475,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.VolumeForce0LoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -494,7 +486,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.VolumeForceLoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
@@ -506,7 +498,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceForce0LoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -517,7 +509,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceForceLoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             **kwargs)
@@ -530,7 +522,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfacePressure0LoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
@@ -542,7 +534,7 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfacePressureLoadingOperator(
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             **kwargs)
@@ -556,7 +548,7 @@ class Problem():
 
         operator = dmech.SurfacePressureGradient0LoadingOperator(
             x=dolfin.SpatialCoordinate(self.mesh),
-            U_test=self.get_displacement_subsol().dsubtest,
+            U_test=self.displacement_subsol.dsubtest,
             N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
@@ -569,8 +561,8 @@ class Problem():
 
         operator = dmech.SurfacePressureGradientLoadingOperator(
             X=dolfin.SpatialCoordinate(self.mesh),
-            U=self.get_displacement_subsol().subfunc,
-            U_test=self.get_displacement_subsol().dsubtest,
+            U=self.displacement_subsol.subfunc,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             **kwargs)
@@ -583,8 +575,8 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceTension0LoadingOperator(
-            u=self.get_displacement_subsol().subfunc,
-            u_test=self.get_displacement_subsol().dsubtest,
+            u=self.displacement_subsol.subfunc,
+            u_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             **kwargs)
@@ -597,8 +589,8 @@ class Problem():
             **kwargs):
 
         operator = dmech.SurfaceTensionLoadingOperator(
-            # U=self.get_displacement_subsol().subfunc,
-            U_test=self.get_displacement_subsol().dsubtest,
+            # U=self.displacement_subsol.subfunc,
+            U_test=self.displacement_subsol.dsubtest,
             kinematics=self.kinematics,
             N=self.mesh_normals,
             **kwargs)
@@ -611,8 +603,8 @@ class Problem():
             **kwargs):
 
         operator = dmech.NormalDisplacementPenaltyOperator(
-            U=self.get_displacement_subsol().subfunc,
-            U_test=self.get_displacement_subsol().dsubtest,
+            U=self.displacement_subsol.subfunc,
+            U_test=self.displacement_subsol.dsubtest,
             N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
@@ -624,8 +616,8 @@ class Problem():
             **kwargs):
 
         operator = dmech.DirectionalDisplacementPenaltyOperator(
-            U=self.get_displacement_subsol().subfunc,
-            U_test=self.get_displacement_subsol().dsubtest,
+            U=self.displacement_subsol.subfunc,
+            U_test=self.displacement_subsol.dsubtest,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
@@ -636,9 +628,9 @@ class Problem():
             **kwargs):
 
         operator = dmech.InertiaOperator(
-            U=self.get_displacement_subsol().subfunc,
-            U_old=self.get_displacement_subsol().func_old,
-            U_test=self.get_displacement_subsol().dsubtest,
+            U=self.displacement_subsol.subfunc,
+            U_old=self.displacement_subsol.func_old,
+            U_test=self.displacement_subsol.dsubtest,
             **kwargs)
         return self.add_operator(operator=operator, k_step=k_step)
 
