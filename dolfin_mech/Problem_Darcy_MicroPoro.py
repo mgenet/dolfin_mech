@@ -411,9 +411,9 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
             p_bar=dolfin.Constant(1.0),
             grad_p_bar_val=None, 
             grad_p_bar_x_ini=1, 
-            grad_p_bar_x_fin=4,
-            grad_p_bar_y_ini=1, 
-            grad_p_bar_y_fin=4,
+            grad_p_bar_x_fin=1,
+            grad_p_bar_y_ini=0, 
+            grad_p_bar_y_fin=0,
             Phis_test=self.get_porosity_subsol().dsubtest
         )
 
@@ -430,7 +430,6 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
         self.add_foi(expr=p,  fs=p_fs, name="p_tilde_new", update_type="project")
 
         k_l = (1.0 / kinematics.J) * kinematics.F * K_l * kinematics.F.T  
-        v_local = - dolfin.grad(p_tot_expr)
         v_local_expr = - dolfin.dot(k_l, dolfin.grad(p_tot_expr))
 
         v_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
@@ -441,17 +440,42 @@ class MicroPoroDarcyProblem(HyperelasticityProblem):
                 update_type="project"
             )
 
-        self.add_foi(
-                expr=v_local,
-                fs=v_fs,
-                name="PressureGradient_local",
-                update_type="project"
-            )
+
         
         Area = dolfin.assemble(1.0 * dx)
+        expr_lst_qx = []
+        expr_lst_qy = []
 
-        self.add_qoi(name="q_avg_x", expr=v_local[0] * dx, norm=Area)
-        self.add_qoi(name="q_avg_y", expr=v_local[1] * dx, norm=Area)
+        for _ in range(len(self.steps)):
+            expr_lst_qx.append(v_local_expr[0] * dx)
+            expr_lst_qy.append(v_local_expr[1] * dx)
+
+        self.add_qoi(name="q_avg_x", expr_lst=expr_lst_qx, norm=Area)
+        self.add_qoi(name="q_avg_y", expr_lst=expr_lst_qy, norm=Area)
+
+
+        self.add_qoi(
+            name="grad_p_bar_x",
+            expr=p_grad_expr[0]* dx,
+            norm=Area
+        )
+
+        self.add_qoi(
+            name="grad_p_bar_y",
+            expr=p_grad_expr[1]* dx,
+            norm=Area
+        )
+
+
+        # for step_id in range(len(self.steps)):
+        #     expr_lst_qx.append(v_local_expr[step_id][0] * dx)
+        #     expr_lst_qy.append(v_local_expr[step_id][1] * dx)
+
+        # self.add_qoi(name="q_avg_x", expr_lst=expr_lst_qx, norm=Area)
+        # self.add_qoi(name="q_avg_y", expr_lst=expr_lst_qy, norm=Area)
+
+        #self.add_qoi(name="q_avg_x", expr=v_local_expr[0] * dx, norm=Area)
+        #self.add_qoi(name="q_avg_y", expr=v_local_expr[1] * dx, norm=Area)
         
 
 
