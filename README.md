@@ -27,3 +27,12 @@ To setup a system, the simplest is to use [conda](https://conda.io): first insta
 conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 matplotlib=3.5 meshio=5.3 mpi4py=3.1.3 numpy=1.24 pandas=1.3 pip python=3.10 vtk=9.2
 conda activate dolfin_mech
 ```
+Now, if you only need to use the library, you can install it with:
+```
+pip install dolfin_mech
+```
+But if you need to develop within the library, you need
+```
+git clone https://github.com/mgenet/dolfin_mech.git
+pip install -e dolfin_mech/.
+```
