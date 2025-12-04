@@ -16,7 +16,8 @@ The library has notably been used in:
 * [[Peyraut & Genet (2024). A model of mechanical loading of the lungs including gravity and a balancing heterogeneous pleural pressure. Biomechanics and Modeling in Mechanobiology.](https://doi.org/10.1007/s10237-024-01876-w)]
 * [[Peyraut & Genet (2025). Finite strain formulation of the discrete equilibrium gap principle: application to direct parameter estimation from large full-fields measurements. Comptes Rendus Mécanique.](https://doi.org/10.5802/crmeca.279)]
 * [[Manoochehrtayebi, Bel-Brunon & Genet (2025). Finite strain micro-poro-mechanics: Formulation and compared analysis with macro-poro-mechanics. International Journal of Solids and Structures.](https://doi.org/10.1016/j.ijsolstr.2025.113354)]
-* [[Peyraut & Genet (2025). Inverse Uncertainty Quantification for Personalized Biomechanical Modeling: Application to Pulmonary Poromechanical Digital Twins. Journal of Biomechanical Engineering](https://doi.org/10.1115/1.4068578)]
+* [[Peyraut & Genet (2025). Inverse Uncertainty Quantification for Personalized Biomechanical Modeling: Application to Pulmonary Poromechanical Digital Twins. Journal of Biomechanical Engineering.](https://doi.org/10.1115/1.4068578)]
+* [[Manoochehrtayebi, Genet & Bel-Brunon (2025). Micro-poro-mechanical modeling of lung parenchyma: Theoretical modeling and parameters identification. Journal of Biomechanical Engineering.](https://doi.org/10.1115/1.4070036)]
 
 ### Installation
 
@@ -25,4 +26,13 @@ To setup a system, the simplest is to use [conda](https://conda.io): first insta
 ```
 conda create -y -c conda-forge -n dolfin_mech fenics=2019.1.0 matplotlib=3.5 meshio=5.3 mpi4py=3.1.3 numpy=1.24 pandas=1.3 pip python=3.10 vtk=9.2
 conda activate dolfin_mech
+```
+Now, if you only need to use the library, you can install it with:
+```
+pip install dolfin_mech
+```
+But if you need to develop within the library, you need
+```
+git clone https://github.com/mgenet/dolfin_mech.git
+pip install -e dolfin_mech/.
 ```
