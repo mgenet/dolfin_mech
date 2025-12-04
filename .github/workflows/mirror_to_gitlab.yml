@@ -19,7 +19,7 @@ jobs:
         username: mgenet
         gitlab_pat: ${{secrets.GITLAB_TOKEN}}
 
-        # - name: Sync repo
+    # - name: Sync repo
     #   uses: wangchucheng/git-repo-sync@v0.1.0
     #   with:
     #     target-url: https://gitlab.inria.fr/mgenet/dolfin_mech
