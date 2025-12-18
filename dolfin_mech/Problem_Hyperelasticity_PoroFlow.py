@@ -14,10 +14,10 @@ import numpy
 import dolfin_mech as dmech
 from .Problem                 import Problem
 from .Problem_Hyperelasticity import HyperelasticityProblem
-
+from .Operator_DarcyFlow import DarcyFlowOperator,PlFieldOperator,WbulkPoroFlowOperator
 ################################################################################
 
-class PoroHyperelasticityProblem(HyperelasticityProblem):
+class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
 
 
@@ -105,6 +105,17 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
         if (pore_behavior is not None):
             pore_behaviors = [pore_behavior]
         self.add_Wpore_operators(pore_behaviors)
+        self.add_pl_operator(measure=self.dV)
+
+        self.add_Darcy_operator(kinematics=self.kinematics,
+            K_l=dolfin.Constant(1.0) * dolfin.Identity(2),
+            rho_l=dolfin.Constant(1),
+            subdomain_id=None,   
+            inlet_id=3,
+            outlet_id=4)
+
+
+
 
 
 
@@ -237,6 +248,21 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             self.add_deformed_center_of_mass_subsol()
 
 
+        self.add_pressure_liquid_subsol(degree=displacement_degree)
+        
+
+    def get_pressure_liquid_name(self):
+        return "p_l"
+
+    def add_pressure_liquid_subsol(self, degree):
+        self.pl_subsol = self.add_scalar_subsol(
+            name=self.get_pressure_liquid_name(),
+            family="CG",
+            degree=degree
+        )
+    
+
+
 
     def set_porosity_fields(self):
 
@@ -308,6 +334,49 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             self.add_foi(expr=operator.material.Sigma, fs=self.mfoi_fs, name="Sigma_skel"+suffix)
             self.add_foi(expr=operator.material.sigma, fs=self.mfoi_fs, name="sigma_skel"+suffix)
 
+    def add_Darcy_operator(self,
+        kinematics,
+        K_l,
+        rho_l,
+        subdomain_id,
+        inlet_id,
+        outlet_id,
+        k_step=None):
+    
+        p      = self.pl_subsol.subfunc
+        p_test = self.pl_subsol.dsubtest
+
+        dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
+        dx_in   = self.get_subdomain_measure(inlet_id)          # dx(inlet_id) for source
+        dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
+
+        operator = DarcyFlowOperator(
+            kinematics,
+            p=p,
+            p_test=p_test,
+            K_l=K_l,
+            rho_l=rho_l,
+            dx=dx,
+            dx_in=dx_in,
+            dx_out=dx_out
+        )
+        self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
+        self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
+
+        return self.add_operator(operator=operator)
+    
+    def add_pl_operator(self,
+            k_step=None,
+            **kwargs):
+        
+        operator = PlFieldOperator(pl= self.pl_subsol.subfunc,
+            unknown_porosity_test=self.porosity_subsol.dsubtest,
+            **kwargs)
+        self.add_operator(
+            operator=operator,
+            k_step=k_step)
+        
+
 
 
     def add_Wbulk_operator(self,
@@ -315,15 +384,18 @@ class PoroHyperelasticityProblem(HyperelasticityProblem):
             material_scaling,
             subdomain_id=None):
 
-        operator = dmech.WbulkPoroOperator(
+        operator = WbulkPoroFlowOperator(
             kinematics=self.kinematics,
+            U=self.displacement_subsol.subfunc,
             U_test=self.displacement_subsol.dsubtest,
             Phis0=self.Phis0,
-            Phis=self.Phis,
-            unknown_porosity_test=self.porosity_subsol.dsubtest,
+            Phis=self.porosity_subsol.subfunc,
+            Phis_test=self.porosity_subsol.dsubtest,
             material_parameters=material_parameters,
             material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id))
+            measure=self.get_subdomain_measure(subdomain_id),
+            pl=self.pl_subsol.subfunc
+            )
         return self.add_operator(operator)
 
 
