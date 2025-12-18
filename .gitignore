@@ -5,3 +5,11 @@ build
 dist
 *.egg-info
 .vscode
+.h5
+__pycache__/
+*.swp
+.vtk
+.sta
+.vtk
+.xdmf
+.h5
