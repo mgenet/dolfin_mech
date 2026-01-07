@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 local_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(local_path))
-
+from fenics import *
 import dolfin_mech as dmech
 from dolfin_mech.Problem_Hyperelasticity_PoroFlow import PoroFlowHyperelasticityProblem
 
@@ -22,14 +22,45 @@ def run_PoroDisc_Coupled(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
+    mesh = dolfin.Mesh()
+    with dolfin.XDMFFile("./mesh/mesh_refine.xdmf") as infile:
+         infile.read(mesh)
 
-    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+
+    mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
+    print("Reading facet mesh...")
+    with XDMFFile("./mesh/facet_mesh_refine.xdmf") as infile:
+        # "name_to_read" must match the name used when writing the XDMF
+        infile.read(mvc, "name_to_read")
+        print("Facet mesh read.")
+
+    # 3. Convert MeshValueCollection to a MeshFunction for use in Measures
+    boundaries = cpp.mesh.MeshFunctionSizet(mesh, mvc)
+
+            
+
+
+    # 4. Use in your Variational Problem
+    ds = Measure("ds", domain=mesh, subdomain_data=boundaries)
+
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
     points_mf = dolfin.MeshFunction("size_t", mesh, 0)
     points_mf.set_all(0)
     domains_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim())
     domains_mf.set_all(0)  # default domain
+
+        # Define tags
+    tag_plane=1
+    tag_left=2
+    tag_right=3
+    tag_top=4
+    tag_bottom=5
+    tag_inclusions=6
+
+
+
 
 
     # ------------------- Porosity Init ---------------------- #
@@ -63,6 +94,9 @@ def run_PoroDisc_Coupled(
         bulk_behavior=mat_params["bulk"],
         pore_behavior=mat_params["pore"])
     
+    # dx_in   = self.get_subdomain_measure(inlet_id)          
+    # dx_out  = self.get_subdomain_measure(outlet_id)   
+    
     # -------------------- Time Step ------------------------- #
     Deltat = step_params.get("Deltat", 1.)
     dt_ini = step_params.get("dt_ini", 0.1)
@@ -73,7 +107,6 @@ def run_PoroDisc_Coupled(
         dt_ini=dt_ini,
         dt_min=dt_min)
 
-
     # ---------------- Boundary Conditions ------------------- #
     # -------------------- Pressure BCs ----------------------- #
     tol = 0.1e-6
@@ -81,58 +114,76 @@ def run_PoroDisc_Coupled(
     x_min = coords[:, 0].min()
     x_max = coords[:, 0].max()
     y_min = coords[:, 1].min()
+    y_max = coords[:, 1].max()
     
     x_max_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_max, tol=tol)
     x_min_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_min, tol=tol)
     y_min_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_min, tol=tol)
+    y_max_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_max, tol=tol)
 
     pressure_space = problem.pl_subsol.fs
 
-    problem.add_constraint(
-    V=pressure_space,
-    sub_domain=x_min_surface,
-    val_ini=0.0,
-    val_fin=1.0,
-    k_step=k_step,  
-    method="pointwise")
 
     problem.add_constraint(
-    V=pressure_space,
-    sub_domain=x_max_surface,
-    val=0.0,
-    k_step=k_step, 
-    method="pointwise"
+        V=pressure_space,
+        sub_domains=boundaries,
+        sub_domain_id=tag_left,   
+        val=0.0,
+        k_step=k_step
     )
 
-    # problem.add_constraint(
-    #     V=problem.displacement_subsol.fs.sub(0),
-    #     sub_domain=x_min_surface,
-    #     val_ini=0,
-    #     val_fin=0.4,
-    #     method="pointwise"
-    # )
-    
+    problem.add_constraint(
+        V=pressure_space,
+        sub_domains=boundaries,
+        sub_domain_id=tag_right,   
+        val=0.0,
+        k_step=k_step
+    )
+
+    problem.add_constraint(
+        V=pressure_space,
+        sub_domains=boundaries,
+        sub_domain_id=tag_inclusions,   
+        val_ini=0.0,
+        val_fin=1.0,
+        k_step=k_step
+    )
+
+
     problem.add_constraint(
         V=problem.displacement_subsol.fs.sub(0),
-        sub_domain=x_max_surface,
-        val=0.0,
-        method="pointwise"
-    )
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs.sub(1),
-        sub_domain=y_min_surface,
-        val=0.0,
-        method="pointwise"
-    )
-    #verify the subdomain issue
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs,
-        sub_domain=y_min_surface,
-        val_ini=[0.0, 0.0],
-        val_fin=[0.2, 0.0],
-        method="pointwise"
+        sub_domains=boundaries,
+        sub_domain_id=tag_left,   
+        val_ini=0.0,
+        val_fin=-0.0005,
+        k_step=k_step
     )
 
+    problem.add_constraint(
+        V=problem.displacement_subsol.fs.sub(0),
+        sub_domains=boundaries,
+        sub_domain_id=tag_right,   
+        val=0.0,
+        k_step=k_step
+    )
+
+    problem.add_constraint(
+        V=problem.displacement_subsol.fs.sub(1),
+        sub_domains=boundaries,
+        sub_domain_id=tag_bottom,   
+        val=0.0,
+        k_step=k_step
+    )
+
+    problem.add_constraint(
+        V=problem.displacement_subsol.fs.sub(1),
+        sub_domains=boundaries,
+        sub_domain_id=tag_top,   
+        val=0.0,
+        k_step=k_step
+    )
+
+    
 
     # -------------------- Quantities of Interest ------------- #
     #problem.add_point_displacement_qoi(name="U", coordinates=[X0+R, Y0], component=0)
@@ -235,7 +286,7 @@ run_PoroDisc_Coupled(
 
     step_params={
         "Deltat": 1.0,
-        "dt_ini": 0.2,
+        "dt_ini": 0.1,
         "dt_min": 0.0001
     },
     load_params={

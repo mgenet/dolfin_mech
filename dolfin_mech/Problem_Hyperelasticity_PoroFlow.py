@@ -62,6 +62,7 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
             porosity_init_fun=porosity_init_fun)
         
         self.w_pressure_balancing_gravity = w_pressure_balancing_gravity
+
         self.set_subsols(
             displacement_degree=displacement_degree,
             porosity_degree=porosity_degree,
@@ -248,7 +249,7 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
             self.add_deformed_center_of_mass_subsol()
 
 
-        self.add_pressure_liquid_subsol(degree=displacement_degree)
+        self.add_pressure_liquid_subsol(degree=displacement_degree-1)
         
 
     def get_pressure_liquid_name(self):

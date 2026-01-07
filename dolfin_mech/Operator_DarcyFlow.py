@@ -25,8 +25,13 @@ class DarcyFlowOperator(Operator):
                  dx,
                  dx_in,
                  dx_out,
-                 Theta_in=dolfin.Constant(0.0),
-                 Theta_out=dolfin.Constant(0.0)):
+                 Theta_in=None,
+                 Theta_out=None):
+
+        if Theta_in is None:
+            Theta_in = dolfin.Constant(0.0)
+        if Theta_out is None:
+            Theta_out = dolfin.Constant(0.0)
         
         
 
