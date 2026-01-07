@@ -34,6 +34,7 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
             porosity_init_fun=None,
             quadrature_degree=None,
             foi_degree=0,
+            flow_params={},
             skel_behavior=None,
             skel_behaviors=[],
             bulk_behavior=None,
@@ -108,17 +109,15 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.add_Wpore_operators(pore_behaviors)
         self.add_pl_operator(measure=self.dV)
 
+        rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
+        K_l   = flow_params.get("K_l", dolfin.Constant(1.0) * dolfin.Identity(self.dim))
+        print("Adding Darcy operator with rho_l =", rho_l, "and K_l =", K_l)
         self.add_Darcy_operator(kinematics=self.kinematics,
-            K_l=dolfin.Constant(1.0) * dolfin.Identity(2),
-            rho_l=dolfin.Constant(1),
+            K_l=K_l,
+            rho_l=rho_l,
             subdomain_id=None,   
             inlet_id=3,
             outlet_id=4)
-
-
-
-
-
 
     def set_known_and_unknown_porosity(self,
             porosity_known):
@@ -226,7 +225,7 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
 
     def set_subsols(self,
-            displacement_degree=1,
+            displacement_degree=2,
             porosity_degree=None,
             porosity_init_val=None,
             porosity_init_fun=None):

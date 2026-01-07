@@ -15,6 +15,7 @@ from dolfin_mech.Problem_Hyperelasticity_PoroFlow import PoroFlowHyperelasticity
 def run_PoroDisc_Coupled(
         mesh_params={},
         mat_params={},
+        flow_params={},
         step_params={},
         load_params={},
         porosity_params={},
@@ -23,14 +24,14 @@ def run_PoroDisc_Coupled(
 
     # ------------------------- Mesh ------------------------- #
     mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/mesh_refine.xdmf") as infile:
+    with dolfin.XDMFFile("./mesh/mesh.xdmf") as infile:
          infile.read(mesh)
 
     #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
     print("Reading facet mesh...")
-    with XDMFFile("./mesh/facet_mesh_refine.xdmf") as infile:
+    with XDMFFile("./mesh/facet_mesh.xdmf") as infile:
         # "name_to_read" must match the name used when writing the XDMF
         infile.read(mvc, "name_to_read")
         print("Facet mesh read.")
@@ -86,10 +87,11 @@ def run_PoroDisc_Coupled(
         domains_mf=domains_mf,
         boundaries_mf=boundaries_mf,
         points_mf=points_mf,
-        displacement_degree=1,
+        displacement_degree=2,
         quadrature_degree = 6,
         porosity_init_val=poro_val,
         porosity_init_fun=porosity_fun,
+        flow_params=flow_params,
         skel_behavior=mat_params["skel"],
         bulk_behavior=mat_params["bulk"],
         pore_behavior=mat_params["pore"])
@@ -253,6 +255,11 @@ mat_params = {
     "kappa":1e2,
     "eta":1e-5}
 
+flow_params = {
+    "rho_l": 1.0,
+    "K_l": dolfin.Constant(((1e-12, 0.0),
+                            (0.0, 1e-12)))}  
+
 
 
 run_PoroDisc_Coupled(
@@ -261,6 +268,7 @@ run_PoroDisc_Coupled(
         "bulk": {"parameters": mat_params, "scaling": "no"},
         "pore": {"parameters": mat_params, "scaling": "no"}
     },
+    flow_params=flow_params,
     mesh_params = {
         "dim": 2,
 
