@@ -111,7 +111,7 @@ class PoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
         K_l   = flow_params.get("K_l", dolfin.Constant(1.0) * dolfin.Identity(self.dim))
-
+        print("Adding Darcy operator with rho_l =", rho_l, "and K_l =", K_l)
         self.add_Darcy_operator(kinematics=self.kinematics,
             K_l=K_l,
             rho_l=rho_l,
