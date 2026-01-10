@@ -104,7 +104,7 @@ class WbulkPoroFlowOperator(Operator):
             self.kinematics.E, U, U_test)
 
         self.res_form =  dolfin.inner(
-            pl * self.kinematics.J * self.kinematics.C_inv,
+            -pl * self.kinematics.J * self.kinematics.C_inv,
             dE_test) * self.measure
 
         self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
