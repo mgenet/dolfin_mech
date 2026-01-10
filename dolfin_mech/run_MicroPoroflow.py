@@ -10,31 +10,35 @@ from fenics import *
 import dolfin_mech as dmech
 from dolfin_mech.Problem_Hyperelasticity_MicroPoroFlow import MicroPoroFlowHyperelasticityProblem
 
+import myPythonLibrary as mypy
 
 
-def run_PoroDisc_Coupled(
+
+def run_MicroPoroFlowHyperelasticity(
+        dim=2,
+        bcs="pbc",
         mesh_params={},
         mat_params={},
         flow_params={},
         step_params={},
         load_params={},
         porosity_params={},
-        res_basename="run_PoroDisc_Coupled",
+        res_basename="run_MicroPoroflow",
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/mesh.xdmf") as infile:
-         infile.read(mesh)
+    # mesh = dolfin.Mesh()
+    # with dolfin.XDMFFile("./mesh/mesh.xdmf") as infile:
+    #      infile.read(mesh)
 
-    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
-    print("Reading facet mesh...")
-    with XDMFFile("./mesh/facet_mesh.xdmf") as infile:
-        # "name_to_read" must match the name used when writing the XDMF
-        infile.read(mvc, "name_to_read")
-        print("Facet mesh read.")
+    # print("Reading facet mesh...")
+    # with XDMFFile("./mesh/facet_mesh.xdmf") as infile:
+    #     # "name_to_read" must match the name used when writing the XDMF
+    #     infile.read(mvc, "name_to_read")
+    #     print("Facet mesh read.")
 
     # 3. Convert MeshValueCollection to a MeshFunction for use in Measures
     boundaries = cpp.mesh.MeshFunctionSizet(mesh, mvc)
@@ -79,7 +83,7 @@ def run_PoroDisc_Coupled(
         porosity_fun = dolfin.Function(poro_fs)
         porosity_fun.vector()[:] = numpy.random.uniform(low=0.4, high=0.6, size=porosity_fun.vector().size())
         poro_val = None
-    
+
     # ---------------------- Problem ------------------------- #
     problem = MicroPoroFlowHyperelasticityProblem(
         mesh=mesh,
@@ -88,6 +92,7 @@ def run_PoroDisc_Coupled(
         points_mf=points_mf,
         displacement_perturbation_degree=2,
         quadrature_degree = 6,
+        bcs="pbc",
         porosity_init_val=poro_val,
         porosity_init_fun=porosity_fun,
         flow_params=flow_params,
@@ -99,90 +104,113 @@ def run_PoroDisc_Coupled(
     # dx_out  = self.get_subdomain_measure(outlet_id)   
     
     # -------------------- Time Step ------------------------- #
-    Deltat = step_params.get("Deltat", 1.)
-    dt_ini = step_params.get("dt_ini", 0.1)
-    dt_min = step_params.get("dt_min", 0.1)
+    n_steps = step_params.get("n_steps", 1)
+    Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
+    dt_ini_lst = step_params.get("dt_ini_lst", [step_params.get("dt_ini", 1.)/n_steps]*n_steps)
+    dt_min_lst = step_params.get("dt_min_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
+    dt_max_lst = step_params.get("dt_max_lst", [step_params.get("dt_max", 1.)/n_steps]*n_steps)
+    
+    # gamma = load_params.get("gamma", 0.0)
 
-    k_step = problem.add_step(
-        Deltat=Deltat,
-        dt_ini=dt_ini,
-        dt_min=dt_min)
+    U_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
+    sigma_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
+    for i in range(dim):
+     for j in range (dim):
+        U_bar_ij_lst[i][j] = load_params.get("U_bar_"+str(i)+str(j)+"_lst", [load_params.get("U_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
+        sigma_bar_ij_lst[i][j] = load_params.get("sigma_bar_"+str(i)+str(j)+"_lst", [load_params.get("sigma_bar_"+str(i)+str(j), None) for k_step in range(n_steps)])
+    pf_lst = load_params.get("pf_lst", [(k_step+1)*load_params.get("pf", 0)/n_steps for k_step in range(n_steps)])
+    gamma_lst = load_params.get("gamma_lst", [(k_step+1)*load_params.get("gamma", 0)/n_steps for k_step in range(n_steps)])
+    tension_params = load_params.get("tension_params", {})
+
+    for k_step in range(n_steps):
+
+        Deltat = Deltat_lst[k_step]
+        dt_ini = dt_ini_lst[k_step]
+        dt_min = dt_min_lst[k_step]
+        dt_max = dt_max_lst[k_step]
+
+        k_step = problem.add_step(
+            Deltat=Deltat,
+            dt_ini=dt_ini,
+            dt_min=dt_min,
+            dt_max=dt_max)
+
+        pf = pf_lst[k_step]
+        pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
+        problem.add_surface_pressure_loading_operator(
+            measure=problem.dS(0),
+            P_ini=pf_old, P_fin=pf,
+            k_step=k_step)
+
+        for i in range(dim):
+         for j in range (dim):
+            U_bar_ij = U_bar_ij_lst[i][j][k_step]
+            U_bar_ij_old = U_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
+            sigma_bar_ij = sigma_bar_ij_lst[i][j][k_step]
+            sigma_bar_ij_old = sigma_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
+            assert ((U_bar_ij is not None) or (sigma_bar_ij is not None))
+            if (U_bar_ij is not None):
+                problem.add_macroscopic_stretch_component_penalty_operator(
+                    i=i, j=j,
+                    U_bar_ij_ini=U_bar_ij_old, U_bar_ij_fin=U_bar_ij,
+                    pen_val=1e6,
+                    k_step=k_step)
+            elif (sigma_bar_ij is not None):
+                problem.add_macroscopic_stress_component_constraint_operator(
+                    i=i, j=j,
+                    sigma_bar_ij_ini=sigma_bar_ij_old, sigma_bar_ij_fin=sigma_bar_ij,
+                    pf_ini=pf_old, pf_fin=pf,
+                    k_step=k_step)
+        
+        problem.add_surface_area_operator(
+            measure=problem.dS(0),
+            k_step=k_step)
+        
+        gamma = gamma_lst[k_step]
+        gamma_old = gamma_lst[k_step-1] if (k_step > 0) else 0.
+        problem.add_surface_tension_loading_operator(
+            measure=problem.dS(0),
+            gamma_ini=gamma_old, gamma_fin=gamma,
+            tension_params=tension_params,
+            k_step=k_step)
 
     # ---------------- Boundary Conditions ------------------- #
     # -------------------- Pressure BCs ----------------------- #
-    tol = 0.1e-6
-    coords = mesh.coordinates()
-    x_min = coords[:, 0].min()
-    x_max = coords[:, 0].max()
-    y_min = coords[:, 1].min()
-    y_max = coords[:, 1].max()
+    # tol = 0.1e-6
+    # coords = mesh.coordinates()
+    # x_min = coords[:, 0].min()
+    # x_max = coords[:, 0].max()
+    # y_min = coords[:, 1].min()
+    # y_max = coords[:, 1].max()
     
-    x_max_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_max, tol=tol)
-    x_min_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_min, tol=tol)
-    y_min_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_min, tol=tol)
-    y_max_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_max, tol=tol)
+    # x_max_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_max, tol=tol)
+    # x_min_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_min, tol=tol)
+    # y_min_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_min, tol=tol)
+    # y_max_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_max, tol=tol)
 
-    pressure_space = problem.pl_subsol.fs
-
-
-    problem.add_constraint(
-        V=pressure_space,
-        sub_domains=boundaries,
-        sub_domain_id=tag_left,   
-        val=0.0,
-        k_step=k_step
-    )
-
-    problem.add_constraint(
-        V=pressure_space,
-        sub_domains=boundaries,
-        sub_domain_id=tag_right,   
-        val=0.0,
-        k_step=k_step
-    )
-
-    problem.add_constraint(
-        V=pressure_space,
-        sub_domains=boundaries,
-        sub_domain_id=tag_inclusions,   
-        val_ini=0.0,
-        val_fin=1.0,
-        k_step=k_step
-    )
+    # pressure_space = problem.pl_subsol.fs
 
 
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs.sub(0),
-        sub_domains=boundaries,
-        sub_domain_id=tag_left,   
-        val_ini=0.0,
-        val_fin=-0.0005,
-        k_step=k_step
-    )
+    # problem.add_constraint(
+    #     V=pressure_space,
+    #     sub_domain=x_max_surface,
+    #     val=1.0,
+    #     k_step=k_step,
+    #     method='pointwise'
+    # )
 
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs.sub(0),
-        sub_domains=boundaries,
-        sub_domain_id=tag_right,   
-        val=0.0,
-        k_step=k_step
-    )
 
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs.sub(1),
-        sub_domains=boundaries,
-        sub_domain_id=tag_bottom,   
-        val=0.0,
-        k_step=k_step
-    )
 
-    problem.add_constraint(
-        V=problem.displacement_subsol.fs.sub(1),
-        sub_domains=boundaries,
-        sub_domain_id=tag_top,   
-        val=0.0,
-        k_step=k_step
-    )
+    # problem.add_constraint(
+    #     V=pressure_space,
+    #     sub_domains=boundaries,
+    #     sub_domain_id=x_max_surface,   
+    #     val_ini=0.0,
+    #     val_fin=1.0,
+    #     k_step=k_step
+    # )
+
+
 
     
 
@@ -254,56 +282,135 @@ mat_params = {
     "kappa":1e2,
     "eta":1e-5}
 
-flow_params = {
-    "rho_l": 1.0,
-    "K_l": dolfin.Constant(((1e-12, 0.0),
-                            (0.0, 1e-12)))}  
+# flow_params = {
+#     "rho_l": 1.0,
+#     "K_l": dolfin.Constant(((1e-12, 0.0),
+#                             (0.0, 1e-12)))}  
 
 
 
-run_PoroDisc_Coupled(
-    mat_params={
-        "skel": {"parameters": mat_params, "scaling": "no"},
-        "bulk": {"parameters": mat_params, "scaling": "no"},
-        "pore": {"parameters": mat_params, "scaling": "no"}
-    },
-    flow_params=flow_params,
-    mesh_params = {
-        "dim": 2,
+# run_PoroDisc_Coupled(
+#     mat_params={
+#         "skel": {"parameters": mat_params, "scaling": "no"},
+#         "bulk": {"parameters": mat_params, "scaling": "no"},
+#         "pore": {"parameters": mat_params, "scaling": "no"}
+#     },
+#     flow_params=flow_params,
+#     mesh_params = {
+#         "dim": 2,
 
-        # square domain
-        "xmin": 0.0,
-        "ymin": 0.0,
-        "xmax": 1.0,
-        "ymax": 1.0,
+#         # square domain
+#         "xmin": 0.0,
+#         "ymin": 0.0,
+#         "xmax": 1.0,
+#         "ymax": 1.0,
 
-        # optional shift (usually 0)
-        "xshift": 0.0,
-        "yshift": 0.0,
+#         # optional shift (usually 0)
+#         "xshift": 0.0,
+#         "yshift": 0.0,
 
-        # hole radius at corners
-        "r0": 0.1,
+#         # hole radius at corners
+#         "r0": 0.1,
 
-        # target mesh size
-        "l": 0.05,
+#         # target mesh size
+#         "l": 0.05,
 
-        # output
-        "mesh_filebasename": "results/mesh"
-    },
+#         # output
+#         "mesh_filebasename": "results/mesh"
+#     },
 
-    step_params={
-        "Deltat": 1.0,
-        "dt_ini": 0.1,
-        "dt_min": 0.0001
-    },
-    load_params={
-        "dR": 0.05
-    },
-    porosity_params={
-        "type": "constant",  # can be "constant", "function_constant", or "random"
-        "val": 0.3
-    },
-    res_basename="results/run_PoroBox",
-    verbose=0
+#     step_params={
+#         "Deltat": 1.0,
+#         "dt_ini": 0.1,
+#         "dt_min": 0.0001
+#     },
+#     load_params={
+#         "dR": 0.05
+#     },
+#     porosity_params={
+#         "type": "constant",  # can be "constant", "function_constant", or "random"
+#         "val": 0.3
+#     },
+#     res_basename="results/run_PoroBox",
+#     verbose=0
     
-)
+# )
+
+
+res_folder = sys.argv[0][:-3]
+test = mypy.Test(
+    res_folder=res_folder,
+    perform_tests=1,
+    stop_at_failure=1,
+    clean_after_tests=1,
+    tester_numpy_tolerance=1e-2)
+
+dim_lst  = [ ]
+dim_lst += [2]
+# dim_lst += [3]
+for dim in dim_lst:
+
+    bcs_lst  = [      ]
+    #bcs_lst += ["kubc"]
+    bcs_lst += ["pbc" ]
+    for bcs in bcs_lst:
+
+        load_lst  = [                     ]
+        load_lst += ["internal_pressure"  ]
+        #load_lst += ["macroscopic_stretch"]
+        #load_lst += ["macroscopic_stress" ]
+        for load in load_lst:
+
+            print("dim =",dim)
+            print("bcs =",bcs)
+            print("load =",load)
+            print(res_folder)
+
+            #res_basename  = sys.argv[0][:-3]
+            res_basename = "-dim="+str(dim)
+            res_basename += "-bcs="+str(bcs)
+            res_basename += "-load="+str(load)
+
+            load_params = {}
+            if (load == "internal_pressure"):
+                load_params["pf"] = +0.2
+                for i in range(dim):
+                 for j in range (dim):
+                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
+            elif (load == "macroscopic_stretch"):
+                load_params["pf"] = 0.
+                load_params["U_bar_00"] = 0.5
+                for i in range(dim):
+                 for j in range (dim):
+                  if ((i != 0) or (j != 0)):
+                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
+            elif (load == "macroscopic_stress"):
+                load_params["pf"] = 0.
+                for i in range(dim):
+                 for j in range (dim):
+                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
+                load_params["sigma_bar_00"] = 0.5
+
+            run_MicroPoroFlowHyperelasticity(
+                dim=dim,
+                mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
+                mat_params={
+                        "skel": {"parameters": mat_params, "scaling": "no"},
+                        "bulk": {"parameters": mat_params, "scaling": "no"},
+                        "pore": {"parameters": mat_params, "scaling": "no"}
+                    },
+                flow_params={
+                    "rho_l": 1.0,
+                    "K_l": dolfin.Constant(((1e-12, 0.0),
+                                            (0.0, 1e-12)))} ,
+                porosity_params={
+                    "type": "constant",  # can be "constant", "function_constant", or "random"
+                    "val": 0.3
+                },  
+                bcs=bcs,
+                step_params={"dt_ini":1e-1, "dt_min":1e-3},
+                load_params=load_params,
+                res_basename=res_folder+"/"+res_basename,
+                verbose=1)
+
+            test.test(res_basename)
