@@ -925,16 +925,27 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             
     def add_Darcy_operator(self,
         kinematics,
+        U,
+        U_test,
+        X,
+        X_0,
+        grad_p_bar_ini,
+        grad_p_bar_fin,
+        pl_bar,
+        Theta_in_ini,
+        Theta_in_fin,
+        Theta_out_ini,
+        Theta_out_fin,
         K_l,
         rho_l,
         subdomain_id,
         inlet_id,
         outlet_id,
-        macro_grad_p,
         unknown_porosity_test,
         k_step=None):
-    
-        p      = self.pl_subsol.subfunc
+
+
+        pl      = self.pl_subsol.subfunc
         p_test = self.pl_subsol.dsubtest
 
         dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
@@ -942,10 +953,20 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
 
         operator = MicroDarcyFlowOperator(
-            kinematics,
-            p=p,
+            kinematics=kinematics,
+            U=U,
+            U_test=U_test,
+            X=X,
+            X_0=X_0,
+            grad_p_bar_ini=grad_p_bar_ini,
+            grad_p_bar_fin=grad_p_bar_fin,
+            Theta_in_ini=Theta_in_ini,
+            Theta_in_fin=Theta_in_fin,
+            Theta_out_ini=Theta_out_ini,    
+            Theta_out_fin=Theta_out_fin,
+            p_tilde=pl,
             p_test=p_test,
-            macro_grad_p=macro_grad_p,
+            pl_bar=pl_bar,
             K_l=K_l,
             rho_l=rho_l,
             dx=dx,
@@ -957,7 +978,12 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
         
-        
+        self.add_foi(
+            expr=operator.pl_tot,
+            fs=self.pl_subsol.fs.collapse(),
+            name="pl_tot",
+            update_type="project")
+
 
         return self.add_operator(operator=operator)
     

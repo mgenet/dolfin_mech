@@ -176,27 +176,23 @@ class MicroDarcyFlowOperator(Operator):
                  p_tilde,
                  grad_p_bar_ini,
                  grad_p_bar_fin,
-                 p_bar,
+                 pl_bar,
                  p_test,
                  K_l,
                  rho_l,
                  dx,
                  dx_in,
                  dx_out,
-                 Theta_in=None,
-                 Theta_out=None):
+                 Theta_in_ini=None,
+                 Theta_in_fin=None,
+                 Theta_out_ini=None,
+                 Theta_out_fin=None):
 
         dE_test = dolfin.derivative(
-            self.kinematics.E, U, U_test)
+            kinematics.E, U, U_test)
 
-        # --- grad_p_bar ini/fin: 2D vector interface (with optional backward compatibility) ---
-        if (grad_p_bar_ini is not None) and (grad_p_bar_fin is not None):
-            gx_ini, gy_ini = grad_p_bar_ini
-            gx_fin, gy_fin = grad_p_bar_fin
-        else:
-            # fallback to legacy x/y inputs
-            gx_ini, gx_fin = grad_p_bar_x_ini, grad_p_bar_x_fin
-            gy_ini, gy_fin = grad_p_bar_y_ini, grad_p_bar_y_fin
+        gx_ini, gy_ini = grad_p_bar_ini
+        gx_fin, gy_fin = grad_p_bar_fin
 
         print("DarcyFlowOperator: grad_p_bar_ini =", (gx_ini, gy_ini))
         print("DarcyFlowOperator: grad_p_bar_fin =", (gx_fin, gy_fin))
@@ -215,8 +211,8 @@ class MicroDarcyFlowOperator(Operator):
             self.tv_grad_p_bar_y.val
         ))
 
-        self.p_bar= p_bar
-        self.p_tot = ( self.p_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
+        self.pl_bar= pl_bar
+        self.pl_tot = ( self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
         self.measure = dx  
         self.kinematics = kinematics
 
@@ -233,28 +229,18 @@ class MicroDarcyFlowOperator(Operator):
         # --- Darcy flow residual (standard diffusion-like form) ---
         self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * dx
         # form pl_field operator#
-        self.res_form = dolfin.inner(self.p_tot, unknown_porosity_test) * self.measure
+        self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.measure
         # form wbulk operator#
-        self.res_form =  dolfin.inner(
-            -self.p_tot * self.kinematics.J * self.kinematics.C_inv,
+        self.res_form +=  dolfin.inner(
+            -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
             dE_test) * self.measure
 
 
-        if Theta_in != 0.0:
-            self.res_form -= Theta_in * p_test * dx_in
-        if Theta_out != 0.0:
-            self.res_form += Theta_out * p_test * dx_out
+        # if Theta_in != 0.0:
+        #     self.res_form -= Theta_in * p_test * dx_in
+        # if Theta_out != 0.0:
+        #     self.res_form += Theta_out * p_test * dx_out
 
-        self.add_foi(
-            expr=self.p_tot,
-            fs=self.pl_subsol.fs.collapse(),
-            name="p_tot",
-            update_type="project")
-        self.add_foi(
-            expr=self.p_lin,
-            fs=self.pl_subsol.fs.collapse(),
-            name="p_lin", 
-            update_type="project")
 
 
 
