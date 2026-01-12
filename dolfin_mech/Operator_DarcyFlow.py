@@ -134,10 +134,11 @@ class WbulkPoroFlowOperator(Operator):
 
         self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
 
-class DarcyFlowOperator(Operator):
+class MicroDarcyFlowOperator(Operator):
     def __init__(self,
                  kinematics,
                  p,
+                 macro_grad_p,
                  p_test,
                  K_l,
                  rho_l,
@@ -175,7 +176,7 @@ class DarcyFlowOperator(Operator):
         grad_p_test = dolfin.grad(p_test)
 
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * grad_p, grad_p_test) * dx
+        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (grad_p+macro_grad_p), grad_p_test) * dx
         if Theta_in != 0.0:
             self.res_form -= Theta_in * p_test * dx_in
         if Theta_out != 0.0:
@@ -183,47 +184,3 @@ class DarcyFlowOperator(Operator):
 
 
 
-
-
-class PlFieldOperator(Operator):
-    def __init__(self,
-                 pl,
-                 unknown_porosity_test,
-                 measure):
-        self.measure = measure
-        self.res_form = dolfin.inner(pl, unknown_porosity_test) * self.measure
-
-class WbulkPoroFlowOperator(Operator):
-
-    def __init__(self,
-            kinematics,
-            U,
-            U_test,
-            Phis0,
-            Phis,
-            Phis_test,
-            material_parameters,
-            material_scaling,
-            measure,
-            pl
-            ):  # new input
-
-        self.kinematics = kinematics
-        self.solid_material = dmech.WbulkLungElasticMaterial(
-            Phis=Phis,
-            Phis0=Phis0,
-            parameters=material_parameters)
-        self.material = dmech.PorousElasticMaterial(
-            solid_material=self.solid_material,
-            scaling=material_scaling,
-            Phis0=Phis0)
-        self.measure = measure
-
-        dE_test = dolfin.derivative(
-            self.kinematics.E, U, U_test)
-
-        self.res_form =  dolfin.inner(
-            -pl * self.kinematics.J * self.kinematics.C_inv,
-            dE_test) * self.measure
-
-        self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure

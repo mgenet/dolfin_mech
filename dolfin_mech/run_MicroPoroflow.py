@@ -262,9 +262,9 @@ def run_MicroPoroFlowHyperelasticity(
         print_out=1,#res_basename*verbose,
         print_sta=1,#res_basename*verbose,
         write_qois=1,#res_basename+"-qois",
-        write_sol=res_basename,#res_basename*verbose,
-        write_vtus=res_basename*verbose,
-        write_vtus_with_preserved_connectivity=True)
+        write_sol=1,#res_basename*verbose,
+        write_vtus=0,
+        write_vtus_with_preserved_connectivity=0)
 
     success = integrator.integrate()
     assert success, "Integration failed. Aborting."
@@ -281,60 +281,6 @@ mat_params = {
     "c2":0.4,
     "kappa":1e2,
     "eta":1e-5}
-
-# flow_params = {
-#     "rho_l": 1.0,
-#     "K_l": dolfin.Constant(((1e-12, 0.0),
-#                             (0.0, 1e-12)))}  
-
-
-
-# run_PoroDisc_Coupled(
-#     mat_params={
-#         "skel": {"parameters": mat_params, "scaling": "no"},
-#         "bulk": {"parameters": mat_params, "scaling": "no"},
-#         "pore": {"parameters": mat_params, "scaling": "no"}
-#     },
-#     flow_params=flow_params,
-#     mesh_params = {
-#         "dim": 2,
-
-#         # square domain
-#         "xmin": 0.0,
-#         "ymin": 0.0,
-#         "xmax": 1.0,
-#         "ymax": 1.0,
-
-#         # optional shift (usually 0)
-#         "xshift": 0.0,
-#         "yshift": 0.0,
-
-#         # hole radius at corners
-#         "r0": 0.1,
-
-#         # target mesh size
-#         "l": 0.05,
-
-#         # output
-#         "mesh_filebasename": "results/mesh"
-#     },
-
-#     step_params={
-#         "Deltat": 1.0,
-#         "dt_ini": 0.1,
-#         "dt_min": 0.0001
-#     },
-#     load_params={
-#         "dR": 0.05
-#     },
-#     porosity_params={
-#         "type": "constant",  # can be "constant", "function_constant", or "random"
-#         "val": 0.3
-#     },
-#     res_basename="results/run_PoroBox",
-#     verbose=0
-    
-# )
 
 
 res_folder = sys.argv[0][:-3]
@@ -402,7 +348,10 @@ for dim in dim_lst:
                 flow_params={
                     "rho_l": 1.0,
                     "K_l": dolfin.Constant(((1e-12, 0.0),
-                                            (0.0, 1e-12)))} ,
+                        (0.0, 1e-12))),
+                    "macro_grad_p": dolfin.Constant((1.0, 0.0)),
+                    "pl_bar": 0.0
+                    },
                 porosity_params={
                     "type": "constant",  # can be "constant", "function_constant", or "random"
                     "val": 0.3
