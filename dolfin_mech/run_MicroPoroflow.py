@@ -103,6 +103,8 @@ def run_MicroPoroFlowHyperelasticity(
     # dx_in   = self.get_subdomain_measure(inlet_id)          
     # dx_out  = self.get_subdomain_measure(outlet_id)   
     
+
+
     # -------------------- Time Step ------------------------- #
     n_steps = step_params.get("n_steps", 1)
     Deltat_lst = step_params.get("Deltat_lst", [step_params.get("Deltat", 1.)/n_steps]*n_steps)
@@ -122,6 +124,32 @@ def run_MicroPoroFlowHyperelasticity(
     gamma_lst = load_params.get("gamma_lst", [(k_step+1)*load_params.get("gamma", 0)/n_steps for k_step in range(n_steps)])
     tension_params = load_params.get("tension_params", {})
 
+    # ---- grad_p_bar (x,y) ----
+    grad_p_bar_ini = {}
+    grad_p_bar_fin = {}
+
+    for d in range(dim):
+        grad_p_bar     = grad_p_bar_lst[d][k_step]
+        grad_p_bar_old = grad_p_bar_lst[d][k_step-1] if (k_step > 0) else 0.0
+
+        grad_p_bar_ini[d] = grad_p_bar_old
+        grad_p_bar_fin[d] = grad_p_bar
+
+    # ---- Theta_in / Theta_out ----
+    Theta_ini = {}
+    Theta_fin = {}
+
+    for name, Theta_lst in {
+        "in":  Theta_in_lst,
+        "out": Theta_out_lst,
+    }.items():
+        Theta     = Theta_lst[k_step]
+        Theta_old = Theta_lst[k_step-1] if (k_step > 0) else 0.0
+
+        Theta_ini[name] = Theta_old
+        Theta_fin[name] = Theta
+
+
     for k_step in range(n_steps):
 
         Deltat = Deltat_lst[k_step]
@@ -137,6 +165,7 @@ def run_MicroPoroFlowHyperelasticity(
 
         pf = pf_lst[k_step]
         pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
+
         problem.add_surface_pressure_loading_operator(
             measure=problem.dS(0),
             P_ini=pf_old, P_fin=pf,
@@ -173,46 +202,36 @@ def run_MicroPoroFlowHyperelasticity(
             gamma_ini=gamma_old, gamma_fin=gamma,
             tension_params=tension_params,
             k_step=k_step)
+        
+        grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
+        grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
 
-    # ---------------- Boundary Conditions ------------------- #
-    # -------------------- Pressure BCs ----------------------- #
-    # tol = 0.1e-6
-    # coords = mesh.coordinates()
-    # x_min = coords[:, 0].min()
-    # x_max = coords[:, 0].max()
-    # y_min = coords[:, 1].min()
-    # y_max = coords[:, 1].max()
-    
-    # x_max_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_max, tol=tol)
-    # x_min_surface = dolfin.CompiledSubDomain("near(x[0], x_top, tol)", x_top=x_min, tol=tol)
-    # y_min_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_min, tol=tol)
-    # y_max_surface = dolfin.CompiledSubDomain("near(x[1], y_top, tol)", y_top=y_max, tol=tol)
+        rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
+        K_l   = flow_params.get("K_l", dolfin.Constant(1.0) * dolfin.Identity(self.dim))
+        macro_grad_p = flow_params.get("macro_grad_p", dolfin.Constant((0.0,)*self.dim))
+        pl_bar = flow_params.get("pl_bar", dolfin.Constant(0.0))
 
-    # pressure_space = problem.pl_subsol.fs
-
-
-    # problem.add_constraint(
-    #     V=pressure_space,
-    #     sub_domain=x_max_surface,
-    #     val=1.0,
-    #     k_step=k_step,
-    #     method='pointwise'
-    # )
-
-
-
-    # problem.add_constraint(
-    #     V=pressure_space,
-    #     sub_domains=boundaries,
-    #     sub_domain_id=x_max_surface,   
-    #     val_ini=0.0,
-    #     val_fin=1.0,
-    #     k_step=k_step
-    # )
+        problem.add_Darcy_operator(
+            kinematics=problem.kinematics,
+            U=problem.displacement_perturbation_subsol.subfunc,
+            U_test=problem.displacement_perturbation_subsol.dsubtest,
+            X=problem.X,
+            X_0=problem.X_0,
+            unknown_porosity_test=problem.porosity_subsol.dsubtest,
+            K_l=dolfin.Constant(1) * dolfin.Identity(2),
+            rho_l=dolfin.Constant(1),
+            grad_p_bar_ini=grad_p_bar_ini,
+            grad_p_bar_fin=grad_p_bar_fin,
+            Theta_in_ini=Theta_ini["in"],   Theta_in_fin=Theta_fin["in"],
+            Theta_out_ini=Theta_ini["out"], Theta_out_fin=Theta_fin["out"],
+            subdomain_id=None,
+            inlet_id=3,
+            outlet_id=4,
+            k_step=k_step
+        )
 
 
 
-    
 
     # -------------------- Quantities of Interest ------------- #
     problem.add_deformed_solid_volume_qoi()
@@ -252,8 +271,8 @@ def run_MicroPoroFlowHyperelasticity(
             "n_iter_for_decel": 16,
             "accel_coeff": 2,
             "decel_coeff": 2},
-        print_out=res_basename,#res_basename*verbose,
-        print_sta=res_basename,#res_basename*verbose,
+        print_out=1,#res_basename*verbose,
+        print_sta=1,#res_basename*verbose,
         write_qois=res_basename+"-qois",
         write_sol=res_basename,
         write_vtus=0,
@@ -343,7 +362,7 @@ for dim in dim_lst:
                     "rho_l": 1.0,
                     "K_l": dolfin.Constant(((1e-12, 0.0),
                         (0.0, 1e-12))),
-                    "macro_grad_p": dolfin.Constant((1.0, 0.0)),
+                    "macro_grad_p_lst": [(0.0, 0.0),(1.0, 1.0)],
                     "pl_bar": 0.0
                     },
                 porosity_params={

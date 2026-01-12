@@ -134,11 +134,49 @@ class WbulkPoroFlowOperator(Operator):
 
         self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
 
+
+class WbulkMicroPoroFlowOperator(Operator):
+
+    def __init__(self,
+            kinematics,
+            U,
+            U_test,
+            Phis0,
+            Phis,
+            Phis_test,
+            material_parameters,
+            material_scaling,
+            measure,
+            pl
+            ):  # new input
+
+        self.kinematics = kinematics
+        self.solid_material = dmech.WbulkLungElasticMaterial(
+            Phis=Phis,
+            Phis0=Phis0,
+            parameters=material_parameters)
+        self.material = dmech.PorousElasticMaterial(
+            solid_material=self.solid_material,
+            scaling=material_scaling,
+            Phis0=Phis0)
+        self.measure = measure
+
+        dE_test = dolfin.derivative(
+            self.kinematics.E, U, U_test)
+        self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
+
 class MicroDarcyFlowOperator(Operator):
     def __init__(self,
                  kinematics,
-                 p,
-                 macro_grad_p,
+                 U,
+                 U_test,
+                 X, 
+                 X_0,
+                 unknown_porosity_test,
+                 p_tilde,
+                 grad_p_bar_ini,
+                 grad_p_bar_fin,
+                 p_bar,
                  p_test,
                  K_l,
                  rho_l,
@@ -148,39 +186,80 @@ class MicroDarcyFlowOperator(Operator):
                  Theta_in=None,
                  Theta_out=None):
 
-        if Theta_in is None:
-            Theta_in = dolfin.Constant(0.0)
-        if Theta_out is None:
-            Theta_out = dolfin.Constant(0.0)
-        
-        
+        dE_test = dolfin.derivative(
+            self.kinematics.E, U, U_test)
 
-        assert dx is not None, "You must provide a global measure dx."
-        assert dx_in is not None and dx_out is not None, "You must provide inlet and outlet subdomain measures."
+        # --- grad_p_bar ini/fin: 2D vector interface (with optional backward compatibility) ---
+        if (grad_p_bar_ini is not None) and (grad_p_bar_fin is not None):
+            gx_ini, gy_ini = grad_p_bar_ini
+            gx_fin, gy_fin = grad_p_bar_fin
+        else:
+            # fallback to legacy x/y inputs
+            gx_ini, gx_fin = grad_p_bar_x_ini, grad_p_bar_x_fin
+            gy_ini, gy_fin = grad_p_bar_y_ini, grad_p_bar_y_fin
 
-        self.measure = dx  # typically dx(0) or full domain
+        print("DarcyFlowOperator: grad_p_bar_ini =", (gx_ini, gy_ini))
+        print("DarcyFlowOperator: grad_p_bar_fin =", (gx_fin, gy_fin))
+
+        # --- TimeVaryingConstant for Theta ---
+        self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
+        self.tv_Theta_out = dmech.TimeVaryingConstant(val_ini=Theta_out_ini, val_fin=Theta_out_fin)
+
+        # --- TimeVaryingConstant for grad p_bar components ---
+        self.tv_grad_p_bar_x = dmech.TimeVaryingConstant(val_ini=gx_ini, val_fin=gx_fin)
+        self.tv_grad_p_bar_y = dmech.TimeVaryingConstant(val_ini=gy_ini, val_fin=gy_fin)
+
+        # --- Assemble vector ∇p̄ (2D) ---
+        self.grad_p_bar = dolfin.as_vector((
+            self.tv_grad_p_bar_x.val,
+            self.tv_grad_p_bar_y.val
+        ))
+
+        self.p_bar= p_bar
+        self.p_tot = ( self.p_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
+        self.measure = dx  
         self.kinematics = kinematics
 
-        grad_p = dolfin.grad(p)
+        self.grad_p_tilde = dolfin.grad(p_tilde)
         grad_p_test = dolfin.grad(p_test)
 
         F = self.kinematics.F
         J = self.kinematics.J
-        # K_l : permeability tensor in reference config (material)
         k_l = (1.0 / J) * F * K_l * F.T  # current configuration permeability
         self.K_l = K_l  # keep reference permeability for output
         self.k_l = k_l  # keep current permeability for output
         self.J = J
 
-        grad_p = dolfin.grad(p)
-        grad_p_test = dolfin.grad(p_test)
-
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (grad_p+macro_grad_p), grad_p_test) * dx
+        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * dx
+        # form pl_field operator#
+        self.res_form = dolfin.inner(self.p_tot, unknown_porosity_test) * self.measure
+        # form wbulk operator#
+        self.res_form =  dolfin.inner(
+            -self.p_tot * self.kinematics.J * self.kinematics.C_inv,
+            dE_test) * self.measure
+
+
         if Theta_in != 0.0:
             self.res_form -= Theta_in * p_test * dx_in
         if Theta_out != 0.0:
             self.res_form += Theta_out * p_test * dx_out
 
+        self.add_foi(
+            expr=self.p_tot,
+            fs=self.pl_subsol.fs.collapse(),
+            name="p_tot",
+            update_type="project")
+        self.add_foi(
+            expr=self.p_lin,
+            fs=self.pl_subsol.fs.collapse(),
+            name="p_lin", 
+            update_type="project")
 
 
+
+    def set_value_at_t_step(self, t_step):
+        self.tv_grad_p_bar_x.set_value_at_t_step(t_step)
+        self.tv_grad_p_bar_y.set_value_at_t_step(t_step)
+        self.tv_Theta_in.set_value_at_t_step(t_step)
+        self.tv_Theta_out.set_value_at_t_step(t_step)
