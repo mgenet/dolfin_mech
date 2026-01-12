@@ -23,7 +23,7 @@ def run_MicroPoroFlowHyperelasticity(
         step_params={},
         load_params={},
         porosity_params={},
-        res_basename="run_MicroPoroflow",
+        res_basename={},
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
@@ -215,22 +215,15 @@ def run_MicroPoroFlowHyperelasticity(
     
 
     # -------------------- Quantities of Interest ------------- #
-    #problem.add_point_displacement_qoi(name="U", coordinates=[X0+R, Y0], component=0)
-    #problem.add_qoi(name="U_field", expr=problem.get_displacement_subsol().subfunc)
-
-    #p = problem.get_subsol("pressure").subfunc
-    ##problem.add_qoi(name="pressure", expr=p)
-    #problem.add_qoi(name="avg_pressure", expr=p * problem.dV)
-
-    #velocity = - rho_l * K_l * dolfin.grad(p)
-    #V = dolfin.VectorFunctionSpace(problem.mesh, "CG", 1)
-    #problem.add_foi(expr=velocity, fs=V, name="velocity")
-
-    #problem.add_qoi(name="sigma_bulk", expr=problem.get_foi("sigma_bulk"))
-    # problem.add_point_displacement_qoi(
-    #    name="U",
-    #    coordinates=[X0+R, Y0],
-    #    component=0)
+    problem.add_deformed_solid_volume_qoi()
+    problem.add_deformed_fluid_volume_qoi()
+    problem.add_deformed_volume_qoi()
+    problem.add_macroscopic_stretch_qois()
+    problem.add_macroscopic_solid_stress_qois()
+    #problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
+    problem.add_macroscopic_stress_qois()
+    problem.add_fluid_pressure_qoi()
+    problem.add_interfacial_surface_qois()
 
     # Retrieve pressure field (Function)
     p = problem.pl_subsol.subfunc
@@ -259,10 +252,10 @@ def run_MicroPoroFlowHyperelasticity(
             "n_iter_for_decel": 16,
             "accel_coeff": 2,
             "decel_coeff": 2},
-        print_out=1,#res_basename*verbose,
-        print_sta=1,#res_basename*verbose,
-        write_qois=1,#res_basename+"-qois",
-        write_sol=1,#res_basename*verbose,
+        print_out=res_basename,#res_basename*verbose,
+        print_sta=res_basename,#res_basename*verbose,
+        write_qois=res_basename+"-qois",
+        write_sol=res_basename,
         write_vtus=0,
         write_vtus_with_preserved_connectivity=0)
 
@@ -286,9 +279,9 @@ mat_params = {
 res_folder = sys.argv[0][:-3]
 test = mypy.Test(
     res_folder=res_folder,
-    perform_tests=1,
+    perform_tests=0,
     stop_at_failure=1,
-    clean_after_tests=1,
+    clean_after_tests=0,
     tester_numpy_tolerance=1e-2)
 
 dim_lst  = [ ]
@@ -336,6 +329,7 @@ for dim in dim_lst:
                  for j in range (dim):
                     load_params["sigma_bar_"+str(i)+str(j)] = 0.
                 load_params["sigma_bar_00"] = 0.5
+                
 
             run_MicroPoroFlowHyperelasticity(
                 dim=dim,
@@ -360,6 +354,6 @@ for dim in dim_lst:
                 step_params={"dt_ini":1e-1, "dt_min":1e-3},
                 load_params=load_params,
                 res_basename=res_folder+"/"+res_basename,
-                verbose=1)
+                verbose=0)
 
             test.test(res_basename)
