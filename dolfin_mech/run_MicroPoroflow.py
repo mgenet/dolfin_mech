@@ -211,7 +211,7 @@ def run_MicroPoroFlowHyperelasticity(
         grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
-        K_l   = flow_params.get("K_l", dolfin.Constant(1.0) * dolfin.Identity(dim))
+        k_l   = flow_params.get("k_l", dolfin.Constant(1.0) * dolfin.Identity(dim))
        
         pl_bar = flow_params.get("pl_bar", dolfin.Constant(0.0))
 
@@ -222,7 +222,7 @@ def run_MicroPoroFlowHyperelasticity(
             X=problem.X,
             X_0=problem.X_0,
             unknown_porosity_test=problem.porosity_subsol.dsubtest,
-            K_l=K_l,
+            k_l=k_l,
             rho_l=rho_l,
             pl_bar=pl_bar,
             grad_p_bar_ini=grad_p_bar_ini,
@@ -235,9 +235,6 @@ def run_MicroPoroFlowHyperelasticity(
             k_step=k_step
         )
 
-
-
-
     # -------------------- Quantities of Interest ------------- #
     problem.add_deformed_solid_volume_qoi()
     problem.add_deformed_fluid_volume_qoi()
@@ -249,18 +246,6 @@ def run_MicroPoroFlowHyperelasticity(
     problem.add_fluid_pressure_qoi()
     problem.add_interfacial_surface_qois()
 
-    # Retrieve pressure field (Function)
-    p = problem.pl_subsol.subfunc
-
-    # Darcy velocity expression
-    #velocity_expr = - problem.rho_l * problem.K_l * dolfin.grad(p)
-    velocity_expr = -  dolfin.grad(p)
-
-    # Function space: vector CG space
-    velocity_fs = dolfin.VectorFunctionSpace(problem.mesh, "CG", 1)
-
-    # Register as a Field Of Interest
-    problem.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
     # -------------------- Solver & Integrator ---------------- #
     solver = dmech.NonlinearSolver(
         problem=problem,
@@ -389,7 +374,7 @@ for dim in dim_lst:
                     },
                 flow_params={
                     "rho_l": 1.0,
-                    "K_l": dolfin.Constant(((1e-12, 0.0),
+                    "k_l": dolfin.Constant(((1e-12, 0.0),
                         (0.0, 1e-12))),
                     "pl_bar": 1.0
                     },

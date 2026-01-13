@@ -936,7 +936,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         Theta_in_fin,
         Theta_out_ini,
         Theta_out_fin,
-        K_l,
+        k_l,
         rho_l,
         subdomain_id,
         inlet_id,
@@ -967,7 +967,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             p_tilde=pl,
             p_test=p_test,
             pl_bar=pl_bar,
-            K_l=K_l,
+            k_l=k_l,
             rho_l=rho_l,
             dx=dx,
             dx_in=dx_in,
@@ -977,6 +977,11 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
+
+        velocity_expr = - operator.k_l * (operator.grad_p_bar + operator.grad_p_tilde)
+        velocity_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
+        self.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
+
         
         self.add_foi(
             expr=operator.pl_tot,

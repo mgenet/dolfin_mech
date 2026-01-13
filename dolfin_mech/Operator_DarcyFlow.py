@@ -178,7 +178,7 @@ class MicroDarcyFlowOperator(Operator):
                  grad_p_bar_fin,
                  pl_bar,
                  p_test,
-                 K_l,
+                 k_l,
                  rho_l,
                  dx,
                  dx_in,
@@ -194,9 +194,6 @@ class MicroDarcyFlowOperator(Operator):
         gx_ini, gy_ini = grad_p_bar_ini
         gx_fin, gy_fin = grad_p_bar_fin
 
-        print("DarcyFlowOperator: grad_p_bar_ini =", (gx_ini, gy_ini))
-        print("DarcyFlowOperator: grad_p_bar_fin =", (gx_fin, gy_fin))
-
         # --- TimeVaryingConstant for Theta ---
         self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
         self.tv_Theta_out = dmech.TimeVaryingConstant(val_ini=Theta_out_ini, val_fin=Theta_out_fin)
@@ -210,7 +207,6 @@ class MicroDarcyFlowOperator(Operator):
             self.tv_grad_p_bar_x.val,
             self.tv_grad_p_bar_y.val
         ))
-        print("MicroDarcyFlowOperator: grad_p_bar =", self.grad_p_bar)
 
         self.pl_bar= pl_bar
         self.pl_tot = ( self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
@@ -222,13 +218,14 @@ class MicroDarcyFlowOperator(Operator):
 
         F = self.kinematics.F
         J = self.kinematics.J
-        k_l = (1.0 / J) * F * K_l * F.T  # current configuration permeability
+        K_l = J * dolfin.inv(F) * k_l * dolfin.inv(F).T# reference configuration permeability
+        #k_l = (1.0 / J) * F * K_l * F.T  # current configuration permeability
         self.K_l = K_l  # keep reference permeability for output
         self.k_l = k_l  # keep current permeability for output
         self.J = J
 
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
+        self.res_form = rho_l * dolfin.inner(K_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         # form pl_field operator#
         self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.measure
         # form wbulk operator#
