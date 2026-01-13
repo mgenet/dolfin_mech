@@ -206,7 +206,8 @@ def run_MicroPoroFlowHyperelasticity(
             tension_params=tension_params,
             k_step=k_step)
         
-        grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
+        #grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
+        grad_p_bar_ini=(0.01,0.01)
         grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
@@ -340,7 +341,7 @@ for dim in dim_lst:
             ]
 
             grad_p_bar_y_lst = [
-                0.0,
+                1.0,
             ]
             Theta_in_lst = [
                 0.0,

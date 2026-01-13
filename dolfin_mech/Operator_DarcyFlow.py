@@ -210,6 +210,7 @@ class MicroDarcyFlowOperator(Operator):
             self.tv_grad_p_bar_x.val,
             self.tv_grad_p_bar_y.val
         ))
+        print("MicroDarcyFlowOperator: grad_p_bar =", self.grad_p_bar)
 
         self.pl_bar= pl_bar
         self.pl_tot = ( self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
@@ -227,7 +228,7 @@ class MicroDarcyFlowOperator(Operator):
         self.J = J
 
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * dx
+        self.res_form = rho_l * dolfin.inner(k_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         # form pl_field operator#
         self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.measure
         # form wbulk operator#
@@ -240,8 +241,6 @@ class MicroDarcyFlowOperator(Operator):
         #     self.res_form -= Theta_in * p_test * dx_in
         # if Theta_out != 0.0:
         #     self.res_form += Theta_out * p_test * dx_out
-
-
 
 
     def set_value_at_t_step(self, t_step):

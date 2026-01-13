@@ -942,7 +942,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         inlet_id,
         outlet_id,
         unknown_porosity_test,
-        k_step=None):
+        k_step):
 
 
         pl      = self.pl_subsol.subfunc
@@ -985,7 +985,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             update_type="project")
 
 
-        return self.add_operator(operator=operator)
+        return self.add_operator(operator=operator, k_step=k_step)
     
     def add_pl_operator(self,
             k_step=None,
