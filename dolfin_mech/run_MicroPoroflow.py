@@ -28,27 +28,11 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    # mesh = dolfin.Mesh()
-    # with dolfin.XDMFFile("./mesh/mesh.xdmf") as infile:
-    #      infile.read(mesh)
+    mesh = dolfin.Mesh()
+    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+         infile.read(mesh)
 
-    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
-
-    mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
-    # print("Reading facet mesh...")
-    # with XDMFFile("./mesh/facet_mesh.xdmf") as infile:
-    #     # "name_to_read" must match the name used when writing the XDMF
-    #     infile.read(mvc, "name_to_read")
-    #     print("Facet mesh read.")
-
-    # 3. Convert MeshValueCollection to a MeshFunction for use in Measures
-    boundaries = cpp.mesh.MeshFunctionSizet(mesh, mvc)
-
-            
-
-
-    # 4. Use in your Variational Problem
-    ds = Measure("ds", domain=mesh, subdomain_data=boundaries)
+    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
@@ -57,13 +41,6 @@ def run_MicroPoroFlowHyperelasticity(
     domains_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim())
     domains_mf.set_all(0)  # default domain
 
-        # Define tags
-    tag_plane=1
-    tag_left=2
-    tag_right=3
-    tag_top=4
-    tag_bottom=5
-    tag_inclusions=6
 
     # ------------------- Porosity Init ---------------------- #
     poro_type = porosity_params.get("type", "constant")
@@ -206,8 +183,7 @@ def run_MicroPoroFlowHyperelasticity(
             tension_params=tension_params,
             k_step=k_step)
         
-        #grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
-        grad_p_bar_ini=(0.01,0.01)
+        grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
         grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
@@ -296,6 +272,13 @@ test = mypy.Test(
 dim_lst  = [ ]
 dim_lst += [2]
 # dim_lst += [3]
+
+pf_values = [0.0, 0.1]
+grad_p_bar_x_lst = [0.]
+grad_p_bar_y_lst = [0.]
+Theta_in_lst = [0.0,]   
+Theta_out_lst = [0.0,]
+
 for dim in dim_lst:
 
     bcs_lst  = [      ]
@@ -304,90 +287,160 @@ for dim in dim_lst:
     for bcs in bcs_lst:
 
         load_lst  = [                     ]
-        load_lst += ["internal_pressure"  ]
-        #load_lst += ["macroscopic_stretch"]
-        #load_lst += ["macroscopic_stress" ]
+        load_lst += ["K_vs_U"             ]
         for load in load_lst:
 
-            print("dim =",dim)
-            print("bcs =",bcs)
-            print("load =",load)
-            print(res_folder)
+            for pf in pf_values:
 
-            #res_basename  = sys.argv[0][:-3]
-            res_basename = "-dim="+str(dim)
-            res_basename += "-bcs="+str(bcs)
-            res_basename += "-load="+str(load)
+                print("dim =",dim)
+                print("bcs =",bcs)
+                print("load =",load)
+                print("pf   =",pf)
 
-            load_params = {}
 
-            grad_p_bar_x_lst = [
-                1.0,   # step 0
-            ]
+                #res_basename  = sys.argv[0][:-3]
+                res_basename = "-dim="+str(dim)
+                res_basename += "-bcs="+str(bcs)
+                res_basename += "-load="+str(load)
+                res_basename += "-pf="+str(pf)
 
-            grad_p_bar_y_lst = [
-                1.0,
-            ]
-            Theta_in_lst = [
-                0.0,
-            ]   
-            Theta_out_lst = [
-                0.0,
-            ]
+                load_params = {}
 
-            flow_loading_params = {
-                # 2D: d=0 -> x, d=1 -> y
-                "grad_p_bar_lst": [
-                    grad_p_bar_x_lst,
-                    grad_p_bar_y_lst
-                ],
-                "Theta_in_lst":  Theta_in_lst,
-                "Theta_out_lst": Theta_out_lst,
-            }
-            if (load == "internal_pressure"):
-                load_params["pf"] = +0.2
+                load_params["pf_lst"] = [0,0]
+
+                load_params["U_bar_00_lst"] = [0.0]
+
                 for i in range(dim):
-                 for j in range (dim):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-            elif (load == "macroscopic_stretch"):
-                load_params["pf"] = 0.
-                load_params["U_bar_00"] = 0.5
-                for i in range(dim):
-                 for j in range (dim):
-                  if ((i != 0) or (j != 0)):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-            elif (load == "macroscopic_stress"):
-                load_params["pf"] = 0.
-                for i in range(dim):
-                 for j in range (dim):
-                    load_params["sigma_bar_"+str(i)+str(j)] = 0.
-                load_params["sigma_bar_00"] = 0.5
-                
+                    for j in range(dim):
+                        if ((i != 0) or (j != 0)):
+                            load_params["sigma_bar_"+str(i)+str(j)] = 0.
 
-            run_MicroPoroFlowHyperelasticity(
-                dim=dim,
-                mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
-                mat_params={
-                        "skel": {"parameters": mat_params, "scaling": "no"},
-                        "bulk": {"parameters": mat_params, "scaling": "no"},
-                        "pore": {"parameters": mat_params, "scaling": "no"}
-                    },
-                flow_params={
-                    "rho_l": 1.0,
-                    "k_l": dolfin.Constant(((1e-12, 0.0),
-                        (0.0, 1e-12))),
-                    "pl_bar": 1.0
-                    },
-                flow_loading_params=flow_loading_params,
-                porosity_params={
-                    "type": "constant",  # can be "constant", "function_constant", or "random"
-                    "val": 0.3
-                },  
-                
-                bcs=bcs,
-                step_params={"dt_ini":1e-1, "dt_min":1e-3},
-                load_params=load_params,
-                res_basename=res_folder+"/"+res_basename,
-                verbose=0)
+                flow_loading_params = {
+                    # 2D: d=0 -> x, d=1 -> y
+                    "grad_p_bar_lst": [
+                        grad_p_bar_x_lst,
+                        grad_p_bar_y_lst
+                    ],
+                    "Theta_in_lst":  Theta_in_lst,
+                    "Theta_out_lst": Theta_out_lst,
+                }
 
-            test.test(res_basename)
+
+                run_MicroPoroFlowHyperelasticity(
+                    dim=dim,
+                    mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
+                    mat_params={
+                            "skel": {"parameters": mat_params, "scaling": "no"},
+                            "bulk": {"parameters": mat_params, "scaling": "no"},
+                            "pore": {"parameters": mat_params, "scaling": "no"}
+                        },
+                    flow_params={
+                        "rho_l": 1.0,
+                        "k_l": dolfin.Constant(((1e-12, 0.0),
+                            (0.0, 1e-12))),
+                        "pl_bar": 1.0
+                        },
+                    flow_loading_params=flow_loading_params,
+                    porosity_params={
+                        "type": "constant",  # can be "constant", "function_constant", or "random"
+                        "val": 0.3
+                    },  
+                    
+                    bcs=bcs,
+                    step_params={"dt_ini":1e-1, "dt_min":1e-3},
+                    load_params=load_params,
+                    res_basename=res_folder+"/"+res_basename,
+                    verbose=0)
+
+                test.test(res_basename)
+
+# -------------------------------------------------
+# For plotting
+# -------------------------------------------------
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+def load_qois(qois_filename):
+    qois_vals = np.loadtxt(qois_filename)
+    with open(qois_filename, "r") as f:
+        qois_names = f.readline().split()[1:]
+    return qois_vals, qois_names
+
+def get(qois_vals, qois_names, key):
+    return qois_vals[:, qois_names.index(key)]
+
+
+def plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix):
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+
+    os.makedirs("plots", exist_ok=True)
+
+    colors = [
+        ("#1f77b4", "#aec7e8"),  
+        ("#d62728", "#ff9896"), 
+        ("#2ca02c", "#98df8a"),  
+        ("#9467bd", "#c5b0d5"), 
+    ]
+
+    fig, ax = plt.subplots(figsize=(7,5))
+
+    for idx, pf in enumerate(pf_list):
+
+        filename = f"{res_folder}/{res_basename_prefix}-pf={pf}-qois.dat"
+        if not os.path.exists(filename):
+            print(f"[WARNING] File missing: {filename}")
+            continue
+
+        qois_vals, names = load_qois(filename)
+
+       
+        Uxx = get(qois_vals, names, "U_bar_XX")[4:]
+        qx  = get(qois_vals, names, "q_avg_x")[4:]
+        qy  = get(qois_vals, names, "q_avg_y")[4:]
+        gx  = get(qois_vals, names, "grad_p_bar_x")[4:]
+        gy  = get(qois_vals, names, "grad_p_bar_y")[4:]
+
+        eps = 1e-12
+        Kxx = -qx / (gx + eps)
+        Kyy = -qy / (gy + eps)
+
+
+        c_dark, c_light = colors[idx % len(colors)]
+
+
+        ax.plot(
+            Uxx, Kxx,
+            color=c_dark, linewidth=2.5,
+            label=rf"$K_{{xx}}$, $p_f={pf}$"
+        )
+
+
+        ax.plot(
+            Uxx, Kyy,
+            color=c_light, linewidth=2.5,
+            label=rf"$K_{{yy}}$, $p_f={pf}$"
+        )
+
+    ax.set_xlabel(r"$U_{\bar{XX}}$", fontsize=16)
+    ax.set_ylabel(r"$K_{xx}, K_{yy}$", fontsize=16)
+    ax.grid(ls="--", alpha=0.4)
+    ax.legend(fontsize=12, framealpha=0.9)
+
+    plt.tight_layout()
+    plt.savefig("plots/Kxx_Kyy_vs_Uxx_multi_pf.png", bbox_inches="tight")
+    plt.close()
+
+    print("Saved: plots/Kxx_Kyy_vs_Uxx_multi_pf.png")
+
+
+if __name__ == "__main__":
+
+    pf_list = pf_values  
+    res_basename_prefix = "-dim=2-bcs=pbc-load=K_vs_U"
+
+    plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix)
+
