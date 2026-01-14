@@ -274,8 +274,8 @@ dim_lst += [2]
 # dim_lst += [3]
 
 pf_values = [0.0, 0.1]
-grad_p_bar_x_lst = [0.]
-grad_p_bar_y_lst = [0.]
+grad_p_bar_x_lst = [0.5]
+grad_p_bar_y_lst = [0.5]
 Theta_in_lst = [0.0,]   
 Theta_out_lst = [0.0,]
 
@@ -308,7 +308,7 @@ for dim in dim_lst:
 
                 load_params["pf_lst"] = [0,0]
 
-                load_params["U_bar_00_lst"] = [0.0]
+                load_params["U_bar_00_lst"] = [0.1]
 
                 for i in range(dim):
                     for j in range(dim):
@@ -338,7 +338,7 @@ for dim in dim_lst:
                         "rho_l": 1.0,
                         "k_l": dolfin.Constant(((1e-12, 0.0),
                             (0.0, 1e-12))),
-                        "pl_bar": 1.0
+                        "pl_bar": 1
                         },
                     flow_loading_params=flow_loading_params,
                     porosity_params={

@@ -486,27 +486,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.add_foi(expr=self.kinematics.C, fs=self.mfoi_fs, name="C_tot", update_type="project")
         self.add_foi(expr=self.kinematics.E, fs=self.mfoi_fs, name="E_tot", update_type="project")
 
-
-
-    def add_elasticity_operator(self,
-            solid_behavior_model,
-            solid_behavior_parameters):
-
-        operator = dmech.HyperElasticityOperator(
-            U=self.displacement_perturbation_subsol.subfunc,
-            U_test=self.displacement_perturbation_subsol.dsubtest,
-            kinematics=self.kinematics,
-            material_model=solid_behavior_model,
-            material_parameters=solid_behavior_parameters,
-            measure=self.dV,
-            formulation="ener")
-        self.add_foi(expr=operator.material.Sigma, fs=self.mfoi_fs, name="Sigma", update_type="project")
-        self.add_foi(expr=operator.material.sigma, fs=self.mfoi_fs, name="sigma", update_type="project")
-
-        return self.add_operator(operator)
-
-
-
     def add_macroscopic_stretch_symmetry_penalty_operator(self,
             **kwargs):
 
@@ -1027,8 +1006,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             Phis_test=self.porosity_subsol.dsubtest,
             material_parameters=material_parameters,
             material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id),
-            pl=self.p_tot
+            measure=self.get_subdomain_measure(subdomain_id)
             )
         return self.add_operator(operator)
 
