@@ -28,11 +28,11 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
-         infile.read(mesh)
+    # mesh = dolfin.Mesh()
+    # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+    #      infile.read(mesh)
 
-    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
@@ -273,9 +273,10 @@ dim_lst  = [ ]
 dim_lst += [2]
 # dim_lst += [3]
 
-pf_values = [0.0, 0.1]
-grad_p_bar_x_lst = [0.5]
-grad_p_bar_y_lst = [0.5]
+#pf_values = [0.0, 0.1,0.2]
+pf_values = [0.2]
+grad_p_bar_x_lst = [0.05]
+grad_p_bar_y_lst = [0.05]
 Theta_in_lst = [0.0,]   
 Theta_out_lst = [0.0,]
 
@@ -306,9 +307,9 @@ for dim in dim_lst:
 
                 load_params = {}
 
-                load_params["pf_lst"] = [0,0]
+                load_params["pf_lst"] = [pf,pf]
 
-                load_params["U_bar_00_lst"] = [0.1]
+                load_params["U_bar_00_lst"] = [0.3]
 
                 for i in range(dim):
                     for j in range(dim):
@@ -328,7 +329,7 @@ for dim in dim_lst:
 
                 run_MicroPoroFlowHyperelasticity(
                     dim=dim,
-                    mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.3, "yshift":-0.3, "zshift":-0.3, "r0":0.2, "l":0.1, "mesh_filebasename":res_folder+"/"+"mesh"},
+                    mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.025, "mesh_filebasename":res_folder+"/"+"mesh"},
                     mat_params={
                             "skel": {"parameters": mat_params, "scaling": "no"},
                             "bulk": {"parameters": mat_params, "scaling": "no"},
@@ -336,9 +337,9 @@ for dim in dim_lst:
                         },
                     flow_params={
                         "rho_l": 1.0,
-                        "k_l": dolfin.Constant(((1e-12, 0.0),
-                            (0.0, 1e-12))),
-                        "pl_bar": 1
+                        "k_l": dolfin.Constant(((1e-15, 0.0),
+                            (0.0, 1e-15))),
+                        "pl_bar": 0.3
                         },
                     flow_loading_params=flow_loading_params,
                     porosity_params={
@@ -347,7 +348,7 @@ for dim in dim_lst:
                     },  
                     
                     bcs=bcs,
-                    step_params={"dt_ini":1e-1, "dt_min":1e-3},
+                    step_params={"dt_ini":1e-2, "dt_min":1e-3, "dt_max":1e-2},
                     load_params=load_params,
                     res_basename=res_folder+"/"+res_basename,
                     verbose=0)
@@ -398,11 +399,25 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix):
         qois_vals, names = load_qois(filename)
 
        
-        Uxx = get(qois_vals, names, "U_bar_XX")[4:]
-        qx  = get(qois_vals, names, "q_avg_x")[4:]
-        qy  = get(qois_vals, names, "q_avg_y")[4:]
-        gx  = get(qois_vals, names, "grad_p_bar_x")[4:]
-        gy  = get(qois_vals, names, "grad_p_bar_y")[4:]
+        # Uxx = get(qois_vals, names, "U_bar_XX")[4:]
+        # qx  = get(qois_vals, names, "q_avg_x")[4:]
+        # qy  = get(qois_vals, names, "q_avg_y")[4:]
+        # gx  = get(qois_vals, names, "grad_p_bar_x")[4:]
+        # gy  = get(qois_vals, names, "grad_p_bar_y")[4:]
+
+        Uxx = get(qois_vals, names, "U_bar_XX")[1:]
+        qx  = get(qois_vals, names, "q_avg_x")[1:]
+        qy  = get(qois_vals, names, "q_avg_y")[1:]
+        gx  = get(qois_vals, names, "grad_p_bar_x")[1:]
+        gy  = get(qois_vals, names, "grad_p_bar_y")[1:]
+
+        # Uxx = get(qois_vals, names, "U_bar_XX")
+        # qx  = get(qois_vals, names, "q_avg_x")
+        # qy  = get(qois_vals, names, "q_avg_y")
+        # gx  = get(qois_vals, names, "grad_p_bar_x")
+        # gy  = get(qois_vals, names, "grad_p_bar_y")
+
+
 
         eps = 1e-12
         Kxx = -qx / (gx + eps)

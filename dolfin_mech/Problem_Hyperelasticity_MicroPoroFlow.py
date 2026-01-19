@@ -42,7 +42,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             porosity_init_val=None,
             porosity_init_fun=None,
             quadrature_degree=None,
-            foi_degree=0,
+            foi_degree=1,
             flow_params={},
             skel_behavior=None,
             skel_behaviors=[],
@@ -975,6 +975,47 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             name="pl_tot",
             update_type="project")
 
+        def _get_dwbulkdphis_expr(wbulk_op):
+            if hasattr(wbulk_op, "material") and hasattr(wbulk_op.material, "dWbulkdPhis"):
+                return wbulk_op.material.dWbulkdPhis
+            if hasattr(wbulk_op, "dWbulkdPhis"):
+                return wbulk_op.dWbulkdPhis
+            if hasattr(wbulk_op, "mat") and hasattr(wbulk_op.mat, "dWbulkdPhis"):
+                return wbulk_op.mat.dWbulkdPhis
+            raise AttributeError(f"dWbulkdPhis not found on {type(wbulk_op)}")
+
+        self.darcy_operator = operator
+
+        if hasattr(self, "wbulk_ops"):
+            for item in self.wbulk_ops:
+                wbulk_op = item["op"]
+                suffix = item.get("suffix", "")
+                sub_id = item.get("subdomain_id", None)
+
+                dw_expr = _get_dwbulkdphis_expr(wbulk_op)
+                diff_expr = operator.pl_tot + dw_expr
+
+                fs_scalar = self.pl_subsol.fs.collapse()
+
+                self.add_foi(
+                    expr=diff_expr,
+                    fs=fs_scalar,
+                    name="pl_plus_minus_dWbulkdPhis"+suffix,
+                    update_type="project"
+                )
+
+                if sub_id is not None:
+                    dx_bulk = self.get_subdomain_measure(sub_id)
+                    Area = dolfin.assemble(1.0 * dx_bulk)
+                    self.add_qoi(
+                        name="avg(pl_plus_minus_dWbulkdPhis)"+suffix,
+                        expr=diff_expr * dx_bulk,
+                        norm=Area
+            )
+
+
+
+
 
         return self.add_operator(operator=operator, k_step=k_step)
     
@@ -1024,6 +1065,14 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             self.add_foi(expr=operator.material.dWbulkdPhis, fs=self.sfoi_fs, name="dWbulkdPhis"+suffix)
             self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv, fs=self.mfoi_fs, name="Sigma_bulk"+suffix)
             self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.I, fs=self.mfoi_fs, name="sigma_bulk"+suffix)
+
+            self.wbulk_ops = getattr(self, "wbulk_ops", [])
+            self.wbulk_ops.append({
+                "op": operator,
+                "suffix": suffix,
+                "subdomain_id": bulk_behavior.get("subdomain_id", None),
+            })
+
 
 
 
