@@ -99,6 +99,8 @@ class WskelPoroFlowOperator(Operator):
             self.kinematics.E, U, U_test)
         self.res_form = dolfin.inner(self.material.Sigma, dE_test) * self.measure
 
+        self.sigma_contrib = self.material.sigma
+
 class WbulkPoroFlowOperator(Operator):
 
     def __init__(self,
@@ -166,9 +168,12 @@ class WbulkMicroPoroFlowOperator(Operator):
 
         self.res_form = self.material.dWbulkdPhis * Phis_test * self.measure
 
-        # self.res_form += dolfin.inner(
-        #     self.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv,
-        #     dE_test) * self.measure
+        self.res_form += dolfin.inner(
+            self.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv,
+            dE_test) * self.measure
+        
+        self.sigma_contrib = self.material.dWbulkdPhis * self.kinematics.I
+
 
 
 class MicroDarcyFlowOperator(Operator):
@@ -235,9 +240,9 @@ class MicroDarcyFlowOperator(Operator):
         # form pl_field operator#
         self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.measure
         # form wbulk operator#
-        self.res_form +=  dolfin.inner(
-            -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
-            dE_test) * self.measure
+        # self.res_form +=  dolfin.inner(
+        #     -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
+        #     dE_test) * self.measure
 
 
         # if Theta_in != 0.0:

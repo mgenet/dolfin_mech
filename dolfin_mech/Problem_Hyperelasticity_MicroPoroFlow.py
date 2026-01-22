@@ -21,7 +21,13 @@ from .Problem                 import Problem
 from .Problem_Hyperelasticity import HyperelasticityProblem
 from .Operator_DarcyFlow import MicroDarcyFlowOperator,PlFieldOperator,WbulkPoroFlowOperator,WskelPoroFlowOperator,WbulkMicroPoroFlowOperator
 ################################################################################
+class _SigmaAggregatorMaterial:
+    def __init__(self, problem):
+        self._problem = problem
 
+    @property
+    def sigma(self):
+        return self._problem.get_sigma_total()
 class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
 
@@ -195,6 +201,10 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 val=0,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
+            self.add_constraint(
+                V=self.porosity_subsol.fs, 
+                val=0,
+                sub_domain=pinpoint_sd)
             
 
         
@@ -451,29 +461,35 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         if (self.porosity_known == "Phis0"): self.add_foi(
             expr=self.Phis0,
             fs=self.porosity_subsol.fs.collapse(),
-            name="Phis0")
+            name="Phis0",
+            update_type="project")
         self.add_foi(
             expr=1. - self.Phis0,
             fs=self.porosity_subsol.fs.collapse(),
-            name="Phif0")
+            name="Phif0",
+            update_type="project")
 
         if (self.porosity_known == "phis"): self.add_foi(
             expr=self.Phis,
             fs=self.porosity_subsol.fs.collapse(),
-            name="Phis")
+            name="Phis",
+            update_type="project")
         self.add_foi(
             expr=self.kinematics.J - self.Phis,
             fs=self.porosity_subsol.fs.collapse(),
-            name="Phif")
+            name="Phif",
+            update_type="project")
 
         self.add_foi(
             expr=self.phis,
             fs=self.porosity_subsol.fs.collapse(),
-            name="phis")
+            name="phis",
+                update_type="project")
         self.add_foi(
             expr=1. - self.phis,
             fs=self.porosity_subsol.fs.collapse(),
-            name="phif")
+            name="phif",
+            update_type="project")
 
     def set_kinematics(self):
 
@@ -516,10 +532,11 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             k_step=None,
             **kwargs):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
         operator = dmech.MacroscopicStressComponentConstraintOperator(
             U_bar=self.macroscopic_stretch_subsol.subfunc,
@@ -760,10 +777,11 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
     def add_macroscopic_solid_stress_qois(self,
             symmetric=False):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
         U_bar = self.macroscopic_stretch_subsol.subfunc
         I_bar = dolfin.Identity(self.dim)
@@ -1008,7 +1026,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                     dx_bulk = self.get_subdomain_measure(sub_id)
                     Area = dolfin.assemble(1.0 * dx_bulk)
                     self.add_qoi(
-                        name="avg(pl_plus_minus_dWbulkdPhis)"+suffix,
+                        name="avg(pl_plus_dWbulkdPhis)"+suffix,
                         expr=diff_expr * dx_bulk,
                         norm=Area
             )
@@ -1032,24 +1050,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         
 
 
-
-    def add_Wbulk_operator(self,
-            material_parameters,
-            material_scaling,
-            subdomain_id=None):
-
-        operator = WbulkMicroPoroFlowOperator(
-            kinematics=self.kinematics,
-            U=self.displacement_subsol.subfunc,
-            U_test=self.displacement_subsol.dsubtest,
-            Phis0=self.Phis0,
-            Phis=self.porosity_subsol.subfunc,
-            Phis_test=self.porosity_subsol.dsubtest,
-            material_parameters=material_parameters,
-            material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id)
-            )
-        return self.add_operator(operator)
 
 
 
@@ -1269,7 +1269,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             material_scaling,
             subdomain_id=None):
 
-        operator = WbulkPoroFlowOperator(
+        operator = WbulkMicroPoroFlowOperator(
             kinematics=self.kinematics,
             U=self.displacement_perturbation_subsol.subfunc,
             U_test=self.displacement_perturbation_subsol.dsubtest,
@@ -1278,7 +1278,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             Phis_test=self.porosity_subsol.dsubtest,
             material_parameters=material_parameters,
             material_scaling=material_scaling,
-            pl=self.pl_subsol.subfunc,
             measure=self.get_subdomain_measure(subdomain_id))
         return self.add_operator(operator)
     
@@ -1335,5 +1334,22 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 degree=degree,
                 init_val=init_val,
                 init_fun=init_fun)
+
+
+    def get_sigma_total(self):
+        sigma_total = None
+
+        for op in self.operators:
+            sig = getattr(op, "sigma_contrib", None)
+            if sig is None:
+                continue
+            sigma_total = sig if sigma_total is None else (sigma_total + sig)
+
+        if sigma_total is None:
+
+            dim = self.dim  
+            sigma_total = dolfin.Constant(((0.0,) * dim,) * dim)
+
+        return sigma_total
 
 

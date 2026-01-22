@@ -309,7 +309,7 @@ for dim in dim_lst:
 
                 load_params["pf_lst"] = [pf,pf]
 
-                load_params["U_bar_00_lst"] = [0.3]
+                load_params["U_bar_00_lst"] = [0.1]
 
                 for i in range(dim):
                     for j in range(dim):
@@ -329,7 +329,7 @@ for dim in dim_lst:
 
                 run_MicroPoroFlowHyperelasticity(
                     dim=dim,
-                    mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.025, "mesh_filebasename":res_folder+"/"+"mesh"},
+                    mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"},
                     mat_params={
                             "skel": {"parameters": mat_params, "scaling": "no"},
                             "bulk": {"parameters": mat_params, "scaling": "no"},
@@ -348,7 +348,7 @@ for dim in dim_lst:
                     },  
                     
                     bcs=bcs,
-                    step_params={"dt_ini":1e-2, "dt_min":1e-3, "dt_max":1e-2},
+                    step_params={"dt_ini":1e-2, "dt_min":1e-2, "dt_max":5e-2},
                     load_params=load_params,
                     res_basename=res_folder+"/"+res_basename,
                     verbose=0)
