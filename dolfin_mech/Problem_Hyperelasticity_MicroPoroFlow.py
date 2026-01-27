@@ -28,6 +28,7 @@ class _SigmaAggregatorMaterial:
     @property
     def sigma(self):
         return self._problem.get_sigma_total()
+    
 class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
 
@@ -201,10 +202,10 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 val=0,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
-            self.add_constraint(
-                V=self.porosity_subsol.fs, 
-                val=0,
-                sub_domain=pinpoint_sd)
+            # self.add_constraint(
+            #     V=self.porosity_subsol.fs, 
+            #     val=0,
+            #     sub_domain=pinpoint_sd)
             
 
         
@@ -825,10 +826,11 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
     def add_macroscopic_solid_hydrostatic_pressure_qoi(self):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
         U_bar = self.macroscopic_stretch_subsol.subfunc
         I_bar = dolfin.Identity(self.dim)
@@ -862,14 +864,23 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
     def add_macroscopic_stress_qois(self,
             symmetric=False):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
-        for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
-            if hasattr(operator, "tv_pf"):
-                tv_pf = operator.tv_pf
+        # for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
+        #     if hasattr(operator, "tv_pf"):
+        #         tv_pf = operator.tv_pf
+        #         break
+        #tv_pf = None
+        for step in self.steps:
+            for operator in step.operators:
+                if hasattr(operator, "tv_pf"):
+                    tv_pf = operator.tv_pf
+                    break
+            if tv_pf is not None:
                 break
 
         U_bar = self.macroscopic_stretch_subsol.subfunc
@@ -1011,7 +1022,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 sub_id = item.get("subdomain_id", None)
 
                 dw_expr = _get_dwbulkdphis_expr(wbulk_op)
-                diff_expr = operator.pl_tot + dw_expr
+                diff_expr = operator.pl_tot*self.kinematics.J + dw_expr
 
                 fs_scalar = self.pl_subsol.fs.collapse()
 

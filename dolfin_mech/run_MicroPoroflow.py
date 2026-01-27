@@ -28,11 +28,11 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    # mesh = dolfin.Mesh()
-    # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
-    #      infile.read(mesh)
+    mesh = dolfin.Mesh()
+    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+         infile.read(mesh)
 
-    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
@@ -144,7 +144,9 @@ def run_MicroPoroFlowHyperelasticity(
             dt_max=dt_max)
 
         pf = pf_lst[k_step]
+
         pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
+
 
         problem.add_surface_pressure_loading_operator(
             measure=problem.dS(0),
@@ -217,7 +219,7 @@ def run_MicroPoroFlowHyperelasticity(
     problem.add_deformed_volume_qoi()
     problem.add_macroscopic_stretch_qois()
     problem.add_macroscopic_solid_stress_qois()
-    #problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
+    # problem.add_macroscopic_solid_hydrostatic_pressure_qoi()
     problem.add_macroscopic_stress_qois()
     problem.add_fluid_pressure_qoi()
     problem.add_interfacial_surface_qois()
@@ -273,12 +275,12 @@ dim_lst  = [ ]
 dim_lst += [2]
 # dim_lst += [3]
 
-#pf_values = [0.0, 0.1,0.2]
-pf_values = [0.2]
-grad_p_bar_x_lst = [0.05]
-grad_p_bar_y_lst = [0.05]
-Theta_in_lst = [0.0,]   
-Theta_out_lst = [0.0,]
+#pf_values = [0.0, 0.03,0.06]
+pf_values = [0.0]
+grad_p_bar_x_lst = [0.05,0.05]
+grad_p_bar_y_lst = [0.05,0.05]
+Theta_in_lst = [0.0,0]   
+Theta_out_lst = [0.0,0]
 
 for dim in dim_lst:
 
@@ -309,12 +311,24 @@ for dim in dim_lst:
 
                 load_params["pf_lst"] = [pf,pf]
 
-                load_params["U_bar_00_lst"] = [0.1]
+                load_params["U_bar_00_lst"] = [0,0.3]
+
+                #load_params["sigma_bar_00_lst"] = [0,0.1]
 
                 for i in range(dim):
                     for j in range(dim):
                         if ((i != 0) or (j != 0)):
                             load_params["sigma_bar_"+str(i)+str(j)] = 0.
+
+                # for i in range(dim):
+                #     for j in range(dim):
+                #         load_params[f"U_bar_{i}{j}_lst"] = [0.0, 0.0]
+
+
+                # for i in range(dim):
+                #     for j in range(dim):
+                #         if ((i != 0) or (j != 0)):
+                #             load_params["sigma_bar_"+str(i)+str(j)] = 0.
 
                 flow_loading_params = {
                     # 2D: d=0 -> x, d=1 -> y
@@ -348,7 +362,13 @@ for dim in dim_lst:
                     },  
                     
                     bcs=bcs,
-                    step_params={"dt_ini":1e-2, "dt_min":1e-2, "dt_max":5e-2},
+                    step_params = {
+                        "n_steps": 2,
+                        "Deltat_lst": [1e-2, 1e-1],     
+                        "dt_ini_lst": [5e-3, 1e-3],     
+                        "dt_min_lst": [5e-3, 1e-4],     
+                        "dt_max_lst": [5e-3, 5e-3],     
+                    },
                     load_params=load_params,
                     res_basename=res_folder+"/"+res_basename,
                     verbose=0)
@@ -405,11 +425,11 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix):
         # gx  = get(qois_vals, names, "grad_p_bar_x")[4:]
         # gy  = get(qois_vals, names, "grad_p_bar_y")[4:]
 
-        Uxx = get(qois_vals, names, "U_bar_XX")[1:]
-        qx  = get(qois_vals, names, "q_avg_x")[1:]
-        qy  = get(qois_vals, names, "q_avg_y")[1:]
-        gx  = get(qois_vals, names, "grad_p_bar_x")[1:]
-        gy  = get(qois_vals, names, "grad_p_bar_y")[1:]
+        Uxx = get(qois_vals, names, "U_bar_XX")[2:]
+        qx  = get(qois_vals, names, "q_avg_x")[2:]
+        qy  = get(qois_vals, names, "q_avg_y")[2:]
+        gx  = get(qois_vals, names, "grad_p_bar_x")[2:]
+        gy  = get(qois_vals, names, "grad_p_bar_y")[2:]
 
         # Uxx = get(qois_vals, names, "U_bar_XX")
         # qx  = get(qois_vals, names, "q_avg_x")
