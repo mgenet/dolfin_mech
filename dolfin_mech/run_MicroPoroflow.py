@@ -275,8 +275,8 @@ dim_lst  = [ ]
 dim_lst += [2]
 # dim_lst += [3]
 
-#pf_values = [0.0, 0.03,0.06]
-pf_values = [0.0]
+pf_values = [0.0, 0.03,0.06]
+#pf_values = [0.0]
 grad_p_bar_x_lst = [0.05,0.05]
 grad_p_bar_y_lst = [0.05,0.05]
 Theta_in_lst = [0.0,0]   
@@ -311,9 +311,9 @@ for dim in dim_lst:
 
                 load_params["pf_lst"] = [pf,pf]
 
-                load_params["U_bar_00_lst"] = [0,0.3]
+                #load_params["U_bar_00_lst"] = [0,0.3]
 
-                #load_params["sigma_bar_00_lst"] = [0,0.1]
+                load_params["sigma_bar_00_lst"] = [0,0.1]
 
                 for i in range(dim):
                     for j in range(dim):

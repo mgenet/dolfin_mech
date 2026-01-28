@@ -993,9 +993,13 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         Area = dolfin.assemble(1.0 * dx)
         self.add_qoi(name="q_avg_x", expr=velocity_expr[0] * dx, norm=Area)
+        
         self.add_qoi(name="q_avg_y", expr=velocity_expr[1] * dx, norm=Area)
         self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)
         self.add_qoi(name="grad_p_bar_y",expr=operator.grad_p_bar[1] * dx,norm=Area)
+
+        self.add_qoi(name="p_tilde_avg", expr=pl * dx, norm=Area)
+
 
             
         self.add_foi(
