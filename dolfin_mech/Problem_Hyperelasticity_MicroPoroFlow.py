@@ -198,7 +198,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 sub_domain=pinpoint_sd,
                 method='pointwise')
             self.add_constraint(
-                V=self.pl_subsol.fs, 
+                V=self.pl_perturbation_subsol.fs, 
                 val=0,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
@@ -434,10 +434,10 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         
 
     def get_pressure_liquid_name(self):
-        return "p_l"
+        return "p_l_perturbation"
 
     def add_pressure_liquid_subsol(self, degree):
-        self.pl_subsol = self.add_scalar_subsol(
+        self.pl_perturbation_subsol = self.add_scalar_subsol(
             name=self.get_pressure_liquid_name(),
             family="CG",
             degree=degree
@@ -953,8 +953,8 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         k_step):
 
 
-        pl      = self.pl_subsol.subfunc
-        p_test = self.pl_subsol.dsubtest
+        pl      = self.pl_perturbation_subsol.subfunc
+        p_test = self.pl_perturbation_subsol.dsubtest
 
         dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
         dx_in   = self.get_subdomain_measure(inlet_id)          # dx(inlet_id) for source
@@ -1004,7 +1004,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             
         self.add_foi(
             expr=operator.pl_tot,
-            fs=self.pl_subsol.fs.collapse(),
+            fs=self.pl_perturbation_subsol.fs.collapse(),
             name="pl_tot",
             update_type="project")
 
@@ -1028,7 +1028,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 dw_expr = _get_dwbulkdphis_expr(wbulk_op)
                 diff_expr = operator.pl_tot*self.kinematics.J + dw_expr
 
-                fs_scalar = self.pl_subsol.fs.collapse()
+                fs_scalar = self.pl_perturbation_subsol.fs.collapse()
 
                 self.add_foi(
                     expr=diff_expr,
