@@ -224,6 +224,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_solid_volume_subsol()
         # self.add_deformed_fluid_volume_subsol()
         self.add_surface_area_subsol()
+        
 
 
 

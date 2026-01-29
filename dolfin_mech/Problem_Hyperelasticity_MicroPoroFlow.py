@@ -20,6 +20,7 @@ import dolfin_mech as dmech
 from .Problem                 import Problem
 from .Problem_Hyperelasticity import HyperelasticityProblem
 from .Operator_DarcyFlow import MicroDarcyFlowOperator,PlFieldOperator,WbulkPoroFlowOperator,WskelPoroFlowOperator,WbulkMicroPoroFlowOperator
+from .Operator_ZeroMeanPressure import ZeroMeanPressureOperator
 ################################################################################
 class _SigmaAggregatorMaterial:
     def __init__(self, problem):
@@ -169,22 +170,15 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             "Cannot provide both pore_behavior & pore_behaviors. Aborting."
         if (pore_behavior is not None):
             pore_behaviors = [pore_behavior]
-        
 
         # self.add_macroscopic_stretch_symmetry_operator()
         self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
 
         self.add_Wpore_operators(pore_behaviors)
 
-        #self.add_pl_operator(measure=self.dV)
+        self.add_pressure_liquid_perturbation_zero_mean_operator()
 
-        # self.add_Darcy_operator(kinematics=self.kinematics,
-        #     K_l=K_l,
-        #     rho_l=rho_l,
-        #     subdomain_id=None,
-        #     macro_grad_p=macro_grad_p,   
-        #     inlet_id=3,
-        #     outlet_id=4)
+        #self.add_pl_operator(measure=self.dV)
 
 
 
@@ -197,18 +191,14 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 val=[0.]*self.dim,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
-            self.add_constraint(
-                V=self.pl_perturbation_subsol.fs, 
-                val=0,
-                sub_domain=pinpoint_sd,
-                method='pointwise')
             # self.add_constraint(
-            #     V=self.porosity_subsol.fs, 
+            #     V=self.pl_perturbation_subsol.fs, 
             #     val=0,
-            #     sub_domain=pinpoint_sd)
-            
+            #     sub_domain=pinpoint_sd,
+            #     method='pointwise')
 
         
+
 
 
     def set_known_and_unknown_porosity(self,
@@ -430,19 +420,29 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         
         if (liquid_pressure_perturbation_degree is None):
             liquid_pressure_perturbation_degree = displacement_perturbation_degree -1
-        self.add_pressure_liquid_subsol(degree=liquid_pressure_perturbation_degree)
+        self.add_pressure_liquid_perturbation_subsol(degree=liquid_pressure_perturbation_degree)
+        self.add_pressure_liquid_perturbation_zero_mean_subsol()
+
+
+            
         
 
     def get_pressure_liquid_name(self):
         return "p_l_perturbation"
 
-    def add_pressure_liquid_subsol(self, degree):
+    def add_pressure_liquid_perturbation_subsol(self, degree):
         self.pl_perturbation_subsol = self.add_scalar_subsol(
             name=self.get_pressure_liquid_name(),
             family="CG",
             degree=degree
         )
-    
+    def add_pressure_liquid_perturbation_zero_mean_subsol(self):
+        self.lambda_pl_perturbation_zero_mean_subsol = self.add_scalar_subsol(
+            name="lambda_"+self.get_pressure_liquid_name()+"_zero_mean",
+            family="R",
+            degree=0
+        )
+
 
 
 
@@ -550,6 +550,24 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             N=self.mesh_normals,
             **kwargs)
         return self.add_operator(operator, k_step=k_step)
+    
+    def add_pressure_liquid_perturbation_zero_mean_operator(self):
+        p      = self.pl_perturbation_subsol.subfunc
+        p_test = self.pl_perturbation_subsol.dsubtest
+
+
+        lam      = self.lambda_pl_perturbation_zero_mean_subsol.subfunc
+        lam_test = self.lambda_pl_perturbation_zero_mean_subsol.dsubtest
+
+        operator = ZeroMeanPressureOperator(
+            p=p,
+            p_test=p_test,
+            lam=lam,
+            lam_test=lam_test,
+            measure=self.dV
+        )
+        return self.add_operator(operator)
+
 
 
 
@@ -998,7 +1016,14 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)
         self.add_qoi(name="grad_p_bar_y",expr=operator.grad_p_bar[1] * dx,norm=Area)
 
-        self.add_qoi(name="p_tilde_avg", expr=pl * dx, norm=Area)
+        V = dolfin.assemble(self.kinematics.J * self.dV)
+        self.add_qoi(
+            name="p_tilde_avg_current",
+            expr=self.pl_perturbation_subsol.subfunc * self.kinematics.J * self.dV,
+            norm=V
+        )
+        
+
 
 
             

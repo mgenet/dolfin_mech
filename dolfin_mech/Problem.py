@@ -261,6 +261,9 @@ class Problem():
             for (k_subsol,subsol) in enumerate(self.subsols):
                 subsol.fs = self.sol_fs.sub(k_subsol)
 
+        print("dim(p)   =", self.pl_perturbation_subsol.fs.dim())
+        print("dim(lam) =", self.lambda_pl_perturbation_zero_mean_subsol.fs.dim())
+
 
 
     def set_solution_functions(self):

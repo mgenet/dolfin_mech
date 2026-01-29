@@ -225,11 +225,22 @@ def run_MicroPoroFlowHyperelasticity(
     problem.add_interfacial_surface_qois()
 
     # -------------------- Solver & Integrator ---------------- #
+    # solver = dmech.NonlinearSolver(
+    #     problem=problem,
+    #     parameters={"sol_tol": [1e-6]*len(problem.subsols), "n_iter_max": 32},
+    #     relax_type="constant",
+    #     write_iter=0)
     solver = dmech.NonlinearSolver(
-        problem=problem,
-        parameters={"sol_tol": [1e-6]*len(problem.subsols), "n_iter_max": 32},
-        relax_type="constant",
-        write_iter=0)
+    problem=problem,
+    parameters={
+        "sol_tol": [1e-6]*len(problem.subsols),
+        "n_iter_max": 32,
+        "linear_solver_type": "dolfin",
+        "linear_solver_name": "umfpack",
+    },
+    relax_type="constant",
+    write_iter=0)
+
 
     integrator = dmech.TimeIntegrator(
         problem=problem,
