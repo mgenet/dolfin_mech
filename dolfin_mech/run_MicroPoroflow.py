@@ -288,8 +288,8 @@ dim_lst += [2]
 
 #pf_values = [0.0, 0.03,0.06]
 pf_values = [0.0]
-grad_p_bar_x_lst = [0.1]
-grad_p_bar_y_lst = [0.1]
+grad_p_bar_x_lst = [5]
+grad_p_bar_y_lst = [5]#[0.1]
 Theta_in_lst = [0.0,0]   
 Theta_out_lst = [0.0,0]
 
@@ -410,8 +410,7 @@ def load_qois(qois_filename):
 def get(qois_vals, qois_names, key):
     return qois_vals[:, qois_names.index(key)]
 
-
-def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix):
+def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix, k_hom=None):
     import numpy as np
     import matplotlib.pyplot as plt
     import os
@@ -428,6 +427,8 @@ def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
     axx, axy = axes
 
+    gx_all, qx_all, gy_all, qy_all = [], [], [], []
+
     for idx, pf in enumerate(pf_list):
         filename = f"{res_folder}/{res_basename_prefix}-pf={pf}-qois.dat"
         if not os.path.exists(filename):
@@ -436,34 +437,54 @@ def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix):
 
         qois_vals, names = load_qois(filename)
 
-        # keep the same slicing convention you use in Kxx/Kyy plot
         qx = get(qois_vals, names, "q_avg_x")[2:]
         qy = get(qois_vals, names, "q_avg_y")[2:]
         gx = get(qois_vals, names, "grad_p_bar_x")[2:]
         gy = get(qois_vals, names, "grad_p_bar_y")[2:]
 
+        # store for reference line range
+        gx_all.append(gx); qx_all.append(qx)
+        gy_all.append(gy); qy_all.append(qy)
+
         c_dark, c_light = colors[idx % len(colors)]
 
-        # qx vs gx
         axx.plot(gx, qx, color=c_dark, linewidth=2.5, label=rf"$p_f={pf}$")
-
-        # qy vs gy
         axy.plot(gy, qy, color=c_light, linewidth=2.5, label=rf"$p_f={pf}$")
+
+    # ---- add theoretical reference lines ----
+    if k_hom is not None:
+        k_hom = np.asarray(k_hom, dtype=float)
+        kxx = k_hom[0, 0]
+        kyy = k_hom[1, 1]
+
+        # pick a reasonable x-range from all datasets
+        if len(gx_all) > 0:
+            gx_min = min([np.min(g) for g in gx_all])
+            gx_max = max([np.max(g) for g in gx_all])
+            gx_ref = np.linspace(gx_min, gx_max, 200)
+            axx.plot(gx_ref, -kxx * gx_ref, "k--", linewidth=2.0,
+                     label=rf"linear model: $q_x=-k_{{xx}}\nabla\bar p_x$ ($k_{{xx}}={kxx:.3g}$)")
+
+        if len(gy_all) > 0:
+            gy_min = min([np.min(g) for g in gy_all])
+            gy_max = max([np.max(g) for g in gy_all])
+            gy_ref = np.linspace(gy_min, gy_max, 200)
+            axy.plot(gy_ref, -kyy * gy_ref, "k--", linewidth=2.0,
+                     label=rf"linear model: $q_y=-k_{{yy}}\nabla\bar p_y$ ($k_{{yy}}={kyy:.3g}$)")
 
     axx.set_xlabel(r"$\nabla \bar{p}_x$", fontsize=16)
     axx.set_ylabel(r"$q_x$", fontsize=16)
     axx.grid(ls="--", alpha=0.4)
-    axx.legend(fontsize=12, framealpha=0.9)
+    axx.legend(fontsize=11, framealpha=0.9)
 
     axy.set_xlabel(r"$\nabla \bar{p}_y$", fontsize=16)
     axy.set_ylabel(r"$q_y$", fontsize=16)
     axy.grid(ls="--", alpha=0.4)
-    axy.legend(fontsize=12, framealpha=0.9)
+    axy.legend(fontsize=11, framealpha=0.9)
 
     plt.tight_layout()
     plt.savefig("plots/q_vs_gradp_multi_pf.png", bbox_inches="tight")
     plt.close()
-
     print("Saved: plots/q_vs_gradp_multi_pf.png")
 
 
@@ -517,6 +538,7 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix):
         eps = 1e-12
         Kxx = -qx / (gx + eps)
         Kyy = -qy / (gy + eps)
+        print(f"pf={pf}: Kxx={Kxx}, Kyy={Kyy}")
 
 
         c_dark, c_light = colors[idx % len(colors)]
@@ -551,7 +573,12 @@ if __name__ == "__main__":
 
     pf_list = pf_values  
     res_basename_prefix = "-dim=2-bcs=pbc-load=K_vs_U"
+    k_hom = [
+        [6.88814361e-01, 7.48353084e-07],
+        [7.48353084e-07, 6.88804851e-01],
+    ]
 
     plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix)
-    plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix)
+    plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix, k_hom=k_hom)
+
 

@@ -229,6 +229,12 @@ class MicroDarcyFlowOperator(Operator):
 
         F = self.kinematics.F
         J = self.kinematics.J
+
+        self.grad_p_tilde_x = dolfin.inv(F).T * self.grad_p_tilde   
+        self.grad_p_bar_x   = dolfin.inv(F).T * self.grad_p_bar  
+
+
+
         K_l = J * dolfin.inv(F) * k_l * dolfin.inv(F).T# reference configuration permeability
         #k_l = (1.0 / J) * F * K_l * F.T  # current configuration permeability
         self.K_l = K_l  # keep reference permeability for output

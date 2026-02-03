@@ -69,6 +69,7 @@ class MicroPoroHomogenizationProblem:
         self.bbox = bbox if (bbox is not None) else bbox_auto
         self.vertices = vertices if (vertices is not None) else vertices_auto
         self.vol = float(vol) if (vol is not None) else float(vol_auto)
+        
 
         # ============================================================
         # Skeleton (linearized W_skel): either (E, nu) or (lambda, mu)
@@ -369,6 +370,7 @@ class MicroPoroHomogenizationProblem:
             k_hom: numpy (dim, dim)
         """
         k_hom = numpy.zeros((self.dim, self.dim), dtype=float)
+        
 
         for i in range(self.dim):
             p_hat = self.solve_cell_pressure_corrector(i, degree_p=degree_p, linear_solver=linear_solver)
@@ -380,13 +382,74 @@ class MicroPoroHomogenizationProblem:
 
             q_avg = numpy.zeros(self.dim, dtype=float)
             for a in range(self.dim):
-                q_avg[a] = dolfin.assemble(q[a] * self.dV) / self.vol
+                #q_avg[a] = dolfin.assemble(q[a] * self.dV) / self.vol
+                q_avg[a] = dolfin.assemble(q[a] * self.dV) / self.mesh_V0  # use original volume
 
             # column i of k_hom equals -<q>
             for a in range(self.dim):
                 k_hom[a, i] = -q_avg[a]
 
         return k_hom
+    
+    def export_flow_solution(self, i, out_xdmf, degree_p=1, linear_solver="mumps", time=0.0):
+        p_hat = self.solve_cell_pressure_corrector(i, degree_p=degree_p, linear_solver=linear_solver)
+
+        Q = dolfin.FunctionSpace(self.mesh, "CG", degree_p)
+        V_q = dolfin.VectorFunctionSpace(self.mesh, "DG", 0)
+
+        p_hat_p = dolfin.project(p_hat, Q)
+
+        e = numpy.zeros(self.dim); e[i] = 1.0
+        grad_p_bar = dolfin.Constant(e)
+        q_expr = - self.k_l0 * (grad_p_bar + dolfin.grad(p_hat_p))
+        q = dolfin.project(q_expr, V_q)
+
+        self.write_xdmf(out_xdmf, [
+            ("p_hat", p_hat_p),
+            ("q", q),
+        ], time=time)
+
+        return p_hat_p, q
+
+    def export_elasticity_solution(self, E_macro, out_xdmf, degree_u=2, linear_solver="mumps", time=0.0):
+        # solve
+        u_hat = self.solve_cell_elasticity(E_macro, degree_u=degree_u, linear_solver=linear_solver)
+
+        # spaces for projection
+        V_u = dolfin.VectorFunctionSpace(self.mesh, "CG", degree_u)
+        V_eps = dolfin.TensorFunctionSpace(self.mesh, "DG", 0)  # piecewise const is often nicer for strains/stresses
+        V_sig = dolfin.TensorFunctionSpace(self.mesh, "DG", 0)
+
+        # project fields
+        u_hat_p = dolfin.project(u_hat, V_u)
+        eps_u   = dolfin.project(self.eps(u_hat_p), V_eps)
+
+        Sigma = self.sigma_skel(u_hat_p, E_macro)
+        Sigma_p = dolfin.project(Sigma, V_sig)
+
+        self.write_xdmf(out_xdmf, [
+            ("u_hat", u_hat_p),
+            ("eps_u", eps_u),
+            ("Sigma", Sigma_p),
+        ], time=time)
+
+        return u_hat_p, eps_u, Sigma_p
+
+    def write_xdmf(self, filename, fields, time=0.0):
+        """
+        fields: list of (name, dolfin.Function)
+        """
+        xdmf = dolfin.XDMFFile(self.mesh.mpi_comm(), filename)
+        xdmf.parameters["flush_output"] = True
+        xdmf.parameters["functions_share_mesh"] = True
+        xdmf.parameters["rewrite_function_mesh"] = False
+
+        for name, f in fields:
+            f.rename(name, "")
+            xdmf.write(f, time)
+
+        xdmf.close()
+
     
     
 
@@ -470,6 +533,9 @@ def fit_lame_from_wskel(dim, material_parameters, eps0=1e-7):
 
 
 
+
+
+
 res_folder = sys.argv[0][:-3]
 test = mypy.Test(
     res_folder=res_folder,
@@ -508,7 +574,7 @@ flow_params = {
     "rho_l": 1.0,
     "k_l": dolfin.Constant(((1, 0.0),
                             (0.0, 1))),
-    "pl_bar": 0.3
+    "pl_bar": 0
 }
 
 # --- periodic cell geometry (if your init auto-computes bbox/vertices/vol, you can omit them) ---
@@ -536,4 +602,21 @@ k_hom_rho = float(flow_params["rho_l"]) * k_hom
 print("rho*k_hom =\n", k_hom_rho)
 
 #Phi_s_expr = hp.Phi_s_from_pl(p_l)   # p_l 可以是 dolfin Function
+print("resfolder:", res_folder)
+E_macro = dolfin.Constant(hp.get_macro_strain(0))
+hp.export_elasticity_solution(
+    E_macro=E_macro,
+    out_xdmf=res_folder + "/results_elasticity_xx.xdmf",
+    degree_u=2,
+    linear_solver="mumps",
+    time=0.0
+)
 
+# 例：导出 Darcy corrector：grad(p)=e_x (i=0)
+hp.export_flow_solution(
+    i=0,
+    out_xdmf=res_folder + "/results_flow_ex.xdmf",
+    degree_p=1,
+    linear_solver="mumps",
+    time=0.0
+)

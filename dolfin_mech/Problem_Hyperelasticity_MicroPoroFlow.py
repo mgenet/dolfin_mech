@@ -1005,7 +1005,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
 
-        velocity_expr = - operator.k_l * (operator.grad_p_bar + operator.grad_p_tilde)
+        velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
         velocity_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
         self.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
 
