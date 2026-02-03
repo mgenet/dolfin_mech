@@ -28,11 +28,11 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    # mesh = dolfin.Mesh()
-    # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
-    #      infile.read(mesh)
+    mesh = dolfin.Mesh()
+    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+         infile.read(mesh)
 
-    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    # mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
@@ -66,7 +66,7 @@ def run_MicroPoroFlowHyperelasticity(
         points_mf=points_mf,
         displacement_perturbation_degree=2,
         quadrature_degree = 6,
-        bcs="pbc",
+        bcs=bcs,
         porosity_init_val=poro_val,
         porosity_init_fun=porosity_fun,
         flow_params=flow_params,
@@ -286,10 +286,10 @@ dim_lst  = [ ]
 dim_lst += [2]
 # dim_lst += [3]
 
-pf_values = [0.0, 0.03,0.06]
-#pf_values = [0.0]
-grad_p_bar_x_lst = [0.05,0.05]
-grad_p_bar_y_lst = [0.05,0.05]
+#pf_values = [0.0, 0.03,0.06]
+pf_values = [0.0]
+grad_p_bar_x_lst = [0.1]
+grad_p_bar_y_lst = [0.1]
 Theta_in_lst = [0.0,0]   
 Theta_out_lst = [0.0,0]
 
@@ -322,9 +322,9 @@ for dim in dim_lst:
 
                 load_params["pf_lst"] = [pf,pf]
 
-                #load_params["U_bar_00_lst"] = [0,0.3]
+                #load_params["U_bar_00_lst"] = [0,0.0]
 
-                load_params["sigma_bar_00_lst"] = [0,0.1]
+                load_params["sigma_bar_00_lst"] = [0,0.0]
 
                 for i in range(dim):
                     for j in range(dim):
@@ -362,9 +362,10 @@ for dim in dim_lst:
                         },
                     flow_params={
                         "rho_l": 1.0,
-                        "k_l": dolfin.Constant(((1e-15, 0.0),
-                            (0.0, 1e-15))),
-                        "pl_bar": 0.3
+                        # "k_l": dolfin.Constant(((1e-15, 0.0),
+                        #     (0.0, 1e-15))),
+                         "k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
+                        "pl_bar": 0
                         },
                     flow_loading_params=flow_loading_params,
                     porosity_params={
@@ -373,12 +374,19 @@ for dim in dim_lst:
                     },  
                     
                     bcs=bcs,
+                    # step_params = {
+                    #     "n_steps": 2,
+                    #     "Deltat_lst": [1e-2, 1e-1],     
+                    #     "dt_ini_lst": [5e-3, 1e-3],     
+                    #     "dt_min_lst": [5e-3, 1e-4],     
+                    #     "dt_max_lst": [5e-3, 5e-3],     
+                    # },
                     step_params = {
-                        "n_steps": 2,
-                        "Deltat_lst": [1e-2, 1e-1],     
-                        "dt_ini_lst": [5e-3, 1e-3],     
-                        "dt_min_lst": [5e-3, 1e-4],     
-                        "dt_max_lst": [5e-3, 5e-3],     
+                        "n_steps": 1,
+                        "Deltat_lst": [1e-1],     
+                        "dt_ini_lst": [1e-3],     
+                        "dt_min_lst": [5e-3],     
+                        "dt_max_lst": [5e-3],     
                     },
                     load_params=load_params,
                     res_basename=res_folder+"/"+res_basename,
@@ -401,6 +409,62 @@ def load_qois(qois_filename):
 
 def get(qois_vals, qois_names, key):
     return qois_vals[:, qois_names.index(key)]
+
+
+def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+
+    os.makedirs("plots", exist_ok=True)
+
+    colors = [
+        ("#1f77b4", "#aec7e8"),
+        ("#d62728", "#ff9896"),
+        ("#2ca02c", "#98df8a"),
+        ("#9467bd", "#c5b0d5"),
+    ]
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
+    axx, axy = axes
+
+    for idx, pf in enumerate(pf_list):
+        filename = f"{res_folder}/{res_basename_prefix}-pf={pf}-qois.dat"
+        if not os.path.exists(filename):
+            print(f"[WARNING] File missing: {filename}")
+            continue
+
+        qois_vals, names = load_qois(filename)
+
+        # keep the same slicing convention you use in Kxx/Kyy plot
+        qx = get(qois_vals, names, "q_avg_x")[2:]
+        qy = get(qois_vals, names, "q_avg_y")[2:]
+        gx = get(qois_vals, names, "grad_p_bar_x")[2:]
+        gy = get(qois_vals, names, "grad_p_bar_y")[2:]
+
+        c_dark, c_light = colors[idx % len(colors)]
+
+        # qx vs gx
+        axx.plot(gx, qx, color=c_dark, linewidth=2.5, label=rf"$p_f={pf}$")
+
+        # qy vs gy
+        axy.plot(gy, qy, color=c_light, linewidth=2.5, label=rf"$p_f={pf}$")
+
+    axx.set_xlabel(r"$\nabla \bar{p}_x$", fontsize=16)
+    axx.set_ylabel(r"$q_x$", fontsize=16)
+    axx.grid(ls="--", alpha=0.4)
+    axx.legend(fontsize=12, framealpha=0.9)
+
+    axy.set_xlabel(r"$\nabla \bar{p}_y$", fontsize=16)
+    axy.set_ylabel(r"$q_y$", fontsize=16)
+    axy.grid(ls="--", alpha=0.4)
+    axy.legend(fontsize=12, framealpha=0.9)
+
+    plt.tight_layout()
+    plt.savefig("plots/q_vs_gradp_multi_pf.png", bbox_inches="tight")
+    plt.close()
+
+    print("Saved: plots/q_vs_gradp_multi_pf.png")
 
 
 def plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix):
@@ -489,4 +553,5 @@ if __name__ == "__main__":
     res_basename_prefix = "-dim=2-bcs=pbc-load=K_vs_U"
 
     plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix)
+    plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix)
 

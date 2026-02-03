@@ -8,6 +8,12 @@ from fenics import *
 import dolfin_mech as dmech
 # ---- minimal kinematics: reference configuration ----
 
+def lame_to_Enu_3D(lam, mu):
+    lam = float(lam); mu = float(mu)
+    nu = lam / (2.0 * (lam + mu))
+    E  = mu * (3.0*lam + 2.0*mu) / (lam + mu)
+    return {"E": E, "nu": nu}
+
 def fit_lame_from_wskel(dim, material_parameters, eps0=1e-7):
 
     if dim == 2:
@@ -128,24 +134,26 @@ mu0  = mu_list[0]
 rel_lam = (lam_list - lam0) / abs(lam0)
 rel_mu  = (mu_list  - mu0 ) / abs(mu0 )
 
-# ---- plot 1: lambda, mu vs eps ----
-plt.figure()
-plt.semilogx(eps_list, lam_list, marker='o', label='lambda')
-plt.semilogx(eps_list, mu_list,  marker='s', label='mu')
-plt.xlabel('eps0')
-plt.ylabel('fitted coefficient')
-plt.grid(True, which='both')
-plt.legend()
-plt.tight_layout()
+# # ---- plot 1: lambda, mu vs eps ----
+# plt.figure()
+# plt.semilogx(eps_list, lam_list, marker='o', label='lambda')
+# plt.semilogx(eps_list, mu_list,  marker='s', label='mu')
+# plt.xlabel('eps0')
+# plt.ylabel('fitted coefficient')
+# plt.grid(True, which='both')
+# plt.legend()
+# plt.tight_layout()
 
-# ---- plot 2: relative deviation from linear baseline ----
-plt.figure()
-plt.semilogx(eps_list, rel_lam, marker='o', label='(lambda-lambda0)/|lambda0|')
-plt.semilogx(eps_list, rel_mu,  marker='s', label='(mu-mu0)/|mu0|')
-plt.xlabel('eps0')
-plt.ylabel('relative deviation')
-plt.grid(True, which='both')
-plt.legend()
-plt.tight_layout()
+# # ---- plot 2: relative deviation from linear baseline ----
+# plt.figure()
+# plt.semilogx(eps_list, rel_lam, marker='o', label='(lambda-lambda0)/|lambda0|')
+# plt.semilogx(eps_list, rel_mu,  marker='s', label='(mu-mu0)/|mu0|')
+# plt.xlabel('eps0')
+# plt.ylabel('relative deviation')
+# plt.grid(True, which='both')
+# plt.legend()
+# plt.tight_layout()
 
-plt.show()
+# plt.show()
+Enu = lame_to_Enu_3D(lam, mu)
+print("Equivalent (3D) Enu =", Enu)

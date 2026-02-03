@@ -261,9 +261,6 @@ class Problem():
             for (k_subsol,subsol) in enumerate(self.subsols):
                 subsol.fs = self.sol_fs.sub(k_subsol)
 
-        print("dim(p)   =", self.pl_perturbation_subsol.fs.dim())
-        print("dim(lam) =", self.lambda_pl_perturbation_zero_mean_subsol.fs.dim())
-
 
 
     def set_solution_functions(self):
@@ -352,10 +349,14 @@ class Problem():
             degree=degree)
 
         self.mfoi_fe = dolfin.TensorElement(
-            family="DG",
+            family="CG",
             cell=self.mesh.ufl_cell(),
             degree=degree)
-
+        
+        print("[FOI] mfoi_fe type:", type(self.mfoi_fe))
+        print("[FOI] mfoi_fe family:", self.mfoi_fe.family())
+        print("[FOI] mfoi_fe degree:", self.mfoi_fe.degree())
+        print("[FOI] mfoi_fe:", self.mfoi_fe)
 
 
     def set_foi_finite_elements_Quad(self,
@@ -390,19 +391,30 @@ class Problem():
 
 
 
-    def set_foi_function_spaces(self):
+    # def set_foi_function_spaces(self):
+
+    #     self.sfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh,
+    #         self.sfoi_fe) # MG: element keyword don't work here…
+
+    #     self.vfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh,
+    #         self.vfoi_fe) # MG: element keyword don't work here…
+
+    #     self.mfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh,
+    #         self.mfoi_fe) # MG: element keyword don't work here…
+    def set_foi_function_spaces(self, constrained_domain=None):
 
         self.sfoi_fs = dolfin.FunctionSpace(
-            self.mesh,
-            self.sfoi_fe) # MG: element keyword don't work here…
+            self.mesh, self.sfoi_fe, constrained_domain=constrained_domain)
 
         self.vfoi_fs = dolfin.FunctionSpace(
-            self.mesh,
-            self.vfoi_fe) # MG: element keyword don't work here…
+            self.mesh, self.vfoi_fe, constrained_domain=constrained_domain)
 
         self.mfoi_fs = dolfin.FunctionSpace(
-            self.mesh,
-            self.mfoi_fe) # MG: element keyword don't work here…
+            self.mesh, self.mfoi_fe, constrained_domain=constrained_domain)
+
 
 
 

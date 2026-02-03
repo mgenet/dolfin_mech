@@ -236,7 +236,7 @@ class MicroDarcyFlowOperator(Operator):
         self.J = J
 
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(K_l * dolfin.inv(kinematics.F) * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
+        self.res_form = rho_l * dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         # form pl_field operator#
         self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
         # form wbulk operator#

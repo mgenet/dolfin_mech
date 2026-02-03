@@ -25,10 +25,14 @@ class MicroPoroHomogenizationProblem:
         vertices=None):
 
         # ---------------- mesh ----------------
-        if mesh is None:
-            if mesh_params is None:
-                raise ValueError("Provide either mesh or mesh_params.")
-            mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+        # if mesh is None:
+        #     if mesh_params is None:
+        #         raise ValueError("Provide either mesh or mesh_params.")
+        #     mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+
+        mesh = dolfin.Mesh()
+        with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+            infile.read(mesh)
 
         self.mesh = mesh
         self.dim = dim

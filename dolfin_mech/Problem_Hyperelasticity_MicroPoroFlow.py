@@ -45,7 +45,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             displacement_perturbation_degree=None,
             solid_pressure_degree=None,
             porosity_known="Phis0",
-            bcs="kubc",
+            bcs="pbc",
             porosity_degree=None,
             porosity_init_val=None,
             porosity_init_fun=None,
@@ -134,12 +134,12 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         self.add_foi(
             expr=self.U_bar,
-            fs=self.displacement_perturbation_subsol.fs.collapse(),
+            fs=self.vfoi_fs,
             name="U_bar",
             update_type="project")
         self.add_foi(
             expr=self.U_tot,
-            fs=self.displacement_perturbation_subsol.fs.collapse(),
+            fs=self.vfoi_fs,
             name="U_tot",
             update_type="project")
 
@@ -461,34 +461,34 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         if (self.porosity_known == "Phis0"): self.add_foi(
             expr=self.Phis0,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="Phis0",
             update_type="project")
         self.add_foi(
             expr=1. - self.Phis0,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="Phif0",
             update_type="project")
 
         if (self.porosity_known == "phis"): self.add_foi(
             expr=self.Phis,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="Phis",
             update_type="project")
         self.add_foi(
             expr=self.kinematics.J - self.Phis,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="Phif",
             update_type="project")
 
         self.add_foi(
             expr=self.phis,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="phis",
-                update_type="project")
+            update_type="project")
         self.add_foi(
             expr=1. - self.phis,
-            fs=self.porosity_subsol.fs.collapse(),
+            fs=self.sfoi_fs,
             name="phif",
             update_type="project")
 
