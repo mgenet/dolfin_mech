@@ -25,14 +25,14 @@ class MicroPoroHomogenizationProblem:
         vertices=None):
 
         # ---------------- mesh ----------------
-        # if mesh is None:
-        #     if mesh_params is None:
-        #         raise ValueError("Provide either mesh or mesh_params.")
-        #     mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+        if mesh is None:
+            if mesh_params is None:
+                raise ValueError("Provide either mesh or mesh_params.")
+            mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
-        mesh = dolfin.Mesh()
-        with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
-            infile.read(mesh)
+        # mesh = dolfin.Mesh()
+        # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+        #     infile.read(mesh)
 
         self.mesh = mesh
         self.dim = dim
@@ -544,7 +544,7 @@ test = mypy.Test(
     clean_after_tests=0,
     tester_numpy_tolerance=1e-2)
 
-mesh_params={"dim":2, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"}
+mesh_params={"dim":2, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.001, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"}
 mat_params = {
     "alpha": 0.16,
     "gamma": 0.5,

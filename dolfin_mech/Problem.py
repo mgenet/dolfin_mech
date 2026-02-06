@@ -349,7 +349,7 @@ class Problem():
             degree=degree)
 
         self.mfoi_fe = dolfin.TensorElement(
-            family="CG",
+            family="DG",
             cell=self.mesh.ufl_cell(),
             degree=degree)
         
@@ -391,29 +391,29 @@ class Problem():
 
 
 
-    # def set_foi_function_spaces(self):
-
-    #     self.sfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh,
-    #         self.sfoi_fe) # MG: element keyword don't work here…
-
-    #     self.vfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh,
-    #         self.vfoi_fe) # MG: element keyword don't work here…
-
-    #     self.mfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh,
-    #         self.mfoi_fe) # MG: element keyword don't work here…
-    def set_foi_function_spaces(self, constrained_domain=None):
+    def set_foi_function_spaces(self):
 
         self.sfoi_fs = dolfin.FunctionSpace(
-            self.mesh, self.sfoi_fe, constrained_domain=constrained_domain)
+            self.mesh,
+            self.sfoi_fe) # MG: element keyword don't work here…
 
         self.vfoi_fs = dolfin.FunctionSpace(
-            self.mesh, self.vfoi_fe, constrained_domain=constrained_domain)
+            self.mesh,
+            self.vfoi_fe) # MG: element keyword don't work here…
 
         self.mfoi_fs = dolfin.FunctionSpace(
-            self.mesh, self.mfoi_fe, constrained_domain=constrained_domain)
+            self.mesh,
+            self.mfoi_fe) # MG: element keyword don't work here…
+    # def set_foi_function_spaces(self, constrained_domain=None):
+
+    #     self.sfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh, self.sfoi_fe, constrained_domain=constrained_domain)
+
+    #     self.vfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh, self.vfoi_fe, constrained_domain=constrained_domain)
+
+    #     self.mfoi_fs = dolfin.FunctionSpace(
+    #         self.mesh, self.mfoi_fe, constrained_domain=constrained_domain)
 
 
 

@@ -220,7 +220,7 @@ class MicroDarcyFlowOperator(Operator):
         ))
 
         self.pl_bar= pl_bar
-        self.pl_tot = ( self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde)
+        self.pl_tot = self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde
         self.measure = dx  
         self.kinematics = kinematics
 
@@ -244,7 +244,8 @@ class MicroDarcyFlowOperator(Operator):
         # --- Darcy flow residual (standard diffusion-like form) ---
         self.res_form = rho_l * dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         # form pl_field operator#
-        self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
+        #self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
+        self.res_form += dolfin.inner(p_tilde, unknown_porosity_test) * self.kinematics.J * self.measure
         # form wbulk operator#
         # self.res_form +=  dolfin.inner(
         #     -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,

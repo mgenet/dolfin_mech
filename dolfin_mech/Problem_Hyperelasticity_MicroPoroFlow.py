@@ -1023,10 +1023,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             norm=V
         )
         
-
-
-
-            
         self.add_foi(
             expr=operator.pl_tot,
             fs=self.pl_perturbation_subsol.fs.collapse(),
@@ -1041,8 +1037,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             if hasattr(wbulk_op, "mat") and hasattr(wbulk_op.mat, "dWbulkdPhis"):
                 return wbulk_op.mat.dWbulkdPhis
             raise AttributeError(f"dWbulkdPhis not found on {type(wbulk_op)}")
-
-        self.darcy_operator = operator
 
         if hasattr(self, "wbulk_ops"):
             for item in self.wbulk_ops:
@@ -1070,10 +1064,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                         expr=diff_expr * dx_bulk,
                         norm=Area
             )
-
-
-
-
 
         return self.add_operator(operator=operator, k_step=k_step)
     

@@ -94,11 +94,8 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
         self.set_foi_finite_elements_DG(
             degree=foi_degree)
-        #self.set_foi_function_spaces()
-        if (bcs == "pbc"):
-            self.set_foi_function_spaces(constrained_domain=periodic_sd)
-        else:
-            self.set_foi_function_spaces()
+        self.set_foi_function_spaces()
+
 
         self.add_foi(
             expr=self.U_bar,
