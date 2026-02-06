@@ -76,11 +76,33 @@ class QOI():
 
 
     def update_direct(self, dt=None, k_step=None):
-        
-        self.value = self.expr(self.point)
+        """
+        Docstring for MPI SAFE update_direct
+        """
+        # MPI safe version
+        try:
+            local_value = self.expr(self.point)
+            found = 1.0
+        except RuntimeError:
+            # Point not in this rank's subdomain in MPIrun
+            local_value = 0.0
+            found = 0.0
+
+        # Sum across all ranks to get the true value on all processes (can be shared)
+        comm = dolfin.MPI.comm_world
+        global_value = dolfin.MPI.sum(comm, local_value)
+        global_found = dolfin.MPI.sum(comm, found)
+
+        if global_found > 0:
+            self.value = global_value / global_found
+        else:
+            # This happens if the point is truly outside the global domain
+            self.value = 0.0
+
+        self.value = dolfin.MPI.sum(dolfin.MPI.comm_world, local_value)
 
         self.value += self.constant
         self.value /= self.norm
-
+        
         if (self.divide_by_dt) and (dt is not None):
             self.value /= dt
