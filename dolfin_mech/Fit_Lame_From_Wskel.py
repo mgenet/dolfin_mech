@@ -157,3 +157,75 @@ rel_mu  = (mu_list  - mu0 ) / abs(mu0 )
 # plt.show()
 Enu = lame_to_Enu_3D(lam, mu)
 print("Equivalent (3D) Enu =", Enu)
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# -------- parameters (edit these) --------
+kappa = 1.0      # your kappa
+phis0 = 0.2      # Phis0 (reference solid fraction)
+delta = 0.02     # Delta Phis (try 0.005, 0.01, 0.02, 0.04, ...)
+# ----------------------------------------
+
+def dWbulkdPhis(phis, kappa, phis0):
+    # dW/dPhis = kappa * (1/Phis0 - 1/Phis)
+    return kappa * (1.0/phis0 - 1.0/phis)
+
+# Phis range (avoid 0 to prevent singularity)
+phis_min = 0.05
+phis_max = 0.6
+phis = np.linspace(phis_min, phis_max, 1000)
+
+# Ensure perturbed Phis stays positive
+phis_pert = phis + delta
+mask = phis_pert > 1e-12
+phis_plot = phis[mask]
+phis_pert_plot = phis_pert[mask]
+
+q = dWbulkdPhis(phis_plot, kappa, phis0)
+q_pert = dWbulkdPhis(phis_pert_plot, kappa, phis0)
+
+dq = q_pert - q
+rel = dq / np.maximum(np.abs(q), 1e-14)  # relative change, avoid divide by 0
+
+# ---- plot 1: dW/dPhis curves ----
+plt.figure()
+plt.plot(phis_plot, q, label="dWbulkdPhis(Phis)")
+plt.plot(phis_plot, q_pert, label=f"dWbulkdPhis(Phis + {delta:g})", linestyle="--")
+plt.axvline(phis0, linestyle=":", label="Phis0")
+plt.xlabel("Phis")
+plt.ylabel("dWbulkdPhis")
+plt.legend()
+plt.title("dWbulkdPhis vs Phis (with perturbation)")
+plt.grid(True, alpha=0.3)
+
+# ---- plot 2: absolute change ----
+# plt.figure()
+# plt.plot(phis_plot, dq, label="Delta(dWbulkdPhis)")
+# plt.xlabel("Phis")
+# plt.ylabel("dWbulkdPhis(Phis+delta) - dWbulkdPhis(Phis)")
+# plt.legend()
+# plt.title("Absolute impact of delta on dWbulkdPhis")
+# plt.grid(True, alpha=0.3)
+
+# ---- plot 3: relative change ----
+# plt.figure()
+# plt.plot(phis_plot, rel, label="Relative change")
+# plt.xlabel("Phis")
+# plt.ylabel("Delta / |base|")
+# plt.legend()
+# plt.title("Relative impact of delta on dWbulkdPhis")
+# plt.grid(True, alpha=0.3)
+
+plt.show()
+
+# ---- quick sensitivity number at a point (optional) ----
+# pick a representative point near your average, e.g. Phis=0.2
+phis_star = 0.2
+q_star = dWbulkdPhis(phis_star, kappa, phis0)
+q_star_pert = dWbulkdPhis(phis_star + delta, kappa, phis0)
+print("At Phis =", phis_star)
+print("dWbulkdPhis =", q_star)
+print("dWbulkdPhis(Phis+delta) =", q_star_pert)
+print("Absolute change =", q_star_pert - q_star)
+print("Relative change =", (q_star_pert - q_star) / (abs(q_star) + 1e-14))

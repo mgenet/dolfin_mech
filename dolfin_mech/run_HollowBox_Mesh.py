@@ -97,6 +97,7 @@ def run_HollowBox_Mesh(
         gmsh.model.occ.addDisk(xc=xmin, yc=ymax, zc=0., rx=r0, ry=r0, tag=hole4_tag)
         gmsh.model.occ.cut(objectDimTags=[(2, box_tag)], toolDimTags=[(2, hole1_tag), (2, hole2_tag), (2, hole3_tag), (2, hole4_tag)], tag=rve_tag)
         gmsh.model.occ.synchronize()
+        #rve_tag = box_tag
         gmsh.model.addPhysicalGroup(dim=2, tags=[rve_tag])
         dmech.setPeriodic(dim=2, coord=0, xmin=xmin+xshift, ymin=ymin+yshift, zmin=0., xmax=xmax+xshift, ymax=ymax+yshift, zmax=0.)
         dmech.setPeriodic(dim=2, coord=1, xmin=xmin+xshift, ymin=ymin+yshift, zmin=0., xmax=xmax+xshift, ymax=ymax+yshift, zmax=0.)

@@ -1004,15 +1004,18 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
+        velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
 
         velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
         velocity_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
         self.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
 
         Area = dolfin.assemble(1.0 * dx)
-        self.add_qoi(name="q_avg_x", expr=velocity_expr[0] * dx, norm=Area)
-        
-        self.add_qoi(name="q_avg_y", expr=velocity_expr[1] * dx, norm=Area)
+        Vcur = dolfin.assemble(self.kinematics.J * dx)
+        #self.add_qoi(name="q_avg_x", expr=velocity_expr[0]  * self.kinematics.J * dx, norm=Vcur)
+        #self.add_qoi(name="q_avg_y", expr=velocity_expr[1]  * self.kinematics.J * dx, norm=Vcur)
+        self.add_qoi(name="q_avg_x", expr=velocity_expr_ref[0]* dx, norm=Area)
+        self.add_qoi(name="q_avg_y", expr=velocity_expr_ref[1]* dx, norm=Area)
         self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)
         self.add_qoi(name="grad_p_bar_y",expr=operator.grad_p_bar[1] * dx,norm=Area)
 
