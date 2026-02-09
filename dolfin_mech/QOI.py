@@ -74,33 +74,35 @@ class QOI():
             self.value /= dt
 
 
-
     def update_direct(self, dt=None, k_step=None):
         """
-        Docstring for MPI SAFE update_direct
+        This is a MPI safe version of the update (evaluation) of a qoi
+        at a given point.
+        An error is raised if the point is outside the domain.
         """
         # MPI safe version
         try:
             local_value = self.expr(self.point)
             found = 1.0
         except RuntimeError:
-            # Point not in this rank's subdomain in MPIrun
             local_value = 0.0
             found = 0.0
 
-        # Sum across all ranks to get the true value on all processes (can be shared)
         comm = dolfin.MPI.comm_world
         global_value = dolfin.MPI.sum(comm, local_value)
         global_found = dolfin.MPI.sum(comm, found)
 
-        if global_found > 0:
-            self.value = global_value / global_found
-        else:
-            # This happens if the point is truly outside the global domain
-            self.value = 0.0
+    
+        if global_found == 0:   
+            if dolfin.MPI.rank(comm) == 0:
+                raise ValueError(f"Erreur : Point {self.point} does not belong to any of the MPI subdomains.")
+            else:
+                raise ValueError("Point outside of domain (secondary rank)")
 
-        self.value = dolfin.MPI.sum(dolfin.MPI.comm_world, local_value)
 
+        # if the point is shared between procs (interface)
+        self.value = global_value / global_found
+        
         self.value += self.constant
         self.value /= self.norm
         
