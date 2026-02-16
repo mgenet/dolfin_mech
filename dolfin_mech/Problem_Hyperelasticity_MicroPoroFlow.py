@@ -321,6 +321,18 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             degree=degree,
             symmetry=symmetry,
             init_val=init_val)
+        
+    def add_macroscopic_unknown_porosity_gradient_subsol(self,degree=0,init_val=None):
+
+        dim = self.mesh.geometry().dim()
+
+        self.grad_unknown_porosity_bar_subsol = self.add_vector_subsol(
+            name="grad_unknown_porosity_bar",
+            family="R",
+            degree=degree,
+            dim=dim,
+            init_val=init_val)
+
 
 
 

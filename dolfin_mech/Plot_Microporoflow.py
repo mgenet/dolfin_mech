@@ -82,11 +82,11 @@ def plot_K_vs_pg_multi_Ex(
 
     ax.set_xlabel(r"$p_f\,(kPa)$", fontsize=16)  # 你这里写 p_f 更一致
     ax.set_ylabel(r"$\tilde{K}_{xx},\,\tilde{K}_{yy}\,(m^2/(Pa\cdot s))$", fontsize=16)
-    ax.grid(ls="--", alpha=0.4)
+    #ax.grid(ls="--", alpha=0.4)
     ax.legend(fontsize=11, framealpha=0.9, loc="upper left")
 
     plt.tight_layout()
-    plt.savefig(savepath, bbox_inches="tight")
+    plt.savefig(savepath, bbox_inches="tight",dpi=300)
     plt.close()
     print(f"Saved: {savepath}")
 
@@ -235,8 +235,26 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(
         c_dark, c_light = colors[idx % len(colors)]
 
         # plot measured
-        ax.plot(Uxx, Kxx, color=c_dark,  linewidth=2.5, label=rf"$K_{{xx}}$ (from $-q_x/g_x$), $p_f={pf}$")
-        ax.plot(Uxx, Kyy, color=c_light, linewidth=2.5, label=rf"$K_{{yy}}$ (from $-q_y/g_y$), $p_f={pf}$")
+        ax.plot(
+            Uxx, Kxx,
+            color=c_dark, linewidth=2.5,
+            label=rf"$\tilde{{K}}_{{xx}}$, $p_g={pf}\,\mathrm{{kPa}}$"
+        )
+
+        ax.plot(
+            Uxx, Kyy,
+            color=c_light, linewidth=2.5,
+            label=rf"$\tilde{{K}}_{{yy}}$, $p_g={pf}\,\mathrm{{kPa}}$"
+        )
+
+
+        ax.set_xlabel(r"$E_x\;()$", fontsize=14)
+        ax.set_ylabel(
+            r"$\tilde{K}_{xx},\,\tilde{K}_{yy}\;(\mathrm{m}^2\,\mathrm{Pa}^{-1}\,\mathrm{s}^{-1})$",
+            fontsize=14
+        )
+
+
 
         # --- build K0 for prediction ---
         if K0_global is not None:
@@ -281,15 +299,15 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(
         # optional quick print
         print(f"pf={pf}: K0 used for pred =\n{K0}")
 
-    ax.set_xlabel(r"$U_{\bar{XX}}$", fontsize=16)
-    ax.set_ylabel(r"$K_{xx}, K_{yy}$", fontsize=16)
-    ax.grid(ls="--", alpha=0.4)
+    # ax.set_xlabel(r"$U_{\bar{XX}}$", fontsize=16)
+    # ax.set_ylabel(r"$K_{xx}, K_{yy}$", fontsize=16)
+    # ax.grid(ls="--", alpha=0.4)
 
     # legend can get big; make it compact
     ax.legend(fontsize=9.5, framealpha=0.9, ncol=1)
 
     plt.tight_layout()
-    plt.savefig("plots/Kxx_Kyy_vs_Uxx_multi_pf.png", bbox_inches="tight")
+    plt.savefig("plots/Kxx_Kyy_vs_Uxx_multi_pf.png", bbox_inches="tight",dpi=300)
     plt.close()
     print("Saved: plots/Kxx_Kyy_vs_Uxx_multi_pf.png")
 
