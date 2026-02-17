@@ -28,11 +28,11 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
-         infile.read(mesh)
+    # mesh = dolfin.Mesh()
+    # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+    #      infile.read(mesh)
 
-    #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
     boundaries_mf = dolfin.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     boundaries_mf.set_all(0)
@@ -199,7 +199,7 @@ def run_MicroPoroFlowHyperelasticity(
             U_test=problem.displacement_perturbation_subsol.dsubtest,
             X=problem.X,
             X_0=problem.X_0,
-            unknown_porosity_test=problem.porosity_subsol.dsubtest,
+            unknown_porosity_test=problem.unknown_porosity_tot_test,
             k_l=k_l,
             rho_l=rho_l,
             pl_bar=pl_bar,
