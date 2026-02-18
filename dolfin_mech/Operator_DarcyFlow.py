@@ -63,17 +63,6 @@ class DarcyFlowOperator(Operator):
             self.res_form += Theta_out * p_test * dx_out
 
 
-
-
-
-class PlFieldOperator(Operator):
-    def __init__(self,
-                 pl,
-                 unknown_porosity_test,
-                 measure):
-        self.measure = measure
-        self.res_form = dolfin.inner(pl, unknown_porosity_test) * self.measure
-
 class WskelPoroFlowOperator(Operator):
 
     def __init__(self,

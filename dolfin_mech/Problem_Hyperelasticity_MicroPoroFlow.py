@@ -211,12 +211,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 val=[0.]*self.dim,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
-            # self.add_constraint(
-            #     V=self.pl_perturbation_subsol.fs, 
-            #     val=0,
-            #     sub_domain=pinpoint_sd,
-            #     method='pointwise')
-
         
 
 
@@ -1329,7 +1323,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             U_test=self.displacement_perturbation_subsol.dsubtest,
             Phis0=self.Phis0,
             Phis=self.unknown_porosity_tot,
-            Phis_test=self.unknown_porosity_tot_test,
+            Phis_test=self.porosity_subsol.dsubtest,
             material_parameters=material_parameters,
             material_scaling=material_scaling,
             measure=self.get_subdomain_measure(subdomain_id))

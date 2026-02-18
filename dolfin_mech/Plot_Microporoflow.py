@@ -30,7 +30,7 @@ def plot_K_vs_pg_multi_Ex(
     Ex_list,
     slice_start=0,
     eps=1e-12,
-    pg_key="p_f",       # 从 qoi 里读 p_f
+    pg_key="p_f",       
     gx_key="grad_p_bar_x",
     gy_key="grad_p_bar_y",
     qx_key="q_avg_x",
@@ -70,7 +70,6 @@ def plot_K_vs_pg_multi_Ex(
         Kxx = -qx / (gx + eps)
         Kyy = -qy / (gy + eps)
 
-        # 排序（保证 pf 递增画出来是顺的）
         order = np.argsort(pf)
         pf, Kxx, Kyy = pf[order], Kxx[order], Kyy[order]
 
