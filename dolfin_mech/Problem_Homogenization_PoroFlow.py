@@ -30,9 +30,17 @@ class MicroPoroHomogenizationProblem:
         #         raise ValueError("Provide either mesh or mesh_params.")
         #     mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
+        # mesh = dolfin.Mesh()
+        # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+        #     infile.read(mesh)
+        # mesh = dolfin.Mesh()
+        # with dolfin.XDMFFile("/Users/xiao/PhD/dolfin_mech_HX2/mesh/voronoi_2D_batch_circle/mesh_phi0p7588_RVE.xdmf") as infile:
+        #     infile.read(mesh)
+
         mesh = dolfin.Mesh()
-        with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+        with dolfin.XDMFFile("/Users/xiao/PhD/dolfin_mech_HX2/mesh/meshes_hex_inclusions/RVE_simple.xdmf") as infile:
             infile.read(mesh)
+
 
         self.mesh = mesh
         self.dim = dim

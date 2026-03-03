@@ -124,17 +124,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         self.U_tot_old  = self.U_bar_old  + self.displacement_perturbation_subsol.func_old
         self.U_tot_test = self.U_bar_test + self.displacement_perturbation_subsol.dsubtest
 
-
-        #self.unknown_porosity_bar      = dolfin.dot(self.grad_unknown_porosity_bar_subsol.subfunc , self.X-self.X_0)
-        #self.unknown_porosity_bar_old  = dolfin.dot(self.grad_unknown_porosity_bar_subsol.func_old, self.X-self.X_0)
-        #self.unknown_porosity_bar_test = dolfin.dot(self.grad_unknown_porosity_bar_subsol.dsubtest, self.X-self.X_0)
-
-        #self.unknown_porosity_tot      = self.unknown_porosity_bar      + self.porosity_subsol.subfunc
-        #self.unknown_porosity_tot_old  = self.unknown_porosity_bar_old  + self.porosity_subsol.func_old
-        #self.unknown_porosity_tot_test = self.unknown_porosity_bar_test + self.porosity_subsol.dsubtest
-
-
-
         self.set_quadrature_degree(
             quadrature_degree=quadrature_degree)
 
@@ -152,23 +141,13 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             fs=self.vfoi_fs,
             name="U_tot",
             update_type="project")
-        # self.add_foi(
-        #     expr=self.unknown_porosity_bar,
-        #     fs=self.sfoi_fs,
-        #     name="unknown_porosity_bar",
-        #     update_type="project")
-        # self.add_foi(
-        #     expr=self.unknown_porosity_tot,
-        #     fs=self.sfoi_fs,
-        #     name="unknown_porosity_tot",
-        #     update_type="project")
-
 
         self.set_kinematics()
 
 
-        self.set_porosity_fields()
-        self.add_local_porosity_fois()
+        #self.set_porosity_fields()
+        #self.add_local_porosity_fois()
+
 
         assert (skel_behavior is     None) or (len(skel_behaviors)==0),\
             "Cannot provide both skel_behavior & skel_behaviors. Aborting."
@@ -183,8 +162,9 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         assert (bulk_behavior is not None) or (len(bulk_behaviors) >0),\
             "Need to provide bulk_behavior or bulk_behaviors. Aborting."
         if (bulk_behavior is not None):
-            bulk_behaviors = [bulk_behavior]
-        self.add_Wbulk_operators(bulk_behaviors)
+            bulk_behaviors = [bulk_behavior]  
+        self.kappa_val = bulk_behaviors[0]["parameters"]["kappa"]   
+
 
         assert (pore_behavior is None) or (len(pore_behaviors)==0),\
             "Cannot provide both pore_behavior & pore_behaviors. Aborting."
@@ -194,7 +174,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         # self.add_macroscopic_stretch_symmetry_operator()
         self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
 
-        self.add_Wpore_operators(pore_behaviors)
+        #self.add_Wpore_operators(pore_behaviors)
 
         self.add_pressure_liquid_perturbation_zero_mean_operator()
 
@@ -439,13 +419,13 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_fluid_volume_subsol()
         self.add_surface_area_subsol()
 
-        if (porosity_degree is None):
-            porosity_degree = displacement_perturbation_degree - 1
-        print("Adding porosity subsolution with degree =", porosity_degree)
-        self.add_porosity_subsol(
-            degree=porosity_degree,
-            init_val=porosity_init_val,
-            init_fun=porosity_init_fun)
+        # if (porosity_degree is None):
+        #     porosity_degree = displacement_perturbation_degree - 1
+        # print("Adding porosity subsolution with degree =", porosity_degree)
+        # self.add_porosity_subsol(
+        #     degree=porosity_degree,
+        #     init_val=porosity_init_val,
+        #     init_fun=porosity_init_fun)
         if (self.w_pressure_balancing_gravity):
             self.add_pressure_balancing_gravity_subsol()
             self.add_gamma_subsol()
@@ -457,7 +437,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             liquid_pressure_perturbation_degree = displacement_perturbation_degree -1
         self.add_pressure_liquid_perturbation_subsol(degree=liquid_pressure_perturbation_degree)
         self.add_pressure_liquid_perturbation_zero_mean_subsol()
-        #self.add_macroscopic_unknown_porosity_gradient_subsol(degree=0)
+
 
         
 
@@ -1005,7 +985,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         subdomain_id,
         inlet_id,
         outlet_id,
-        unknown_porosity_test,
+        #unknown_porosity_test,
         k_step):
 
 
@@ -1036,10 +1016,11 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             dx=dx,
             dx_in=dx_in,
             dx_out=dx_out,
-            unknown_porosity_test=unknown_porosity_test
+            #unknown_porosity_test=unknown_porosity_test
         )
-
-
+        
+        Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val)*operator.pl_tot)
+        self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
         velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
@@ -1050,8 +1031,8 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         Area = dolfin.assemble(1.0 * dx)
         Vcur = dolfin.assemble(self.kinematics.J * dx)
-        #self.add_qoi(name="q_avg_x", expr=velocity_expr[0]  * self.kinematics.J * dx, norm=Vcur)
-        #self.add_qoi(name="q_avg_y", expr=velocity_expr[1]  * self.kinematics.J * dx, norm=Vcur)
+
+
         self.add_qoi(name="q_avg_x", expr=velocity_expr_ref[0]* dx, norm=Area)
         self.add_qoi(name="q_avg_y", expr=velocity_expr_ref[1]* dx, norm=Area)
         self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)

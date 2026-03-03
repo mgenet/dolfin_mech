@@ -172,7 +172,7 @@ class MicroDarcyFlowOperator(Operator):
                  U_test,
                  X, 
                  X_0,
-                 unknown_porosity_test,
+                 #unknown_porosity_test,
                  p_tilde,
                  grad_p_bar_ini,
                  grad_p_bar_fin,
@@ -233,12 +233,12 @@ class MicroDarcyFlowOperator(Operator):
         # --- Darcy flow residual (standard diffusion-like form) ---
         self.res_form = rho_l * dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         # form pl_field operator#
-        self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
+        #self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
         #self.res_form += dolfin.inner(p_tilde, unknown_porosity_test) * self.kinematics.J * self.measure
         # form wbulk operator#
-        # self.res_form +=  dolfin.inner(
-        #     -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
-        #     dE_test) * self.measure
+        self.res_form +=  dolfin.inner(
+            -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
+            dE_test) * self.measure
 
 
         # if Theta_in != 0.0:

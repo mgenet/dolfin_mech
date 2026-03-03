@@ -404,17 +404,6 @@ class Problem():
         self.mfoi_fs = dolfin.FunctionSpace(
             self.mesh,
             self.mfoi_fe) # MG: element keyword don't work here…
-    # def set_foi_function_spaces(self, constrained_domain=None):
-
-    #     self.sfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh, self.sfoi_fe, constrained_domain=constrained_domain)
-
-    #     self.vfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh, self.vfoi_fe, constrained_domain=constrained_domain)
-
-    #     self.mfoi_fs = dolfin.FunctionSpace(
-    #         self.mesh, self.mfoi_fe, constrained_domain=constrained_domain)
-
 
 
 

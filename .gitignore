@@ -13,3 +13,5 @@ __pycache__/
 .vtk
 .xdmf
 .h5
+.png
+.dat

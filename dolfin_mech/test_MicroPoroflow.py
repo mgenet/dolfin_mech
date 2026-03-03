@@ -17,6 +17,7 @@ import myPythonLibrary as mypy
 def run_MicroPoroFlowHyperelasticity(
         dim=2,
         bcs="pbc",
+        mesh_path=None, 
         mesh_params={},
         mat_params={},
         flow_params={},
@@ -28,9 +29,27 @@ def run_MicroPoroFlowHyperelasticity(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/mesh_phi0p5186_RVE.xdmf") as infile:
-         infile.read(mesh)
+    if mesh_path is not None:
+        mesh_path = Path(mesh_path)
+        if not mesh_path.exists():
+            raise FileNotFoundError(f"Mesh file not found: {mesh_path}")
+
+        mesh = dolfin.Mesh()
+        with dolfin.XDMFFile(mesh_path.as_posix()) as infile:
+            infile.read(mesh)
+
+        if verbose:
+            print("Mesh loaded from:", mesh_path)
+
+    else:
+        mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
+    # mesh = dolfin.Mesh()
+    # with dolfin.XDMFFile("./mesh/voronoi_2D_RVE.xdmf") as infile:
+    # infile.read(mesh)
+
+        if verbose:
+            print("Mesh generated with run_HollowBox_Mesh")
+
 
     #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
 
@@ -264,186 +283,122 @@ def run_MicroPoroFlowHyperelasticity(
     integrator.close()
 
 # ----------------- Run with Options -----------------
+import sys, re
+from pathlib import Path
+import dolfin
 
+# -------------------- material -------------------- #
 mat_params = {
-    "alpha":0.16,
-    "gamma":0.5,
-    "c1":0.2,
-    "c2":0.4,
-    "kappa":1e2,
-    "eta":1e-5}
+    "alpha": 0.16,
+    "gamma": 0.5,
+    "c1": 0.2,
+    "c2": 0.4,
+    "kappa": 1e2,
+    "eta": 1e-5,
+}
 
-
+# -------------------- test harness -------------------- #
 res_folder = sys.argv[0][:-3]
 test = mypy.Test(
     res_folder=res_folder,
     perform_tests=0,
     stop_at_failure=1,
     clean_after_tests=0,
-    tester_numpy_tolerance=1e-2)
+    tester_numpy_tolerance=1e-2,
+)
 
-dim_lst  = [ ]
-dim_lst += [2]
-# dim_lst += [3]
-Ex_values = [0.0, 0.1, 0.2]
-#pf_values = [0.0, 0.03,0.06]
-Ex_values = [0.0, 0.1, 0.2] 
-pf_values = [0.0]
-grad_p_bar_x_lst = [0.3,0.3]#[5]
-grad_p_bar_y_lst = [0.3,0.3]#[5]#[0.1]
-Theta_in_lst = [0.0,0]   
-Theta_out_lst = [0.0,0]
+# -------------------- run setup (single step, no meca loading) -------------------- #
+dim = 2
+bcs = "pbc"
 
+# small macroscopic pressure gradient (2D)
+gx = 1e-3
+gy = 1e-3
 
+# 1 step -> all lists must be length 1
 flow_loading_params = {
-    # 2D: d=0 -> x, d=1 -> y
     "grad_p_bar_lst": [
-        grad_p_bar_x_lst,
-        grad_p_bar_y_lst
+        [gx],   # x-component over steps
+        [gy],   # y-component over steps
     ],
-    "Theta_in_lst":  Theta_in_lst,
-    "Theta_out_lst": Theta_out_lst,
+    "Theta_in_lst":  [0.0],
+    "Theta_out_lst": [0.0],
 }
 
-for dim in dim_lst:
+step_params = {
+    "n_steps": 1,
+    "Deltat_lst": [1e-2],
+    "dt_ini_lst": [1e-3],
+    "dt_min_lst": [5e-3],
+    "dt_max_lst": [1e-2],
+}
 
-    bcs_lst  = [      ]
-    #bcs_lst += ["kubc"]
-    bcs_lst += ["pbc" ]
-    for bcs in bcs_lst:
+# no mechanical loading: keep macroscopic stretch fixed to 0, and sigma = 0
+load_params = {
+    "pf_lst": [0.0],
+}
+for i in range(dim):
+    for j in range(dim):
+        load_params[f"sigma_bar_{i}{j}"] = 0.0
 
-        load_lst  = [                     ]
-        #load_lst += ["K_vs_U"]
-        load_lst += ["K_vs_pf"]
-        for load in load_lst:
+# -------------------- batch meshes -------------------- #
+mesh_dir = Path("/Users/xiao/PhD/dolfin_mech_HX2/mesh/voronoi_2D_batch_hex")
+xdmf_files = sorted(mesh_dir.glob("*_RVE.xdmf"))
+if len(xdmf_files) == 0:
+    raise RuntimeError(f"No *_RVE.xdmf found in: {mesh_dir}")
 
-            if load == "K_vs_U":
-                load_params = {}
-                def set_sigma_bar_all_zero(except00=False):
-                    for i in range(dim):
-                        for j in range(dim):
-                            if except00 and (i == 0 and j == 0):
-                                continue
-                            load_params[f"sigma_bar_{i}{j}"] = 0.0
+def parse_porosity_from_filename(stem: str):
+    """
+    Accepts patterns like:
+      voronoi_phi_0p7744_phi0p7588_RVE
+      voronoi_phi0p7744_RVE
+    Returns a float or None.
+    Priority: first 'phi' number found.
+    """
+    m = re.search(r"phi_?([0-9]+p[0-9]+)", stem)
+    if not m:
+        return None
+    return float(m.group(1).replace("p", "."))
 
-                for pf in pf_values:
+for xdmf_path in xdmf_files:
 
-                    print("dim =",dim)
-                    print("bcs =",bcs)
-                    print("load =",load)
-                    print("pf   =",pf)
+    phi = parse_porosity_from_filename(xdmf_path.stem)
 
+    mesh_tag = xdmf_path.stem
+    if phi is None:
+        res_basename = f"-dim={dim}-bcs={bcs}-Konly-mesh={mesh_tag}"
+    else:
+        res_basename = f"-dim={dim}-bcs={bcs}-Konly-phi={phi:.6f}-mesh={mesh_tag}"
 
-                    #res_basename  = sys.argv[0][:-3]
-                    res_basename = "-dim="+str(dim)
-                    res_basename += "-bcs="+str(bcs)
-                    res_basename += "-load="+str(load)
-                    res_basename += "-pf="+str(pf)
+    print("\n--- Running mesh ---")
+    print("xdmf:", xdmf_path.name)
+    if phi is not None:
+        print("parsed phi:", phi)
 
-                    load_params["pf_lst"] = [pf,pf]
+    run_MicroPoroFlowHyperelasticity(
+        dim=dim,
+        bcs=bcs,
+        mesh_path=str(xdmf_path),   # <-- core: read this mesh
+        mesh_params={},             # unused in this branch
+        mat_params={
+            "skel": {"parameters": mat_params, "scaling": "no"},
+            "bulk": {"parameters": mat_params, "scaling": "no"},
+            "pore": {"parameters": mat_params, "scaling": "no"},
+        },
+        flow_params={
+            "rho_l": 1.0,
+            "k_l": dolfin.Constant(((1, 0.0), (0.0, 1))),
+            "pl_bar": 0,
+        },
+        flow_loading_params=flow_loading_params,
+        porosity_params={
+            "type": "constant",
+            "val": phi if phi is not None else 0.3,  # if filename doesn't carry phi, fallback
+        },
+        step_params=step_params,
+        load_params=load_params,
+        res_basename=res_folder + "/" + res_basename,
+        verbose=0,
+    )
 
-                    load_params["U_bar_00_lst"] = [0,0.3]
-
-                    #load_params["sigma_bar_00_lst"] = [0,0.1]
-
-                    for i in range(dim):
-                        for j in range(dim):
-                            if ((i != 0) or (j != 0)):
-                                load_params["sigma_bar_"+str(i)+str(j)] = 0.
-
-                    # for i in range(dim):
-                    #     for j in range(dim):
-                    #         load_params[f"U_bar_{i}{j}_lst"] = [0.0, 0.0]
-
-
-                    # for i in range(dim):
-                    #     for j in range(dim):
-                    #         if ((i != 0) or (j != 0)):
-                    #             load_params["sigma_bar_"+str(i)+str(j)] = 0.
-
-                    run_MicroPoroFlowHyperelasticity(
-                        dim=dim,
-                        mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"},
-                        mat_params={
-                                "skel": {"parameters": mat_params, "scaling": "no"},
-                                "bulk": {"parameters": mat_params, "scaling": "no"},
-                                "pore": {"parameters": mat_params, "scaling": "no"}
-                            },
-                        flow_params={
-                            "rho_l": 1.0,
-                            "k_l": dolfin.Constant(((1e-15, 0.0),
-                                (0.0, 1e-15))),
-                            #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 0
-                            },
-                        flow_loading_params=flow_loading_params,
-                        porosity_params={
-                            "type": "constant",  # can be "constant", "function_constant", or "random"
-                            "val": 0.3
-                        },  
-                        
-                        bcs=bcs,
-                        step_params = {
-                            "n_steps": 2,
-                            "Deltat_lst": [1e-2, 1e-1],     
-                            "dt_ini_lst": [5e-3, 1e-3],     
-                            "dt_min_lst": [5e-3, 1e-4],     
-                            "dt_max_lst": [5e-3, 5e-3],     
-                        },
-                        load_params=load_params,
-                        res_basename=res_folder+"/"+res_basename,
-                        verbose=0)
-
-                    test.test(res_basename)
-
-
-            if load == "K_vs_pf":
-                for Ex in Ex_values:
-
-                    load_params = {}
-                    load_params["U_bar_00_lst"] = [Ex, Ex]      
-                    pf_target = 0.2
-                    load_params["pf_lst"] = [0.0, pf_target]     
-
-                    for i in range(dim):
-                        for j in range(dim):
-                            if (i, j) != (0, 0):
-                                load_params[f"sigma_bar_{i}{j}"] = 0.0
-
-                    res_basename  = f"-dim={dim}-bcs={bcs}-load=K_vs_pf-Ex={Ex}"
-
-                    run_MicroPoroFlowHyperelasticity(
-                        dim=dim,
-                        mesh_params={"dim":dim, "xmin":0., "ymin":0., "zmin":0., "xmax":1., "ymax":1., "zmax":1., "xshift":-0.5, "yshift":-0.5, "zshift":-0.5, "r0":0.2, "l":0.05, "mesh_filebasename":res_folder+"/"+"mesh"},
-                        mat_params={
-                                "skel": {"parameters": mat_params, "scaling": "no"},
-                                "bulk": {"parameters": mat_params, "scaling": "no"},
-                                "pore": {"parameters": mat_params, "scaling": "no"}
-                            },
-                        flow_params={
-                            "rho_l": 1.0,
-                            "k_l": dolfin.Constant(((1e-15, 0.0),
-                                (0.0, 1e-15))),
-                            #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 0
-                            },
-                        flow_loading_params=flow_loading_params,
-                        porosity_params={
-                            "type": "constant",  # can be "constant", "function_constant", or "random"
-                            "val": 0.3
-                        },  
-                        
-                        bcs=bcs,
-                        step_params = {
-                            "n_steps": 2,
-                            "Deltat_lst": [1e-2, 1e-1],     
-                            "dt_ini_lst": [5e-3, 1e-3],     
-                            "dt_min_lst": [5e-3, 1e-4],     
-                            "dt_max_lst": [5e-3, 5e-3],     
-                        },
-                        load_params=load_params,
-                        res_basename=res_folder+"/"+res_basename,
-                        verbose=0)
-                    test.test(res_basename)
-
-                
+    test.test(res_basename)
