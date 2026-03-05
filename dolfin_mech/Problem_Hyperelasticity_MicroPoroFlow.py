@@ -969,152 +969,146 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 expr=expr*self.dS(0))
             
     def add_Darcy_operator(self,
-        kinematics,
-        U,
-        U_test,
-        X,
-        X_0,
-        grad_p_bar_ini,
-        grad_p_bar_fin,
-        pl_bar_ini,
-        pl_bar_fin,
-        Theta_in_ini,
-        Theta_in_fin,
-        Theta_out_ini,
-        Theta_out_fin,
-        k_l,
-        rho_l,
-        subdomain_id,
-        inlet_id,
-        outlet_id,
-        #unknown_porosity_test,
-        k_step):
+                        # --- kinematics / fields ---
+                        kinematics,
+                        U,
+                        U_test,
+                        X,
+                        X_0,
 
-        pl      = self.pl_perturbation_subsol.subfunc
-        p_test = self.pl_perturbation_subsol.dsubtest
+                        # --- macro loads ---
+                        grad_p_bar_ini,
+                        grad_p_bar_fin,
+                        pl_bar_ini,
+                        pl_bar_fin,
+                        Theta_in_ini,
+                        Theta_in_fin,
+                        Theta_out_ini,
+                        Theta_out_fin,
 
-        dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
-        dx_in   = self.get_subdomain_measure(inlet_id)          # dx(inlet_id) for source
-        dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
-        
+                        # --- material ---
+                        k_l0,               # 2x2 tensor baseline intrinsic permeability (current config)
 
+                        # --- domain / boundary ids ---
+                        subdomain_id,
+                        inlet_id,
+                        outlet_id,
+
+                        # --- step index ---
+                        k_step):
+
+        # Pressure perturbation unknown and its test function
+        p_tilde = self.pl_perturbation_subsol.subfunc
+        p_test  = self.pl_perturbation_subsol.dsubtest
+
+        # Measures restricted to subdomain and (optional) inlet/outlet regions
+        dx     = self.get_subdomain_measure(subdomain_id)
+        dx_in  = self.get_subdomain_measure(inlet_id)   if inlet_id  is not None else None
+        dx_out = self.get_subdomain_measure(outlet_id)  if outlet_id is not None else None
+
+        # Build Darcy operator (reference weak form; outputs q_l/Q_l/k_l_intr/Phis_expr for post-processing)
         operator = MicroDarcyFlowOperator(
             kinematics=kinematics,
             U=U,
             U_test=U_test,
             X=X,
             X_0=X_0,
+            p_tilde=p_tilde,
+            p_test=p_test,
             grad_p_bar_ini=grad_p_bar_ini,
             grad_p_bar_fin=grad_p_bar_fin,
-            Theta_in_ini=Theta_in_ini,
-            Theta_in_fin=Theta_in_fin,
-            Theta_out_ini=Theta_out_ini,    
-            Theta_out_fin=Theta_out_fin,
-            p_tilde=pl,
-            p_test=p_test,
             pl_bar_ini=pl_bar_ini,
             pl_bar_fin=pl_bar_fin,
-            k_l=k_l,
-            rho_l=rho_l,
-            dx=dx,
+            k_l0=k_l0,
             Phis0=self.Phis0,
             kappa_val=self.kappa_val,
+            dx=dx,
             dx_in=dx_in,
             dx_out=dx_out,
-            #unknown_porosity_test=unknown_porosity_test
+            Theta_in_ini=Theta_in_ini,
+            Theta_in_fin=Theta_in_fin,
+            Theta_out_ini=Theta_out_ini,
+            Theta_out_fin=Theta_out_fin,
         )
 
-        operator.dx_measure = dx
-        operator.dx_in_measure = dx_in
-        operator.dx_out_measure = dx_out
-
-        print(k_step)
-        print("pl_bar:", pl_bar_ini, "->", pl_bar_fin)
-        print("grad_p_bar:", grad_p_bar_ini, "->", grad_p_bar_fin)
-
-        Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val)*operator.pl_tot)
-        # self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
-        # self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
-        # self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
-        # self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
-        # self.add_foi(expr=operator.pl_affine, fs=self.sfoi_fs, name="pl_affine", update_type="project")
-        # self.add_foi(expr=operator.pl_bar, fs=self.sfoi_fs, name="pl_bar", update_type="project")
-        # self.add_foi(expr=operator.pl_tot, fs=self.sfoi_fs, name="pl_tot", update_type="project")
-
-        velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
-        self.velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
-        self.add_foi(expr=self.velocity_expr, fs=self.vfoi_fs, name="DarcyVelocity")
-
+        # Add any additional FOIs/QOIs you already manage centrally
         self.add_darcy_fois(operator)
 
+        # Register operator for this load step
         return self.add_operator(operator=operator, k_step=k_step)
-    
-
-
+        
     def add_darcy_qois(self, symmetric=False):
-        pl_bar_lst = []
-        qx_lst = []
-        qy_lst = []
-        gpx_lst = []
-        gpy_lst = []
-        ptilde_avg_lst = []
+        """
+        Add Darcy-related QOIs for the current step.
 
-        V0_ref = self.Vs0 
+        QOIs are reference-domain averages (normalized by Area_ref = ∫_Ω 1 dX):
+        - pl_bar_avg
+        - Q_l_avg_x, Q_l_avg_y      (Piola/reference flux)
+        - grad_p_bar_avg_x, grad_p_bar_avg_y
+        """
 
-        for step in self.steps:
-            darcy_op = None
-            for op in step.operators:
+        if not self.steps:
+            raise RuntimeError("No steps available.")
 
-                if hasattr(op, "pl_tot") and hasattr(op, "K_l") and hasattr(op, "grad_p_bar"):
-                    darcy_op = op
-                    break
-            if darcy_op is None:
-                raise RuntimeError("Cannot find Darcy operator in a step. Did you add it to every step?")
+        step = self.steps[-1]
 
-            vel_ref = - darcy_op.K_l * (darcy_op.grad_p_tilde + darcy_op.grad_p_bar)
+        # ---- find Darcy operator in this step ----
+        darcy_op = None
+        for op in step.operators:
+            # Prefer the new API: Q_l is explicitly stored by MicroDarcyFlowOperator
+            if hasattr(op, "Q_l") and hasattr(op, "grad_p_bar") and hasattr(op, "pl_bar"):
+                darcy_op = op
+                break
+        if darcy_op is None:
+            raise RuntimeError("Cannot find Darcy operator in current step.")
 
-            dx = getattr(darcy_op, "dx_measure", None)
-            if dx is None:
-                raise RuntimeError("Darcy operator has no dx_measure. Save dx into operator when creating it.")
+        dx = getattr(darcy_op, "dx_measure", None)
+        if dx is None:
+            raise RuntimeError("Darcy operator has no dx_measure.")
 
-            Area = dolfin.assemble(1.0 * dx)
+        Area_ref = dolfin.assemble(1.0 * dx)
 
-            pl_bar_lst.append(darcy_op.pl_bar * dx)
-            qx_lst.append(vel_ref[0] * dx)
-            qy_lst.append(vel_ref[1] * dx)
-            gpx_lst.append(darcy_op.grad_p_bar[0] * dx)
-            gpy_lst.append(darcy_op.grad_p_bar[1] * dx)
-
-            ptilde_avg_lst.append(self.pl_perturbation_subsol.subfunc * self.kinematics.J * self.dV)
-
-
-        self.add_qoi(name="pl_bar",        expr_lst=pl_bar_lst,        norm=Area)
-        self.add_qoi(name="q_avg_x",       expr_lst=qx_lst,            norm=Area)
-        self.add_qoi(name="q_avg_y",       expr_lst=qy_lst,            norm=Area)
-        self.add_qoi(name="grad_p_bar_x",  expr_lst=gpx_lst,           norm=Area)
-        self.add_qoi(name="grad_p_bar_y",  expr_lst=gpy_lst,           norm=Area)
-
-
-        #self.add_qoi(name="p_tilde_intJ",  expr_lst=ptilde_avg_lst)
-        # self.add_qoi(name="p_tilde_avg_ref", expr_lst=ptilde_avg_lst, norm=V0_ref)
-    
+        # Reference averages over the Darcy subdomain
+        self.add_qoi(name="pl_bar_avg",       expr=darcy_op.pl_bar * dx,       norm=Area_ref)
+        self.add_qoi(name="Q_l_avg_x",        expr=darcy_op.Q_l[0] * dx,       norm=Area_ref)
+        self.add_qoi(name="Q_l_avg_y",        expr=darcy_op.Q_l[1] * dx,       norm=Area_ref)
+        self.add_qoi(name="grad_p_bar_avg_x", expr=darcy_op.grad_p_bar[0] * dx, norm=Area_ref)
+        self.add_qoi(name="grad_p_bar_avg_y", expr=darcy_op.grad_p_bar[1] * dx, norm=Area_ref)
 
     def add_darcy_fois(self, operator):
+        """
+        Register Darcy-related fields of interest (FOIs).
+        This function is idempotent: it adds FOIs only once.
+        """
 
         if getattr(self, "_darcy_fois_added", False):
             return
         self._darcy_fois_added = True
 
-        Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val) * operator.pl_tot)
+        # --- scalar fields ---
+        # Stored as UFL expressions inside the operator (preferred: no re-definition here).
+        self.add_foi(expr=operator.Phis_expr,   fs=self.sfoi_fs, name="Phis",   update_type="project")
+        self.add_foi(expr=operator.Phif_expr,   fs=self.sfoi_fs, name="Phif",   update_type="project")
 
-        self.add_foi(expr=Phis_expr,      fs=self.sfoi_fs, name="Phis",      update_type="project")
-        self.add_foi(expr=operator.K_l,   fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
-        self.add_foi(expr=operator.k_l,   fs=self.mfoi_fs, name="k_l_curr",  update_type="project")
-        self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
-        self.add_foi(expr=operator.pl_affine, fs=self.sfoi_fs, name="pl_affine", update_type="project")
-        self.add_foi(expr=operator.pl_bar,    fs=self.sfoi_fs, name="pl_bar",    update_type="project")
-        self.add_foi(expr=operator.pl_tot,    fs=self.sfoi_fs, name="pl_tot",    update_type="project")
+        self.add_foi(expr=operator.pl_affine,   fs=self.sfoi_fs, name="pl_affine", update_type="project")
+        self.add_foi(expr=operator.pl_bar,      fs=self.sfoi_fs, name="pl_bar",    update_type="project")
+        self.add_foi(expr=operator.pl_tot,      fs=self.sfoi_fs, name="pl_tot",    update_type="project")
 
+        # Optional: relative permeability factor (scalar) if you store it on the operator
+        if hasattr(operator, "k_rel_expr"):
+            self.add_foi(expr=operator.k_rel_expr, fs=self.sfoi_fs, name="k_rel", update_type="project")
+
+        # --- tensor fields ---
+        # K_l: pull-back permeability used in the reference weak form
+        self.add_foi(expr=operator.K_l,       fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
+
+        # k_l_intr: intrinsic permeability tensor in current configuration
+        self.add_foi(expr=operator.k_l_intr,  fs=self.mfoi_fs, name="k_l_intr",  update_type="project")
+
+        # --- fluxes (vectors) ---
+        # q_l: current Darcy flux, Q_l: Piola/reference flux
+        self.add_foi(expr=operator.q_l,       fs=self.vfoi_fs, name="q_l",       update_type="project")
+        self.add_foi(expr=operator.Q_l,       fs=self.vfoi_fs, name="Q_l",       update_type="project")
 
  
     def add_global_porosity_qois(self):

@@ -167,14 +167,14 @@ def plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix, k_hom=Non
     plt.close()
     print("Saved: plots/q_vs_gradp_multi_pf.png")
 
+
 def plot_Kxx_Kyy_vs_Uxx_multi_pf(
     res_folder,
     pf_list,
     res_basename_prefix,
-    k0_hom=None,          # 2x2 reference permeability tensor in reference config
-    slice_start=6,        # keep consistent with your [2:] slicing
+    K0_ref=None,          # 2x2 reference permeability tensor (reference config)
+    slice_start=6,
     eps=1e-12,
-    use_F_equals_U=True,  # if True: F = U_bar ; otherwise you can modify later
 ):
     import numpy as np
     import matplotlib.pyplot as plt
@@ -191,11 +191,11 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(
 
     fig, ax = plt.subplots(figsize=(7.6, 5.2))
 
-    # sanitize k0_hom
-    if k0_hom is not None:
-        K0_global = np.asarray(k0_hom, dtype=float)
+    # sanitize K0_ref
+    if K0_ref is not None:
+        K0_global = np.asarray(K0_ref, dtype=float)
         if K0_global.shape != (2, 2):
-            raise ValueError(f"k0_hom must be shape (2,2) in 2D, got {K0_global.shape}")
+            raise ValueError(f"K0_ref must be shape (2,2) in 2D, got {K0_global.shape}")
     else:
         K0_global = None
 
@@ -207,106 +207,69 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(
 
         qois_vals, names = load_qois(filename)
 
-        # --- macro stretch components (you said you have YY and XY) ---
+        # --- macro stretch components ---
         Uxx = get(qois_vals, names, "U_bar_XX")[slice_start:]
         Uyy = get(qois_vals, names, "U_bar_YY")[slice_start:]
-        Uxy = get(qois_vals, names, "U_bar_XY")[slice_start:]  # assume symmetric stretch, so Uyx=Uxy
+        Uxy = get(qois_vals, names, "U_bar_XY")[slice_start:]  # assume symmetry: Uyx=Uxy
 
-        # --- flow outputs ---
-        qx  = get(qois_vals, names, "q_avg_x")[slice_start:]
-        qy  = get(qois_vals, names, "q_avg_y")[slice_start:]
-        gx  = get(qois_vals, names, "grad_p_bar_x")[slice_start:]
-        gy  = get(qois_vals, names, "grad_p_bar_y")[slice_start:]
+        # --- Darcy outputs (NEW names) ---
+        # Q_l_avg_* are Piola/reference flux components
+        Qx = get(qois_vals, names, "Q_l_avg_x")[slice_start:]
+        Qy = get(qois_vals, names, "Q_l_avg_y")[slice_start:]
+        gx = get(qois_vals, names, "grad_p_bar_avg_x")[slice_start:]
+        gy = get(qois_vals, names, "grad_p_bar_avg_y")[slice_start:]
 
         Uxx = np.asarray(Uxx, dtype=float)
         Uyy = np.asarray(Uyy, dtype=float)
         Uxy = np.asarray(Uxy, dtype=float)
-        qx  = np.asarray(qx,  dtype=float)
-        qy  = np.asarray(qy,  dtype=float)
+        Qx  = np.asarray(Qx,  dtype=float)
+        Qy  = np.asarray(Qy,  dtype=float)
         gx  = np.asarray(gx,  dtype=float)
         gy  = np.asarray(gy,  dtype=float)
 
-        # --- "measured" K from q/g (component-wise) ---
-        Kxx = -qx / (gx + eps)
-        Kyy = -qy / (gy + eps)
+        # --- "measured" reference permeability from Piola flux ---
+        # Q = - K_ref * grad_X(p)  =>  K_ref,xx ~ -Qx/gx  (component-wise)
+        Kxx_ref = -Qx / (gx + eps)
+        Kyy_ref = -Qy / (gy + eps)
 
         # choose colors
         c_dark, c_light = colors[idx % len(colors)]
 
         # plot measured
         ax.plot(
-            Uxx, Kxx,
+            Uxx, Kxx_ref,
             color=c_dark, linewidth=2.5,
-            label=rf"$\tilde{{K}}_{{xx}}$, $p_g={pf}\,\mathrm{{kPa}}$"
+            label=rf"$K_{{xx}}^{{ref}}$, $p_f={pf}\,\mathrm{{kPa}}$"
         )
-
         ax.plot(
-            Uxx, Kyy,
+            Uxx, Kyy_ref,
             color=c_light, linewidth=2.5,
-            label=rf"$\tilde{{K}}_{{yy}}$, $p_g={pf}\,\mathrm{{kPa}}$"
+            label=rf"$K_{{yy}}^{{ref}}$, $p_f={pf}\,\mathrm{{kPa}}$"
         )
 
-
-        ax.set_xlabel(r"$E_x\;()$", fontsize=14)
+        ax.set_xlabel(r"$U_{\bar{XX}}$", fontsize=14)
         ax.set_ylabel(
-            r"$\tilde{K}_{xx},\,\tilde{K}_{yy}\;(\mathrm{m}^2\,\mathrm{Pa}^{-1}\,\mathrm{s}^{-1})$",
+            r"$K_{xx}^{ref},\,K_{yy}^{ref}\;(\mathrm{m}^2\,\mathrm{Pa}^{-1}\,\mathrm{s}^{-1})$",
             fontsize=14
         )
 
-
-
-        # --- build K0 for prediction ---
+        # --- reference K0 for prediction (optional) ---
         if K0_global is not None:
             K0 = K0_global
         else:
-            # fallback: use first point to define a diagonal reference K0
-            # (keeps the reference line meaningful even if you didn't pass k0_hom)
-            k0_x = float(Kxx[0])
-            k0_y = float(Kyy[0])
-            K0 = np.array([[k0_x, 0.0],
-                           [0.0,  k0_y]], dtype=float)
+            # fallback: diagonal K0 from first point (keeps line meaningful)
+            K0 = np.array([[float(Kxx_ref[0]), 0.0],
+                           [0.0,             float(Kyy_ref[0])]], dtype=float)
 
-        # --- predicted k via push-forward: k_pred = (1/J) F K0 F^T ---
-        Kxx_pred = np.zeros_like(Uxx)
-        Kyy_pred = np.zeros_like(Uxx)
+        # If you later want to compare with a predicted pull-back:
+        # K_pred = J * F^{-1} * k_intr * F^{-T}  (or any other model)
+        # You can add dashed lines here.
 
-        for n in range(len(Uxx)):
-            # F = I + U_bar  (because u_bar = U_bar * (X - X0))
-            F = np.array([[1.0 + Uxx[n],       Uxy[n]],
-                        [      Uxy[n], 1.0 + Uyy[n]]], dtype=float)
-
-            J = float(np.linalg.det(F))
-            Finv = np.linalg.inv(F)
-            if abs(J) < 1e-15:
-                Kxx_pred[n] = np.nan
-                Kyy_pred[n] = np.nan
-                continue
-
-            K_back = J * (Finv @ K0 @ Finv.T)
-
-            k_pred = (1.0 / J) * (F @ K0 @ F.T)
-
-            Kxx_pred[n] = K_back[0, 0]
-            Kyy_pred[n] = K_back[1, 1]
-
-        # plot predicted (dashed)
-        # ax.plot(Uxx, Kxx_pred, color=c_dark,  ls="--", linewidth=2.0,
-        #         label=rf"$\frac{{1}}{{J}}(F K_0 F^T)_{{xx}}$, $p_f={pf}$")
-        # ax.plot(Uxx, Kyy_pred, color=c_light, ls="--", linewidth=2.0,
-        #         label=rf"$\frac{{1}}{{J}}(F K_0 F^T)_{{yy}}$, $p_f={pf}$")
-
-        # optional quick print
         print(f"pf={pf}: K0 used for pred =\n{K0}")
 
-    # ax.set_xlabel(r"$U_{\bar{XX}}$", fontsize=16)
-    # ax.set_ylabel(r"$K_{xx}, K_{yy}$", fontsize=16)
-    # ax.grid(ls="--", alpha=0.4)
-
-    # legend can get big; make it compact
     ax.legend(fontsize=9.5, framealpha=0.9, ncol=1)
-
     plt.tight_layout()
-    plt.savefig("plots/Kxx_Kyy_vs_Uxx_multi_pf.png", bbox_inches="tight",dpi=300)
+    plt.savefig("plots/Kxx_Kyy_vs_Uxx_multi_pf.png", bbox_inches="tight", dpi=300)
     plt.close()
     print("Saved: plots/Kxx_Kyy_vs_Uxx_multi_pf.png")
 
@@ -328,7 +291,7 @@ if __name__ == "__main__":
     k_hom = [[6.17843158e-16, 0.00000000e+00],
               [0.00000000e+00, 6.03204544e-16]]
 
-    plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix,k0_hom=None)
+    plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix)
     #plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix, k_hom=None)
     #plot_K_vs_pg_multi_Ex(res_folder,  res_basename_prefix_pf, Ex_list=[0.0, 0.1, 0.2], slice_start=3, pg_in_kPa=True)
 

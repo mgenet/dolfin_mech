@@ -9,10 +9,7 @@ import dolfin_mech as dmech
 from fenics import *
 import dolfin
 from dolfin_mech.Problem_Hyperelasticity_MicroPoroFlow import MicroPoroFlowHyperelasticityProblem
-
 import myPythonLibrary as mypy
-
-
 
 def run_MicroPoroFlowHyperelasticity(
         dim=2,
@@ -192,22 +189,31 @@ def run_MicroPoroFlowHyperelasticity(
 
 
         problem.add_Darcy_operator(
+            # --- kinematics / fields ---
             kinematics=problem.kinematics,
             U=problem.displacement_perturbation_subsol.subfunc,
             U_test=problem.displacement_perturbation_subsol.dsubtest,
             X=problem.X,
             X_0=problem.X_0,
-            pl_bar_ini=pl_bar_ini, pl_bar_fin=pl_bar_fin,
-            k_l=k_l,
-            rho_l=rho_l,
+
+            # --- macro loads ---
             grad_p_bar_ini=grad_p_bar_ini,
             grad_p_bar_fin=grad_p_bar_fin,
+            pl_bar_ini=pl_bar_ini,
+            pl_bar_fin=pl_bar_fin,
             Theta_in_ini=Theta_in_ini,   Theta_in_fin=Theta_in_fin,
             Theta_out_ini=Theta_out_ini, Theta_out_fin=Theta_out_fin,
+
+            # --- material ---
+            k_l0=k_l,   # rename: baseline intrinsic permeability tensor
+
+            # --- ids ---
             subdomain_id=None,
             inlet_id=None,
             outlet_id=None,
-            k_step=k_step
+
+            # --- step ---
+            k_step=k_step,
         )
 
     # -------------------- Quantities of Interest ------------- #

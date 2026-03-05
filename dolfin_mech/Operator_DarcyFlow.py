@@ -89,184 +89,141 @@ class WskelPoroFlowOperator(Operator):
         self.res_form = dolfin.inner(self.material.Sigma, dE_test) * self.measure
 
         self.sigma_contrib = self.material.sigma
-
-class WbulkPoroFlowOperator(Operator):
-
-    def __init__(self,
-            kinematics,
-            U,
-            U_test,
-            Phis0,
-            Phis,
-            Phis_test,
-            material_parameters,
-            material_scaling,
-            measure,
-            pl
-            ):  # new input
-
-        self.kinematics = kinematics
-        self.solid_material = dmech.WbulkLungElasticMaterial(
-            Phis=Phis,
-            Phis0=Phis0,
-            parameters=material_parameters)
-        self.material = dmech.PorousElasticMaterial(
-            solid_material=self.solid_material,
-            scaling=material_scaling,
-            Phis0=Phis0)
-        self.measure = measure
-
-        dE_test = dolfin.derivative(
-            self.kinematics.E, U, U_test)
-
-        self.res_form =  dolfin.inner(
-            -pl * self.kinematics.J * self.kinematics.C_inv,
-            dE_test) * self.measure
-
-        self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
-
-
-class WbulkMicroPoroFlowOperator(Operator):
-
-    def __init__(self,
-            kinematics,
-            U,
-            U_test,
-            Phis0,
-            Phis,
-            Phis_test,
-            material_parameters,
-            material_scaling,
-            measure
-            ):  # new input
         
-        self.kinematics = kinematics
-        self.solid_material = dmech.WbulkLungElasticMaterial(
-            Phis=Phis,
-            Phis0=Phis0,
-            parameters=material_parameters)
-        self.material = dmech.PorousElasticMaterial(
-            solid_material=self.solid_material,
-            scaling=material_scaling,
-            Phis0=Phis0)
-        self.measure = measure
-
-        dE_test = dolfin.derivative(
-            self.kinematics.E, U, U_test)
-        
-
-        self.res_form = self.material.dWbulkdPhis * Phis_test * self.measure
-
-        self.res_form += dolfin.inner(
-            self.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv,
-            dE_test) * self.measure
-        
-        self.sigma_contrib = self.material.dWbulkdPhis * self.kinematics.I
-
-
-
 class MicroDarcyFlowOperator(Operator):
+    """
+    Darcy operator written in the reference configuration.
+
+    Outputs:
+      - k_l_intr : intrinsic permeability tensor (current config)
+      - K_l      : pulled-back permeability tensor (reference config)
+      - q_l      : Darcy flux (current config)
+      - Q_l      : Piola flux (reference config)
+    """
+
     def __init__(self,
+                 # --- kinematics / mechanics coupling ---
                  kinematics,
                  U,
                  U_test,
-                 X, 
+                 X,
                  X_0,
-                 #unknown_porosity_test,
+
+                 # --- pressure unknown & test ---
                  p_tilde,
+                 p_test,
+
+                 # --- macroscopic loading (time-varying) ---
                  grad_p_bar_ini,
                  grad_p_bar_fin,
                  pl_bar_ini,
                  pl_bar_fin,
-                 p_test,
-                 k_l,
-                 rho_l,
-                 dx,
+
+                 # --- material / constitutive parameters ---
+                 k_l0,          # 2x2 tensor (baseline intrinsic permeability, current config)
                  Phis0,
                  kappa_val,
-                 dx_in,
-                 dx_out,
-                 Theta_in_ini=None,
-                 Theta_in_fin=None,
-                 Theta_out_ini=None,
-                 Theta_out_fin=None):
 
-        
-        def kclaw_kozeny_carman_from_Phis(Phis):
-            Phif  = 1.0 - Phis
-            Phif0 = 1.0 - Phis0
-            eps = dolfin.Constant(1e-12)  
-            num = (Phif  + eps)**3 / ((1.0 - Phif  + eps)**2)   # = Phif^3 / Phis^2
-            den = (Phif0 + eps)**3 / ((1.0 - Phif0 + eps)**2)
-            return num / den
+                 # --- measures & (optional) boundary source terms ---
+                 dx,
+                 dx_in=None,
+                 dx_out=None,
+                 Theta_in_ini=0.0,
+                 Theta_in_fin=0.0,
+                 Theta_out_ini=0.0,
+                 Theta_out_fin=0.0):
 
-        dE_test = dolfin.derivative(
-            kinematics.E, U, U_test)
+        self.kinematics = kinematics
 
+        # Measures (also reused later for qois/fois)
+        self.dx_measure = dx
+        self.dx_in = dx_in
+        self.dx_out = dx_out
+        self.measure = dx
+
+        # ---- time-varying macro loads ----
         gx_ini, gy_ini = grad_p_bar_ini
         gx_fin, gy_fin = grad_p_bar_fin
 
-        # --- TimeVaryingConstant for pl_bar ---
         self.tv_pl_bar = dmech.TimeVaryingConstant(val_ini=pl_bar_ini, val_fin=pl_bar_fin)
-
-        # --- TimeVaryingConstant for Theta ---
-        self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
-        self.tv_Theta_out = dmech.TimeVaryingConstant(val_ini=Theta_out_ini, val_fin=Theta_out_fin)
-
-        # --- TimeVaryingConstant for grad p_bar components ---
         self.tv_grad_p_bar_x = dmech.TimeVaryingConstant(val_ini=gx_ini, val_fin=gx_fin)
         self.tv_grad_p_bar_y = dmech.TimeVaryingConstant(val_ini=gy_ini, val_fin=gy_fin)
 
-        # --- Assemble vector ∇p̄ (2D) ---
-        self.grad_p_bar = dolfin.as_vector((
-            self.tv_grad_p_bar_x.val,
-            self.tv_grad_p_bar_y.val
-        ))
+        # ---- time-varying boundary sources (safe defaults) ----
+        if Theta_in_ini is None:  Theta_in_ini = 0.0
+        if Theta_in_fin is None:  Theta_in_fin = Theta_in_ini
+        if Theta_out_ini is None: Theta_out_ini = 0.0
+        if Theta_out_fin is None: Theta_out_fin = Theta_out_ini
 
+        self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
+        self.tv_Theta_out = dmech.TimeVaryingConstant(val_ini=Theta_out_ini, val_fin=Theta_out_fin)
+
+        # ---- macro pressure (reference) ----
+        self.grad_p_bar = dolfin.as_vector((self.tv_grad_p_bar_x.val, self.tv_grad_p_bar_y.val))
         self.pl_bar = self.tv_pl_bar.val
         self.pl_affine = dolfin.dot(self.grad_p_bar, X - X_0)
+
         self.pl_tot = self.pl_bar + self.pl_affine + p_tilde
-        self.measure = dx  
-        self.kinematics = kinematics
-        self.grad_p_tilde = dolfin.grad(p_tilde)
-        
-        grad_p_test = dolfin.grad(p_test)
 
-        F = self.kinematics.F
-        J = self.kinematics.J
+        # Reference gradients
+        gradX_p_tot  = self.grad_p_bar + dolfin.grad(p_tilde)
+        gradX_p_test = dolfin.grad(p_test)
 
-        self.grad_p_tilde_x = dolfin.inv(F).T * self.grad_p_tilde   
-        self.grad_p_bar_x   = dolfin.inv(F).T * self.grad_p_bar  
+        # Only keep invF locally (no caching of F/J)
+        invF = dolfin.inv(self.kinematics.F)
 
-        Phis = Phis0 / (1.0 + (Phis0/kappa_val) * self.pl_tot)
+        # Current gradient (for current flux output)
+        gradx_p_tot = invF.T * gradX_p_tot
 
-        k_l_eff = 1#kclaw_kozeny_carman_from_Phis(Phis)
-        self.k_l_eff = k_l_eff 
-        K_l = J * dolfin.inv(F) * k_l * k_l_eff * dolfin.inv(F).T
+        # ---- porosity law + relative permeability factor ----
+        Phis = Phis0 / (1.0 + (Phis0 / kappa_val) * self.pl_tot)
+        self.Phis_expr = Phis
+        self.Phif_expr = 1.0 - Phis
+        k_rel = k_rel_kozeny_carman_from_Phis(Phis=Phis, Phis0=Phis0)
 
-        self.K_l = K_l  # keep reference permeability for output
-        self.k_l = k_l  # keep current permeability for output
-        self.J = J
+        # Intrinsic permeability (current) and pull-back tensor (reference)
+        self.k_l_intr = k_l0 * k_rel
+        self.K_l = self.kinematics.J * invF * self.k_l_intr * invF.T
 
-        # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
-        self.res_form +=  dolfin.inner(
-            -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
-            dE_test) * self.measure
-        
-        Sigma_p = -self.pl_tot * self.kinematics.J * self.kinematics.C_inv
-        self.sigma_contrib = (1.0/self.J) * self.kinematics.F * Sigma_p * self.kinematics.F.T
+        # Fluxes for output
+        self.q_l = - self.k_l_intr * gradx_p_tot
+        self.Q_l = self.kinematics.J * invF * self.q_l
 
-    # if Theta_in != 0.0:
-    #     self.res_form -= Theta_in * p_test * dx_in
-    # if Theta_out != 0.0:
-    #     self.res_form += Theta_out * p_test * dx_out
+        # ---- Darcy residual (reference configuration) ----
+        self.res_form = dolfin.inner(self.K_l * gradX_p_tot, gradX_p_test) * self.measure
 
+        # ---- coupling to solid equilibrium (pressure stress) ----
+        dE_test = dolfin.derivative(self.kinematics.E, U, U_test)
+        Sigma_p = - self.pl_tot * self.kinematics.J * self.kinematics.C_inv
+        self.res_form += dolfin.inner(Sigma_p, dE_test) * self.measure
 
+        self.sigma_contrib = (1.0 / self.kinematics.J) * self.kinematics.F * Sigma_p * self.kinematics.F.T
+
+        # ---- optional inlet/outlet source terms ----
+        if self.dx_in is not None:
+            self.res_form -= self.tv_Theta_in.val * p_test * self.dx_in
+        if self.dx_out is not None:
+            self.res_form += self.tv_Theta_out.val * p_test * self.dx_out
 
     def set_value_at_t_step(self, t_step):
+        """Update all time-varying quantities for the current load step."""
         self.tv_grad_p_bar_x.set_value_at_t_step(t_step)
         self.tv_grad_p_bar_y.set_value_at_t_step(t_step)
+        self.tv_pl_bar.set_value_at_t_step(t_step)
         self.tv_Theta_in.set_value_at_t_step(t_step)
         self.tv_Theta_out.set_value_at_t_step(t_step)
-        self.tv_pl_bar.set_value_at_t_step(t_step)
+
+def k_rel_kozeny_carman_from_Phis(Phis, Phis0, eps_val=1e-12):
+    """
+    Kozeny–Carman-type relative permeability factor based on solid fraction.
+
+    k_rel(Phis) = [(1-Phis)^3 / Phis^2] / [(1-Phis0)^3 / Phis0^2]
+    with a small regularization eps to avoid division by zero.
+    """
+    Phif  = 1.0 - Phis
+    Phif0 = 1.0 - Phis0
+    eps = dolfin.Constant(eps_val)
+
+    num = (Phif  + eps)**3 / ((1.0 - Phif  + eps)**2)   # = Phif^3 / Phis^2
+    den = (Phif0 + eps)**3 / ((1.0 - Phif0 + eps)**2)   # = Phif0^3 / Phis0^2
+    return num / den
