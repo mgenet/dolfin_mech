@@ -6,8 +6,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import sys  
-pf_values = [0.0, 0.03,0.06]
-
+# pf_values = [0.0, 0.03,0.06]
+pf_values = [0.0]
 #res_folder = sys.argv[0][:-3]
 res_folder = "/Users/xiao/PhD/dolfin_mech_HX2/dolfin_mech/run_MicroPoroflow"
 
@@ -321,13 +321,15 @@ if __name__ == "__main__":
     #     [6.88814361e-01, 7.48353084e-07],
     #     [7.48353084e-07, 6.88804851e-01],
     # ]
-    k_hom = [
-        [ 9.99997937e-01, 5.36264851e-11],
-        [5.36264851e-11,  9.99997937e-01]
-    ]
+    # k_hom = [
+    #     [ 9.99997937e-01, 5.36264851e-11],
+    #     [5.36264851e-11,  9.99997937e-01]
+    # ]
+    k_hom = [[6.17843158e-16, 0.00000000e+00],
+              [0.00000000e+00, 6.03204544e-16]]
 
-    #plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix,k0_hom=None)
+    plot_Kxx_Kyy_vs_Uxx_multi_pf(res_folder, pf_list, res_basename_prefix,k0_hom=None)
     #plot_q_vs_gradp_multi_pf(res_folder, pf_list, res_basename_prefix, k_hom=None)
-    plot_K_vs_pg_multi_Ex(res_folder,  res_basename_prefix_pf, Ex_list=[0.0, 0.1, 0.2], slice_start=3, pg_in_kPa=True)
+    #plot_K_vs_pg_multi_Ex(res_folder,  res_basename_prefix_pf, Ex_list=[0.0, 0.1, 0.2], slice_start=3, pg_in_kPa=True)
 
 

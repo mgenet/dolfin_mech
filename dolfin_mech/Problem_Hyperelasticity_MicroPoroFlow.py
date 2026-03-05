@@ -1014,15 +1014,18 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             k_l=k_l,
             rho_l=rho_l,
             dx=dx,
+            Phis0=self.Phis0,
+            kappa_val=self.kappa_val,
             dx_in=dx_in,
             dx_out=dx_out,
             #unknown_porosity_test=unknown_porosity_test
         )
-        
+
         Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val)*operator.pl_tot)
         self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
+        self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
         velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
 
         velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)

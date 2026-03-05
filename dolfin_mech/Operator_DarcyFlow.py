@@ -181,6 +181,8 @@ class MicroDarcyFlowOperator(Operator):
                  k_l,
                  rho_l,
                  dx,
+                 Phis0,
+                 kappa_val,
                  dx_in,
                  dx_out,
                  Theta_in_ini=None,
@@ -188,11 +190,22 @@ class MicroDarcyFlowOperator(Operator):
                  Theta_out_ini=None,
                  Theta_out_fin=None):
 
+        
+        def kclaw_kozeny_carman_from_Phis(Phis):
+            Phif  = 1.0 - Phis
+            Phif0 = 1.0 - Phis0
+            eps = dolfin.Constant(1e-12)  
+            num = (Phif  + eps)**3 / ((1.0 - Phif  + eps)**2)   # = Phif^3 / Phis^2
+            den = (Phif0 + eps)**3 / ((1.0 - Phif0 + eps)**2)
+            return num / den
+
         dE_test = dolfin.derivative(
             kinematics.E, U, U_test)
 
         gx_ini, gy_ini = grad_p_bar_ini
         gx_fin, gy_fin = grad_p_bar_fin
+
+        
 
         # --- TimeVaryingConstant for Theta ---
         self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
@@ -222,30 +235,30 @@ class MicroDarcyFlowOperator(Operator):
         self.grad_p_tilde_x = dolfin.inv(F).T * self.grad_p_tilde   
         self.grad_p_bar_x   = dolfin.inv(F).T * self.grad_p_bar  
 
+        Phis = Phis0 / (1.0 + (Phis0/kappa_val) * self.pl_tot)
 
+        k_l_eff = kclaw_kozeny_carman_from_Phis(Phis)
+        self.k_l_eff = k_l_eff 
+        K_l = J * dolfin.inv(F) * k_l * k_l_eff * dolfin.inv(F).T
 
-        K_l = J * dolfin.inv(F) * k_l * dolfin.inv(F).T# reference configuration permeability
-        #k_l = (1.0 / J) * F * K_l * F.T  # current configuration permeability
         self.K_l = K_l  # keep reference permeability for output
         self.k_l = k_l  # keep current permeability for output
         self.J = J
 
         # --- Darcy flow residual (standard diffusion-like form) ---
-        self.res_form = rho_l * dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
-        # form pl_field operator#
-        #self.res_form += dolfin.inner(self.pl_tot, unknown_porosity_test) * self.kinematics.J * self.measure
-        #self.res_form += dolfin.inner(p_tilde, unknown_porosity_test) * self.kinematics.J * self.measure
-        # form wbulk operator#
+        self.res_form = dolfin.inner(K_l * (self.grad_p_bar+self.grad_p_tilde), grad_p_test) * self.measure
         self.res_form +=  dolfin.inner(
             -self.pl_tot * self.kinematics.J * self.kinematics.C_inv,
             dE_test) * self.measure
+        
+        Sigma_p = -self.pl_tot * self.kinematics.J * self.kinematics.C_inv
+        self.sigma_contrib = (1.0/self.J) * self.kinematics.F * Sigma_p * self.kinematics.F.T
 
 
         # if Theta_in != 0.0:
         #     self.res_form -= Theta_in * p_test * dx_in
         # if Theta_out != 0.0:
         #     self.res_form += Theta_out * p_test * dx_out
-
 
     def set_value_at_t_step(self, t_step):
         self.tv_grad_p_bar_x.set_value_at_t_step(t_step)

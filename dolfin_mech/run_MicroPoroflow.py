@@ -29,7 +29,7 @@ def run_MicroPoroFlowHyperelasticity(
 
     # ------------------------- Mesh ------------------------- #
     mesh = dolfin.Mesh()
-    with dolfin.XDMFFile("./mesh/mesh_phi0p5186_RVE.xdmf") as infile:
+    with dolfin.XDMFFile("/Users/xiao/PhD/dolfin_mech_HX2/mesh/mesh_phi0p5186_RVE.xdmf") as infile:
          infile.read(mesh)
 
     #mesh = dmech.run_HollowBox_Mesh(params=mesh_params)
@@ -270,7 +270,7 @@ mat_params = {
     "gamma":0.5,
     "c1":0.2,
     "c2":0.4,
-    "kappa":1e2,
+    "kappa":1,
     "eta":1e-5}
 
 
@@ -287,10 +287,10 @@ dim_lst += [2]
 # dim_lst += [3]
 Ex_values = [0.0, 0.1, 0.2]
 #pf_values = [0.0, 0.03,0.06]
-Ex_values = [0.0, 0.1, 0.2] 
+#Ex_values = [0.0, 0.1, 0.2] 
 pf_values = [0.0]
-grad_p_bar_x_lst = [0.3,0.3]#[5]
-grad_p_bar_y_lst = [0.3,0.3]#[5]#[0.1]
+grad_p_bar_x_lst = [0.5,0.5]#[5]
+grad_p_bar_y_lst = [0.5,0.5]#[5]#[0.1]
 Theta_in_lst = [0.0,0]   
 Theta_out_lst = [0.0,0]
 
@@ -313,8 +313,8 @@ for dim in dim_lst:
     for bcs in bcs_lst:
 
         load_lst  = [                     ]
-        #load_lst += ["K_vs_U"]
-        load_lst += ["K_vs_pf"]
+        load_lst += ["K_vs_U"]
+        #load_lst += ["K_vs_pf"]
         for load in load_lst:
 
             if load == "K_vs_U":
@@ -342,7 +342,7 @@ for dim in dim_lst:
 
                     load_params["pf_lst"] = [pf,pf]
 
-                    load_params["U_bar_00_lst"] = [0,0.3]
+                    load_params["U_bar_00_lst"] = [0,0.1]
 
                     #load_params["sigma_bar_00_lst"] = [0,0.1]
 
@@ -374,7 +374,7 @@ for dim in dim_lst:
                             "k_l": dolfin.Constant(((1e-15, 0.0),
                                 (0.0, 1e-15))),
                             #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 0
+                            "pl_bar": 0.1
                             },
                         flow_loading_params=flow_loading_params,
                         porosity_params={
@@ -425,7 +425,7 @@ for dim in dim_lst:
                             "k_l": dolfin.Constant(((1e-15, 0.0),
                                 (0.0, 1e-15))),
                             #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 0
+                            "pl_bar": 1
                             },
                         flow_loading_params=flow_loading_params,
                         porosity_params={
