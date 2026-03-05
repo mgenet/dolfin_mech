@@ -13,6 +13,7 @@
 ###                                                                          ###
 ################################################################################
 
+import operator
 import dolfin
 import numpy
 
@@ -995,6 +996,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         dx      = self.get_subdomain_measure(subdomain_id)      # e.g., dx or dx(subdomain_id)
         dx_in   = self.get_subdomain_measure(inlet_id)          # dx(inlet_id) for source
         dx_out  = self.get_subdomain_measure(outlet_id)         # dx(outlet_id) for sink
+        
 
         operator = MicroDarcyFlowOperator(
             kinematics=kinematics,
@@ -1022,167 +1024,99 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             #unknown_porosity_test=unknown_porosity_test
         )
 
+        operator.dx_measure = dx
+        operator.dx_in_measure = dx_in
+        operator.dx_out_measure = dx_out
+
         print(k_step)
         print("pl_bar:", pl_bar_ini, "->", pl_bar_fin)
         print("grad_p_bar:", grad_p_bar_ini, "->", grad_p_bar_fin)
 
         Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val)*operator.pl_tot)
-        self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
-        self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
-        self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
-        self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
-        #self.add_foi(expr=operator.pl_affine, fs=self.vfoi_fs, name="pl_affine", update_type="project")
-        self.add_foi(expr=operator.pl_bar, fs=self.sfoi_fs, name="pl_bar", update_type="project")
+        # self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
+        # self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
+        # self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
+        # self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
+        # self.add_foi(expr=operator.pl_affine, fs=self.sfoi_fs, name="pl_affine", update_type="project")
+        # self.add_foi(expr=operator.pl_bar, fs=self.sfoi_fs, name="pl_bar", update_type="project")
+        # self.add_foi(expr=operator.pl_tot, fs=self.sfoi_fs, name="pl_tot", update_type="project")
 
         velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
-        velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
-        self.add_foi(expr=velocity_expr, fs=self.vfoi_fs, name="DarcyVelocity")
+        self.velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
+        self.add_foi(expr=self.velocity_expr, fs=self.vfoi_fs, name="DarcyVelocity")
 
-        Area = dolfin.assemble(1.0 * dx)
-        Vcur = dolfin.assemble(self.kinematics.J * dx)
-
-        self.add_qoi(name="pl_bar", expr=operator.pl_bar * dx, norm=Area)
-        self.add_qoi(name="q_avg_x", expr=velocity_expr_ref[0]* dx, norm=Area)
-        self.add_qoi(name="q_avg_y", expr=velocity_expr_ref[1]* dx, norm=Area)
-        self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)
-        self.add_qoi(name="grad_p_bar_y",expr=operator.grad_p_bar[1] * dx,norm=Area)
-
-        V = dolfin.assemble(self.kinematics.J * self.dV)
-        self.add_qoi(
-            name="p_tilde_avg_current",
-            expr=self.pl_perturbation_subsol.subfunc * self.kinematics.J * self.dV,
-            norm=V
-        )
-        
-        self.add_foi(
-            expr=operator.pl_tot,
-            fs=self.pl_perturbation_subsol.fs.collapse(),
-            name="pl_tot",
-            update_type="project")
-
-        def _get_dwbulkdphis_expr(wbulk_op):
-            if hasattr(wbulk_op, "material") and hasattr(wbulk_op.material, "dWbulkdPhis"):
-                return wbulk_op.material.dWbulkdPhis
-            if hasattr(wbulk_op, "dWbulkdPhis"):
-                return wbulk_op.dWbulkdPhis
-            if hasattr(wbulk_op, "mat") and hasattr(wbulk_op.mat, "dWbulkdPhis"):
-                return wbulk_op.mat.dWbulkdPhis
-            raise AttributeError(f"dWbulkdPhis not found on {type(wbulk_op)}")
-
-        if hasattr(self, "wbulk_ops"):
-            for item in self.wbulk_ops:
-                wbulk_op = item["op"]
-                suffix = item.get("suffix", "")
-                sub_id = item.get("subdomain_id", None)
-
-                dw_expr = _get_dwbulkdphis_expr(wbulk_op)
-                diff_expr = operator.pl_tot*self.kinematics.J + dw_expr
-
-                fs_scalar = self.pl_perturbation_subsol.fs.collapse()
-
-                self.add_foi(
-                    expr=diff_expr,
-                    fs=fs_scalar,
-                    name="pl_plus_minus_dWbulkdPhis"+suffix,
-                    update_type="project"
-                )
-
-                if sub_id is not None:
-                    dx_bulk = self.get_subdomain_measure(sub_id)
-                    Area = dolfin.assemble(1.0 * dx_bulk)
-                    self.add_qoi(
-                        name="avg(pl_plus_dWbulkdPhis)"+suffix,
-                        expr=diff_expr * dx_bulk,
-                        norm=Area
-            )
+        self.add_darcy_fois(operator)
 
         return self.add_operator(operator=operator, k_step=k_step)
     
 
 
+    def add_darcy_qois(self, symmetric=False):
+        pl_bar_lst = []
+        qx_lst = []
+        qy_lst = []
+        gpx_lst = []
+        gpy_lst = []
+        ptilde_avg_lst = []
+
+        V0_ref = self.Vs0 
+
+        for step in self.steps:
+            darcy_op = None
+            for op in step.operators:
+
+                if hasattr(op, "pl_tot") and hasattr(op, "K_l") and hasattr(op, "grad_p_bar"):
+                    darcy_op = op
+                    break
+            if darcy_op is None:
+                raise RuntimeError("Cannot find Darcy operator in a step. Did you add it to every step?")
+
+            vel_ref = - darcy_op.K_l * (darcy_op.grad_p_tilde + darcy_op.grad_p_bar)
+
+            dx = getattr(darcy_op, "dx_measure", None)
+            if dx is None:
+                raise RuntimeError("Darcy operator has no dx_measure. Save dx into operator when creating it.")
+
+            Area = dolfin.assemble(1.0 * dx)
+
+            pl_bar_lst.append(darcy_op.pl_bar * dx)
+            qx_lst.append(vel_ref[0] * dx)
+            qy_lst.append(vel_ref[1] * dx)
+            gpx_lst.append(darcy_op.grad_p_bar[0] * dx)
+            gpy_lst.append(darcy_op.grad_p_bar[1] * dx)
+
+            ptilde_avg_lst.append(self.pl_perturbation_subsol.subfunc * self.kinematics.J * self.dV)
 
 
+        self.add_qoi(name="pl_bar",        expr_lst=pl_bar_lst,        norm=Area)
+        self.add_qoi(name="q_avg_x",       expr_lst=qx_lst,            norm=Area)
+        self.add_qoi(name="q_avg_y",       expr_lst=qy_lst,            norm=Area)
+        self.add_qoi(name="grad_p_bar_x",  expr_lst=gpx_lst,           norm=Area)
+        self.add_qoi(name="grad_p_bar_y",  expr_lst=gpy_lst,           norm=Area)
 
 
-    def add_Wbulk_operators(self,
-            bulk_behaviors):
+        #self.add_qoi(name="p_tilde_intJ",  expr_lst=ptilde_avg_lst)
+        # self.add_qoi(name="p_tilde_avg_ref", expr_lst=ptilde_avg_lst, norm=V0_ref)
+    
 
-        for bulk_behavior in bulk_behaviors:
-            operator = self.add_Wbulk_operator(
-                material_parameters=bulk_behavior["parameters"],
-                material_scaling=bulk_behavior["scaling"],
-                subdomain_id=bulk_behavior.get("subdomain_id", None))
-            suffix = "_"+bulk_behavior["suffix"] if "suffix" in bulk_behavior else ""
-            self.add_foi(expr=operator.material.dWbulkdPhis, fs=self.sfoi_fs, name="dWbulkdPhis"+suffix)
-            self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.J * self.kinematics.C_inv, fs=self.mfoi_fs, name="Sigma_bulk"+suffix)
-            self.add_foi(expr=operator.material.dWbulkdPhis * self.kinematics.I, fs=self.mfoi_fs, name="sigma_bulk"+suffix)
+    def add_darcy_fois(self, operator):
 
-            self.wbulk_ops = getattr(self, "wbulk_ops", [])
-            self.wbulk_ops.append({
-                "op": operator,
-                "suffix": suffix,
-                "subdomain_id": bulk_behavior.get("subdomain_id", None),
-            })
+        if getattr(self, "_darcy_fois_added", False):
+            return
+        self._darcy_fois_added = True
 
+        Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val) * operator.pl_tot)
 
+        self.add_foi(expr=Phis_expr,      fs=self.sfoi_fs, name="Phis",      update_type="project")
+        self.add_foi(expr=operator.K_l,   fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
+        self.add_foi(expr=operator.k_l,   fs=self.mfoi_fs, name="k_l_curr",  update_type="project")
+        self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
+        self.add_foi(expr=operator.pl_affine, fs=self.sfoi_fs, name="pl_affine", update_type="project")
+        self.add_foi(expr=operator.pl_bar,    fs=self.sfoi_fs, name="pl_bar",    update_type="project")
+        self.add_foi(expr=operator.pl_tot,    fs=self.sfoi_fs, name="pl_tot",    update_type="project")
 
 
-    def add_Wpore_operator(self,
-            material_parameters,
-            material_scaling,
-            subdomain_id=None):
-
-        operator = dmech.WporePoroOperator(
-            kinematics=self.kinematics,
-            Phis0=self.Phis0,
-            Phis=self.Phis,
-            unknown_porosity_test=self.porosity_subsol.dsubtest,
-            material_parameters=material_parameters,
-            material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id))
-        return self.add_operator(operator)
-
-
-
-    def add_Wpore_operators(self,
-            pore_behaviors):
-
-        for pore_behavior in pore_behaviors:
-            self.add_Wpore_operator(
-                material_parameters=pore_behavior["parameters"],
-                material_scaling=pore_behavior["scaling"],
-                subdomain_id=pore_behavior.get("subdomain_id", None))
-
-
-
-
-    def add_pressure_balancing_gravity_loading_operator(self,
-            k_step=None,
-            **kwargs):
-
-        operator = dmech.PressureBalancingGravityLoadingOperator(
-            X=self.X,
-            x0=self.deformed_center_of_mass_subsol.subfunc,
-            x0_test=self.deformed_center_of_mass_subsol.dsubtest,
-            lmbda=self.lmbda_subsol.subfunc,
-            lmbda_test=self.lmbda_subsol.dsubtest,
-            mu=self.mu_subsol.subfunc,
-            mu_test=self.mu_subsol.dsubtest,
-            p = self.pressure_balancing_gravity_subsol.subfunc,
-            p_test = self.pressure_balancing_gravity_subsol.dsubtest,
-            gamma = self.gamma_subsol.subfunc,
-            gamma_test = self.gamma_subsol.dsubtest,
-            kinematics=self.kinematics,
-            U=self.displacement_subsol.subfunc,
-            U_test=self.displacement_subsol.dsubtest,
-            Phis=self.Phis,
-            Phis0=self.Phis0,
-            N=self.mesh_normals,
-            **kwargs)
-        return self.add_operator(operator=operator, k_step=k_step)
-
-
-
+ 
     def add_global_porosity_qois(self):
 
         self.add_qoi(
@@ -1302,39 +1236,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         return self.get_subsol_function_space(name=self.get_porosity_name())
     
-    def add_Wbulk_operator(self,
-            material_parameters,
-            material_scaling,
-            subdomain_id=None):
-
-        operator = WbulkMicroPoroFlowOperator(
-            kinematics=self.kinematics,
-            U=self.displacement_perturbation_subsol.subfunc,
-            U_test=self.displacement_perturbation_subsol.dsubtest,
-            Phis0=self.Phis0,
-            Phis=self.porosity_subsol.subfunc,
-            Phis_test=self.porosity_subsol.dsubtest,
-            material_parameters=material_parameters,
-            material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id))
-        return self.add_operator(operator)
-    
-    def add_Wpore_operator(self,
-            material_parameters,
-            material_scaling,
-            subdomain_id=None):
-
-        operator = dmech.WporePoroOperator(
-            kinematics=self.kinematics,
-            Phis0=self.Phis0,
-            Phis=self.Phis,
-            unknown_porosity_test=self.porosity_subsol.dsubtest,
-            material_parameters=material_parameters,
-            material_scaling=material_scaling,
-            measure=self.get_subdomain_measure(subdomain_id))
-        return self.add_operator(operator)
-
-    
     def add_Wskel_operator(self,
             material_parameters,
             material_scaling,
@@ -1389,5 +1290,4 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             sigma_total = dolfin.Constant(((0.0,) * dim,) * dim)
 
         return sigma_total
-
 

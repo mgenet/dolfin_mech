@@ -139,7 +139,7 @@ class WbulkMicroPoroFlowOperator(Operator):
             material_scaling,
             measure
             ):  # new input
-
+        
         self.kinematics = kinematics
         self.solid_material = dmech.WbulkLungElasticMaterial(
             Phis=Phis,
@@ -229,6 +229,7 @@ class MicroDarcyFlowOperator(Operator):
         self.measure = dx  
         self.kinematics = kinematics
         self.grad_p_tilde = dolfin.grad(p_tilde)
+        
         grad_p_test = dolfin.grad(p_test)
 
         F = self.kinematics.F
@@ -256,13 +257,12 @@ class MicroDarcyFlowOperator(Operator):
         Sigma_p = -self.pl_tot * self.kinematics.J * self.kinematics.C_inv
         self.sigma_contrib = (1.0/self.J) * self.kinematics.F * Sigma_p * self.kinematics.F.T
 
+    # if Theta_in != 0.0:
+    #     self.res_form -= Theta_in * p_test * dx_in
+    # if Theta_out != 0.0:
+    #     self.res_form += Theta_out * p_test * dx_out
 
 
-
-        # if Theta_in != 0.0:
-        #     self.res_form -= Theta_in * p_test * dx_in
-        # if Theta_out != 0.0:
-        #     self.res_form += Theta_out * p_test * dx_out
 
     def set_value_at_t_step(self, t_step):
         self.tv_grad_p_bar_x.set_value_at_t_step(t_step)

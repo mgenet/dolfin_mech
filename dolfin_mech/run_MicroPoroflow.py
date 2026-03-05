@@ -98,48 +98,23 @@ def run_MicroPoroFlowHyperelasticity(
     gamma_lst = load_params.get("gamma_lst", [(k_step+1)*load_params.get("gamma", 0)/n_steps for k_step in range(n_steps)])
     tension_params = load_params.get("tension_params", {})
 
+    
+
     # --- flow loading lists ---
-    grad_p_bar_lst = flow_loading_params.get("grad_p_bar_lst", [[0.0]*n_steps for _ in range(dim)])
-    p_bar_lst = flow_loading_params.get("p_bar_lst", [0.0]*n_steps)
-    Theta_in_lst   = flow_loading_params.get("Theta_in_lst",  [0.0]*n_steps)
-    Theta_out_lst  = flow_loading_params.get("Theta_out_lst", [0.0]*n_steps)
 
+    pl_bar_ini_lst = flow_loading_params.get("pl_bar_ini_lst", [0.0]*n_steps)
+    pl_bar_fin_lst = flow_loading_params.get("pl_bar_fin_lst", [0.0]*n_steps)
 
-    # ---- grad_p_bar (x,y) ----
-    grad_p_bar_ini = {}
-    grad_p_bar_fin = {}
+    grad_p_bar_x_ini_lst = flow_loading_params.get("grad_p_bar_x_ini_lst", [0.0]*n_steps)
+    grad_p_bar_x_fin_lst = flow_loading_params.get("grad_p_bar_x_fin_lst", [0.0]*n_steps)
 
-    pl_bar_ini = {}
-    pl_bar_fin = {}
+    grad_p_bar_y_ini_lst = flow_loading_params.get("grad_p_bar_y_ini_lst", [0.0]*n_steps)
+    grad_p_bar_y_fin_lst = flow_loading_params.get("grad_p_bar_y_fin_lst", [0.0]*n_steps)
 
-    for k_step in range(n_steps):
-        for d in range(dim):
-            grad_p_bar     = grad_p_bar_lst[d][k_step]
-            grad_p_bar_old = grad_p_bar_lst[d][k_step-1] if (k_step > 0) else 0.0
-
-            grad_p_bar_ini[d] = grad_p_bar_old
-            grad_p_bar_fin[d] = grad_p_bar
-
-        
-        
-        pl_bar_ini = p_bar_lst[k_step-1] if (k_step > 0) else 0.0
-        pl_bar_fin = p_bar_lst[k_step]
-
-        
-
-        # ---- Theta_in / Theta_out ----
-        Theta_ini = {}
-        Theta_fin = {}
-
-        for name, Theta_lst in {
-            "in":  Theta_in_lst,
-            "out": Theta_out_lst,
-        }.items():
-            Theta     = Theta_lst[k_step]
-            Theta_old = Theta_lst[k_step-1] if (k_step > 0) else 0.0
-
-            Theta_ini[name] = Theta_old
-            Theta_fin[name] = Theta
+    Theta_in_ini_lst  = flow_loading_params.get("Theta_in_ini_lst",  [0.0]*n_steps)
+    Theta_in_fin_lst  = flow_loading_params.get("Theta_in_fin_lst",  [0.0]*n_steps)
+    Theta_out_ini_lst = flow_loading_params.get("Theta_out_ini_lst", [0.0]*n_steps)
+    Theta_out_fin_lst = flow_loading_params.get("Theta_out_fin_lst", [0.0]*n_steps)
 
 
     for k_step in range(n_steps):
@@ -197,9 +172,20 @@ def run_MicroPoroFlowHyperelasticity(
             tension_params=tension_params,
             k_step=k_step)
         
-        grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
-        grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
-    
+
+
+            # ---- flow loadings (pull from your manual arrays using k) ----
+        pl_bar_ini = pl_bar_ini_lst[k_step]
+        pl_bar_fin = pl_bar_fin_lst[k_step]
+
+        grad_p_bar_ini = (grad_p_bar_x_ini_lst[k_step], grad_p_bar_y_ini_lst[k_step])
+        grad_p_bar_fin = (grad_p_bar_x_fin_lst[k_step], grad_p_bar_y_fin_lst[k_step])
+
+        Theta_in_ini  = Theta_in_ini_lst[k_step]
+        Theta_in_fin  = Theta_in_fin_lst[k_step]
+        Theta_out_ini = Theta_out_ini_lst[k_step]
+        Theta_out_fin = Theta_out_fin_lst[k_step]
+
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
         k_l   = flow_params.get("k_l", dolfin.Constant(1.0) * dolfin.Identity(dim))
@@ -216,8 +202,8 @@ def run_MicroPoroFlowHyperelasticity(
             rho_l=rho_l,
             grad_p_bar_ini=grad_p_bar_ini,
             grad_p_bar_fin=grad_p_bar_fin,
-            Theta_in_ini=Theta_ini["in"],   Theta_in_fin=Theta_fin["in"],
-            Theta_out_ini=Theta_ini["out"], Theta_out_fin=Theta_fin["out"],
+            Theta_in_ini=Theta_in_ini,   Theta_in_fin=Theta_in_fin,
+            Theta_out_ini=Theta_out_ini, Theta_out_fin=Theta_out_fin,
             subdomain_id=None,
             inlet_id=None,
             outlet_id=None,
@@ -234,6 +220,9 @@ def run_MicroPoroFlowHyperelasticity(
     problem.add_macroscopic_stress_qois()
     problem.add_fluid_pressure_qoi()
     problem.add_interfacial_surface_qois()
+    problem.add_darcy_qois() 
+
+
 
     # -------------------- Solver & Integrator ---------------- #
     # solver = dmech.NonlinearSolver(
@@ -301,23 +290,37 @@ Ex_values = [0.0, 0.1, 0.2]
 #Ex_values = [0.0, 0.1, 0.2] 
 pf_values = [0]
 p_bar_lst = [0.0, 0.1, 0.1]#[0.0, 0.1, 0.2]
-grad_p_bar_x_lst = [0,0.2,0.2]#[5]
-grad_p_bar_y_lst = [0,0.2,0.2]#[5]#[0.1]
+
+pl_bar_ini_lst = [0.0, 0.1]
+pl_bar_fin_lst = [0.1, 0.1]
+
+grad_p_bar_x_ini_lst = [0.0, 0.2]
+grad_p_bar_x_fin_lst = [0.2, 0.2]
+
+grad_p_bar_y_ini_lst = [0.0, 0.2]
+grad_p_bar_y_fin_lst = [0.2, 0.2]
+
 Theta_in_lst = [0.0,0]   
 Theta_out_lst = [0.0,0]
 
 
 flow_loading_params = {
-    # 2D: d=0 -> x, d=1 -> y
-    "grad_p_bar_lst": [
-        grad_p_bar_x_lst,
-        grad_p_bar_y_lst
-    ],
-    "Theta_in_lst":  Theta_in_lst,
-    "Theta_out_lst": Theta_out_lst,
-    "p_bar_lst": p_bar_lst,
-}
+    # pressure (scalar)
+    "pl_bar_ini_lst": pl_bar_ini_lst,
+    "pl_bar_fin_lst": pl_bar_fin_lst,
 
+    # pressure gradient (2D)
+    "grad_p_bar_x_ini_lst": grad_p_bar_x_ini_lst,
+    "grad_p_bar_x_fin_lst": grad_p_bar_x_fin_lst,
+    "grad_p_bar_y_ini_lst": grad_p_bar_y_ini_lst,
+    "grad_p_bar_y_fin_lst": grad_p_bar_y_fin_lst,
+
+    # Theta (keep simple: scalar ini/fin per step)
+    "Theta_in_ini_lst":  [0.0, 0.0],  
+    "Theta_in_fin_lst":  Theta_in_lst, 
+    "Theta_out_ini_lst": [0.0, 0.0],
+    "Theta_out_fin_lst": Theta_out_lst,
+}
 for dim in dim_lst:
 
     bcs_lst  = [      ]
