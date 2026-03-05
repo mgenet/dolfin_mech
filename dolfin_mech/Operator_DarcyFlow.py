@@ -176,7 +176,8 @@ class MicroDarcyFlowOperator(Operator):
                  p_tilde,
                  grad_p_bar_ini,
                  grad_p_bar_fin,
-                 pl_bar,
+                 pl_bar_ini,
+                 pl_bar_fin,
                  p_test,
                  k_l,
                  rho_l,
@@ -205,7 +206,8 @@ class MicroDarcyFlowOperator(Operator):
         gx_ini, gy_ini = grad_p_bar_ini
         gx_fin, gy_fin = grad_p_bar_fin
 
-        
+        # --- TimeVaryingConstant for pl_bar ---
+        self.tv_pl_bar = dmech.TimeVaryingConstant(val_ini=pl_bar_ini, val_fin=pl_bar_fin)
 
         # --- TimeVaryingConstant for Theta ---
         self.tv_Theta_in  = dmech.TimeVaryingConstant(val_ini=Theta_in_ini,  val_fin=Theta_in_fin)
@@ -221,11 +223,11 @@ class MicroDarcyFlowOperator(Operator):
             self.tv_grad_p_bar_y.val
         ))
 
-        self.pl_bar= pl_bar
-        self.pl_tot = self.pl_bar + dolfin.dot(self.grad_p_bar, X - X_0) + p_tilde
+        self.pl_bar = self.tv_pl_bar.val
+        self.pl_affine = dolfin.dot(self.grad_p_bar, X - X_0)
+        self.pl_tot = self.pl_bar + self.pl_affine + p_tilde
         self.measure = dx  
         self.kinematics = kinematics
-
         self.grad_p_tilde = dolfin.grad(p_tilde)
         grad_p_test = dolfin.grad(p_test)
 
@@ -237,7 +239,7 @@ class MicroDarcyFlowOperator(Operator):
 
         Phis = Phis0 / (1.0 + (Phis0/kappa_val) * self.pl_tot)
 
-        k_l_eff = kclaw_kozeny_carman_from_Phis(Phis)
+        k_l_eff = 1#kclaw_kozeny_carman_from_Phis(Phis)
         self.k_l_eff = k_l_eff 
         K_l = J * dolfin.inv(F) * k_l * k_l_eff * dolfin.inv(F).T
 
@@ -255,6 +257,8 @@ class MicroDarcyFlowOperator(Operator):
         self.sigma_contrib = (1.0/self.J) * self.kinematics.F * Sigma_p * self.kinematics.F.T
 
 
+
+
         # if Theta_in != 0.0:
         #     self.res_form -= Theta_in * p_test * dx_in
         # if Theta_out != 0.0:
@@ -265,3 +269,4 @@ class MicroDarcyFlowOperator(Operator):
         self.tv_grad_p_bar_y.set_value_at_t_step(t_step)
         self.tv_Theta_in.set_value_at_t_step(t_step)
         self.tv_Theta_out.set_value_at_t_step(t_step)
+        self.tv_pl_bar.set_value_at_t_step(t_step)

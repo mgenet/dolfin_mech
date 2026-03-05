@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys  
 # pf_values = [0.0, 0.03,0.06]
-pf_values = [0.0]
+pf_values = [0]
 #res_folder = sys.argv[0][:-3]
 res_folder = "/Users/xiao/PhD/dolfin_mech_HX2/dolfin_mech/run_MicroPoroflow"
 
@@ -172,7 +172,7 @@ def plot_Kxx_Kyy_vs_Uxx_multi_pf(
     pf_list,
     res_basename_prefix,
     k0_hom=None,          # 2x2 reference permeability tensor in reference config
-    slice_start=3,        # keep consistent with your [2:] slicing
+    slice_start=6,        # keep consistent with your [2:] slicing
     eps=1e-12,
     use_F_equals_U=True,  # if True: F = U_bar ; otherwise you can modify later
 ):

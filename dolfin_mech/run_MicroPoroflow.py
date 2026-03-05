@@ -100,6 +100,7 @@ def run_MicroPoroFlowHyperelasticity(
 
     # --- flow loading lists ---
     grad_p_bar_lst = flow_loading_params.get("grad_p_bar_lst", [[0.0]*n_steps for _ in range(dim)])
+    p_bar_lst = flow_loading_params.get("p_bar_lst", [0.0]*n_steps)
     Theta_in_lst   = flow_loading_params.get("Theta_in_lst",  [0.0]*n_steps)
     Theta_out_lst  = flow_loading_params.get("Theta_out_lst", [0.0]*n_steps)
 
@@ -107,6 +108,10 @@ def run_MicroPoroFlowHyperelasticity(
     # ---- grad_p_bar (x,y) ----
     grad_p_bar_ini = {}
     grad_p_bar_fin = {}
+
+    pl_bar_ini = {}
+    pl_bar_fin = {}
+
     for k_step in range(n_steps):
         for d in range(dim):
             grad_p_bar     = grad_p_bar_lst[d][k_step]
@@ -114,6 +119,13 @@ def run_MicroPoroFlowHyperelasticity(
 
             grad_p_bar_ini[d] = grad_p_bar_old
             grad_p_bar_fin[d] = grad_p_bar
+
+        
+        
+        pl_bar_ini = p_bar_lst[k_step-1] if (k_step > 0) else 0.0
+        pl_bar_fin = p_bar_lst[k_step]
+
+        
 
         # ---- Theta_in / Theta_out ----
         Theta_ini = {}
@@ -187,11 +199,11 @@ def run_MicroPoroFlowHyperelasticity(
         
         grad_p_bar_ini = (grad_p_bar_ini[0], grad_p_bar_ini[1])
         grad_p_bar_fin = (grad_p_bar_fin[0], grad_p_bar_fin[1])
+    
 
         rho_l = flow_params.get("rho_l", dolfin.Constant(1.0))
         k_l   = flow_params.get("k_l", dolfin.Constant(1.0) * dolfin.Identity(dim))
-       
-        pl_bar = flow_params.get("pl_bar", dolfin.Constant(0.0))
+
 
         problem.add_Darcy_operator(
             kinematics=problem.kinematics,
@@ -199,17 +211,16 @@ def run_MicroPoroFlowHyperelasticity(
             U_test=problem.displacement_perturbation_subsol.dsubtest,
             X=problem.X,
             X_0=problem.X_0,
-            #unknown_porosity_test=problem.porosity_subsol.dsubtest,
+            pl_bar_ini=pl_bar_ini, pl_bar_fin=pl_bar_fin,
             k_l=k_l,
             rho_l=rho_l,
-            pl_bar=pl_bar,
             grad_p_bar_ini=grad_p_bar_ini,
             grad_p_bar_fin=grad_p_bar_fin,
             Theta_in_ini=Theta_ini["in"],   Theta_in_fin=Theta_fin["in"],
             Theta_out_ini=Theta_ini["out"], Theta_out_fin=Theta_fin["out"],
             subdomain_id=None,
-            inlet_id=3,
-            outlet_id=4,
+            inlet_id=None,
+            outlet_id=None,
             k_step=k_step
         )
 
@@ -288,9 +299,10 @@ dim_lst += [2]
 Ex_values = [0.0, 0.1, 0.2]
 #pf_values = [0.0, 0.03,0.06]
 #Ex_values = [0.0, 0.1, 0.2] 
-pf_values = [0.0]
-grad_p_bar_x_lst = [0.5,0.5]#[5]
-grad_p_bar_y_lst = [0.5,0.5]#[5]#[0.1]
+pf_values = [0]
+p_bar_lst = [0.0, 0.1, 0.1]#[0.0, 0.1, 0.2]
+grad_p_bar_x_lst = [0,0.2,0.2]#[5]
+grad_p_bar_y_lst = [0,0.2,0.2]#[5]#[0.1]
 Theta_in_lst = [0.0,0]   
 Theta_out_lst = [0.0,0]
 
@@ -303,6 +315,7 @@ flow_loading_params = {
     ],
     "Theta_in_lst":  Theta_in_lst,
     "Theta_out_lst": Theta_out_lst,
+    "p_bar_lst": p_bar_lst,
 }
 
 for dim in dim_lst:
@@ -342,10 +355,9 @@ for dim in dim_lst:
 
                     load_params["pf_lst"] = [pf,pf]
 
-                    load_params["U_bar_00_lst"] = [0,0.1]
+                    load_params["U_bar_00_lst"] = [0,0.3]
 
                     #load_params["sigma_bar_00_lst"] = [0,0.1]
-
                     for i in range(dim):
                         for j in range(dim):
                             if ((i != 0) or (j != 0)):
@@ -373,8 +385,6 @@ for dim in dim_lst:
                             "rho_l": 1.0,
                             "k_l": dolfin.Constant(((1e-15, 0.0),
                                 (0.0, 1e-15))),
-                            #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 0.1
                             },
                         flow_loading_params=flow_loading_params,
                         porosity_params={
@@ -386,9 +396,9 @@ for dim in dim_lst:
                         step_params = {
                             "n_steps": 2,
                             "Deltat_lst": [1e-2, 1e-1],     
-                            "dt_ini_lst": [5e-3, 1e-3],     
-                            "dt_min_lst": [5e-3, 1e-4],     
-                            "dt_max_lst": [5e-3, 5e-3],     
+                            "dt_ini_lst": [2e-3, 1e-3],     
+                            "dt_min_lst": [2e-3, 1e-4],     
+                            "dt_max_lst": [2e-3, 5e-3],     
                         },
                         load_params=load_params,
                         res_basename=res_folder+"/"+res_basename,
@@ -422,15 +432,13 @@ for dim in dim_lst:
                             },
                         flow_params={
                             "rho_l": 1.0,
-                            "k_l": dolfin.Constant(((1e-15, 0.0),
-                                (0.0, 1e-15))),
-                            #"k_l": dolfin.Constant(((1, 0.0),(0.0, 1))),
-                            "pl_bar": 1
+                            "k_l": dolfin.Constant(((1e-6, 0.0),
+                                (0.0, 1e-6)))
                             },
                         flow_loading_params=flow_loading_params,
                         porosity_params={
                             "type": "constant",  # can be "constant", "function_constant", or "random"
-                            "val": 0.3
+                            "val": 0.2
                         },  
                         
                         bcs=bcs,

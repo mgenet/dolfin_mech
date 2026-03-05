@@ -975,7 +975,8 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         X_0,
         grad_p_bar_ini,
         grad_p_bar_fin,
-        pl_bar,
+        pl_bar_ini,
+        pl_bar_fin,
         Theta_in_ini,
         Theta_in_fin,
         Theta_out_ini,
@@ -987,7 +988,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         outlet_id,
         #unknown_porosity_test,
         k_step):
-
 
         pl      = self.pl_perturbation_subsol.subfunc
         p_test = self.pl_perturbation_subsol.dsubtest
@@ -1010,7 +1010,8 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             Theta_out_fin=Theta_out_fin,
             p_tilde=pl,
             p_test=p_test,
-            pl_bar=pl_bar,
+            pl_bar_ini=pl_bar_ini,
+            pl_bar_fin=pl_bar_fin,
             k_l=k_l,
             rho_l=rho_l,
             dx=dx,
@@ -1021,21 +1022,26 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             #unknown_porosity_test=unknown_porosity_test
         )
 
+        print(k_step)
+        print("pl_bar:", pl_bar_ini, "->", pl_bar_fin)
+        print("grad_p_bar:", grad_p_bar_ini, "->", grad_p_bar_fin)
+
         Phis_expr = self.Phis0 / (1.0 + (self.Phis0/self.kappa_val)*operator.pl_tot)
         self.add_foi(expr=Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
         self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
         self.add_foi(expr=operator.k_l, fs=self.mfoi_fs, name="k_l_curr", update_type="project")
         self.add_foi(expr=operator.k_l_eff, fs=self.sfoi_fs, name="k_l_eff", update_type="project")
-        velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
+        #self.add_foi(expr=operator.pl_affine, fs=self.vfoi_fs, name="pl_affine", update_type="project")
+        self.add_foi(expr=operator.pl_bar, fs=self.sfoi_fs, name="pl_bar", update_type="project")
 
+        velocity_expr_ref = - operator.K_l * (operator.grad_p_tilde + operator.grad_p_bar)
         velocity_expr = - operator.k_l * (operator.grad_p_tilde_x + operator.grad_p_bar_x)
-        velocity_fs = dolfin.VectorFunctionSpace(self.mesh, "CG", 1)
-        self.add_foi(expr=velocity_expr, fs=velocity_fs, name="DarcyVelocity")
+        self.add_foi(expr=velocity_expr, fs=self.vfoi_fs, name="DarcyVelocity")
 
         Area = dolfin.assemble(1.0 * dx)
         Vcur = dolfin.assemble(self.kinematics.J * dx)
 
-
+        self.add_qoi(name="pl_bar", expr=operator.pl_bar * dx, norm=Area)
         self.add_qoi(name="q_avg_x", expr=velocity_expr_ref[0]* dx, norm=Area)
         self.add_qoi(name="q_avg_y", expr=velocity_expr_ref[1]* dx, norm=Area)
         self.add_qoi(name="grad_p_bar_x",expr=operator.grad_p_bar[0] * dx,norm=Area)
