@@ -1211,9 +1211,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             name="pf",
             expr=sum([operator.pf*operator.measure for step in self.steps for operator in step.operators if hasattr(operator, "pf")]))
 
-
-
-        
     def add_Wskel_operators(self,
             skel_behaviors):
 
