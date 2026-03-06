@@ -20,7 +20,7 @@ import numpy
 import dolfin_mech as dmech
 from .Problem                 import Problem
 from .Problem_Hyperelasticity import HyperelasticityProblem
-from .Operator_DarcyFlow import MicroDarcyFlowOperator,WbulkPoroFlowOperator,WskelPoroFlowOperator,WbulkMicroPoroFlowOperator
+from .Operator_DarcyFlow import MicroDarcyFlowOperator,WskelPoroFlowOperator
 from .Operator_ZeroMeanPressure import ZeroMeanPressureOperator
 ################################################################################
 class _SigmaAggregatorMaterial:
@@ -988,6 +988,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
                         # --- material ---
                         k_l0,               # 2x2 tensor baseline intrinsic permeability (current config)
+                        use_kozeny_carman,  # whether to use Kozeny-Carman relative permeability (True) or a constant factor (False)
 
                         # --- domain / boundary ids ---
                         subdomain_id,
@@ -1019,6 +1020,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             grad_p_bar_fin=grad_p_bar_fin,
             pl_bar_ini=pl_bar_ini,
             pl_bar_fin=pl_bar_fin,
+            use_kozeny_carman=use_kozeny_carman,
             k_l0=k_l0,
             Phis0=self.Phis0,
             kappa_val=self.kappa_val,
@@ -1069,9 +1071,12 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         Area_ref = dolfin.assemble(1.0 * dx)
 
         # Reference averages over the Darcy subdomain
+        # Average over RVE box
+        self.add_qoi(name="Q_l_avg_x",        expr=darcy_op.Q_l[0] * dx,       norm=self.V0)
+        self.add_qoi(name="Q_l_avg_y",        expr=darcy_op.Q_l[1] * dx,       norm=self.V0)
+
+        # Average over solid skeleton 
         self.add_qoi(name="pl_bar_avg",       expr=darcy_op.pl_bar * dx,       norm=Area_ref)
-        self.add_qoi(name="Q_l_avg_x",        expr=darcy_op.Q_l[0] * dx,       norm=Area_ref)
-        self.add_qoi(name="Q_l_avg_y",        expr=darcy_op.Q_l[1] * dx,       norm=Area_ref)
         self.add_qoi(name="grad_p_bar_avg_x", expr=darcy_op.grad_p_bar[0] * dx, norm=Area_ref)
         self.add_qoi(name="grad_p_bar_avg_y", expr=darcy_op.grad_p_bar[1] * dx, norm=Area_ref)
 

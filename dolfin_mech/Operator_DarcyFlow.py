@@ -89,7 +89,42 @@ class WskelPoroFlowOperator(Operator):
         self.res_form = dolfin.inner(self.material.Sigma, dE_test) * self.measure
 
         self.sigma_contrib = self.material.sigma
-        
+
+class WbulkPoroFlowOperator(Operator):
+
+    def __init__(self,
+            kinematics,
+            U,
+            U_test,
+            Phis0,
+            Phis,
+            Phis_test,
+            material_parameters,
+            material_scaling,
+            measure,
+            pl # new input
+            ): 
+
+        self.kinematics = kinematics
+        self.solid_material = dmech.WbulkLungElasticMaterial(
+            Phis=Phis,
+            Phis0=Phis0,
+            parameters=material_parameters)
+        self.material = dmech.PorousElasticMaterial(
+            solid_material=self.solid_material,
+            scaling=material_scaling,
+            Phis0=Phis0)
+        self.measure = measure
+
+        dE_test = dolfin.derivative(
+            self.kinematics.E, U, U_test)
+
+        self.res_form =  dolfin.inner(
+            -pl * self.kinematics.J * self.kinematics.C_inv,
+            dE_test) * self.measure
+
+        self.res_form += self.material.dWbulkdPhis * Phis_test * self.measure
+
 class MicroDarcyFlowOperator(Operator):
     """
     Darcy operator written in the reference configuration.
@@ -123,6 +158,7 @@ class MicroDarcyFlowOperator(Operator):
                  k_l0,          # 2x2 tensor (baseline intrinsic permeability, current config)
                  Phis0,
                  kappa_val,
+                 use_kozeny_carman,
 
                  # --- measures & (optional) boundary source terms ---
                  dx,
@@ -179,7 +215,11 @@ class MicroDarcyFlowOperator(Operator):
         Phis = Phis0 / (1.0 + (Phis0 / kappa_val) * self.pl_tot)
         self.Phis_expr = Phis
         self.Phif_expr = 1.0 - Phis
-        k_rel = k_rel_kozeny_carman_from_Phis(Phis=Phis, Phis0=Phis0)
+
+        if use_kozeny_carman:
+            k_rel = k_rel_kozeny_carman_from_Phis(Phis=Phis, Phis0=Phis0)
+        else:
+            k_rel = dolfin.Constant(1.0)
 
         # Intrinsic permeability (current) and pull-back tensor (reference)
         self.k_l_intr = k_l0 * k_rel
