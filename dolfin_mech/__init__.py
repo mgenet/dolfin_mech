@@ -30,6 +30,7 @@ from .Material_Inelastic import *
 from .NonlinearSolver import *
 from .Operator import *
 from .Operator_Constraint_MacroscopicStressComponent import *
+from .Operator_DarcyFlow import *
 from .Operator_HyperElasticity import *
 from .Operator_HyperHydrostaticPressure import *
 from .Operator_HyperIncompressibility import *
@@ -57,6 +58,7 @@ from .Operator_Poro_Pf import *
 from .Operator_Poro_Wbulk import *
 from .Operator_Poro_Wpore import *
 from .Operator_Poro_Wskel import *
+from .Operator_ZeroMeanPressure import *
 from .Problem import *
 from .Problem_Elasticity import *
 from .Problem_Homogenization import *
@@ -65,6 +67,7 @@ from .Problem_Hyperelasticity_Inverse import *
 from .Problem_Hyperelasticity_MicroPoro import *
 from .Problem_Hyperelasticity_Poro import *
 from .Problem_Hyperelasticity_Poro_Inverse import *
+from .Problem_Hyperelasticity_MicroPoroFlow import *
 from .QOI import *
 from .Step import *
 from .SubDomain_Periodic import *
@@ -88,4 +91,5 @@ from .run_RivlinCube_Elasticity import *
 from .run_RivlinCube_Hyperelasticity import *
 from .run_RivlinCube_Mesh import *
 from .run_RivlinCube_PoroHyperelasticity import *
+from .run_HollowBox_MicroPoroflow import *
 from .write_VTU_file import *

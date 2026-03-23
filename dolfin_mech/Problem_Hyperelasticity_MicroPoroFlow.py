@@ -1,13 +1,11 @@
-#coding=utf8
-
 ################################################################################
 ###                                                                          ###
-### Created by Martin Genet, 2018-2025                                       ###
+### Created by Haotian XIAO, 2024-2027                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Mahdi Manoochehrtayebi, 2020-2024                                    ###
+### And Martin Genet, 2018-2025                                              ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -19,9 +17,8 @@ import numpy
 
 import dolfin_mech as dmech
 from .Problem                 import Problem
-from .Problem_Hyperelasticity import HyperelasticityProblem
-from .Operator_DarcyFlow import MicroDarcyFlowOperator,WskelPoroFlowOperator
-from .Operator_ZeroMeanPressure import ZeroMeanPressureOperator
+from .Problem_Hyperelasticity_MicroPoro import MicroPoroHyperelasticityProblem
+
 ################################################################################
 class _SigmaAggregatorMaterial:
     def __init__(self, problem):
@@ -30,10 +27,8 @@ class _SigmaAggregatorMaterial:
     @property
     def sigma(self):
         return self._problem.get_sigma_total()
-    
-class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
-
+class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
 
     def __init__(self,
             w_solid_incompressibility=False,
@@ -179,10 +174,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
         self.add_pressure_liquid_perturbation_zero_mean_operator()
 
-
-
-
-
         if (bcs == "kubc"):
             self.add_kubc()
         elif (bcs == "pbc"):
@@ -192,8 +183,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                 val=[0.]*self.dim,
                 sub_domain=pinpoint_sd,
                 method='pointwise')
-        
-
 
 
     def set_known_and_unknown_porosity(self,
@@ -281,118 +270,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             degree=0)
     
 
-
-    def get_deformed_center_of_mass(self):
-        
-        M = dolfin.assemble(getattr(self, self.porosity_known)*self.dV)
-        center_of_mass = numpy.empty(self.dim)
-        for k_dim in range(self.dim):
-            center_of_mass[k_dim] = dolfin.assemble(getattr(self, self.porosity_known)*self.X[k_dim]*self.dV)/M
-        return center_of_mass
-
-
-
-    def add_deformed_center_of_mass_subsol(self):
-        
-        self.deformed_center_of_mass_subsol = self.add_vector_subsol(
-            name="xg",
-            family="R",
-            degree=0,
-            init_val=self.get_deformed_center_of_mass())
-
-  
-    
-
-        
-
-    def add_macroscopic_stretch_subsol(self,
-            degree=0,
-            symmetry=None,
-            init_val=None):
-
-        self.macroscopic_stretch_subsol = self.add_tensor_subsol(
-            name="U_bar",
-            family="R",
-            degree=degree,
-            symmetry=symmetry,
-            init_val=init_val)
-        
-    def add_macroscopic_unknown_porosity_gradient_subsol(self,degree=0,init_val=None):
-
-        self.grad_unknown_porosity_bar_subsol = self.add_vector_subsol(
-            name="grad_unknown_porosity_bar",
-            family="R",
-            degree=degree,
-            init_val=init_val)
-        
-    def add_macroscopic_unknown_porosity_gradient_subsol(self,
-        degree=0,
-        init_val=None):
-
-
-        self.grad_unknown_porosity_bar_subsol = self.add_vector_subsol(
-            name="grad_unknown_porosity_bar",
-            family="R",
-            degree=degree,
-            init_val=init_val)
-
-
-
-
-
-    def add_displacement_perturbation_subsol(self,
-            degree):
-
-        self.displacement_perturbation_degree = degree
-        self.displacement_perturbation_subsol = self.add_vector_subsol(
-            name="U_tilde",
-            family="CG",
-            degree=self.displacement_perturbation_degree)
-
-
-
-    def add_deformed_total_volume_subsol(self):
-
-        self.deformed_total_volume_subsol = self.add_scalar_subsol(
-            name="v",
-            family="R",
-            degree=0,
-            init_val=self.V0)
-
-
-
-    def add_deformed_solid_volume_subsol(self):
-
-        self.deformed_solid_volume_subsol = self.add_scalar_subsol(
-            name="v_s",
-            family="R",
-            degree=0,
-            init_val=self.mesh_V0)
-
-
-
-    def add_deformed_fluid_volume_subsol(self):
-
-        self.deformed_fluid_volume_subsol = self.add_scalar_subsol(
-            name="v_f",
-            family="R",
-            degree=0,
-            init_val=self.Vf0)
-
-
-
-    def add_surface_area_subsol(self,
-            degree=0,
-            init_val=None):
-            
-        self.surface_area_subsol = self.add_scalar_subsol(
-            name="S_area",
-            family="R",
-            degree=degree,
-            init_val=init_val)
-
-
-
     def set_subsols(self,
             displacement_perturbation_degree=None,
             solid_pressure_degree=None,
@@ -415,9 +292,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         
         # self.add_macroscopic_stress_lagrange_multiplier_subsol()
 
-        # self.add_deformed_total_volume_subsol()
-        # self.add_deformed_solid_volume_subsol()
-        # self.add_deformed_fluid_volume_subsol()
+
         self.add_surface_area_subsol()
 
         # if (porosity_degree is None):
@@ -427,24 +302,12 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         #     degree=porosity_degree,
         #     init_val=porosity_init_val,
         #     init_fun=porosity_init_fun)
-        if (self.w_pressure_balancing_gravity):
-            self.add_pressure_balancing_gravity_subsol()
-            self.add_gamma_subsol()
-            self.add_lmbda_subsol()
-            self.add_mu_subsol()
-            self.add_deformed_center_of_mass_subsol()
         
         if (liquid_pressure_perturbation_degree is None):
             liquid_pressure_perturbation_degree = displacement_perturbation_degree -1
         self.add_pressure_liquid_perturbation_subsol(degree=liquid_pressure_perturbation_degree)
         self.add_pressure_liquid_perturbation_zero_mean_subsol()
 
-
-        
-
-
-            
-        
 
     def get_pressure_liquid_name(self):
         return "p_l_perturbation"
@@ -511,64 +374,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             name="phif",
             update_type="project")
 
-    def set_kinematics(self):
 
-        self.kinematics = dmech.Kinematics(
-            U=self.U_tot,
-            U_old=self.U_tot_old)
-
-        self.add_foi(expr=self.kinematics.F, fs=self.mfoi_fs, name="F_tot", update_type="project")
-        self.add_foi(expr=self.kinematics.J, fs=self.sfoi_fs, name="J_tot", update_type="project")
-        self.add_foi(expr=self.kinematics.C, fs=self.mfoi_fs, name="C_tot", update_type="project")
-        self.add_foi(expr=self.kinematics.E, fs=self.mfoi_fs, name="E_tot", update_type="project")
-
-    def add_macroscopic_stretch_symmetry_penalty_operator(self,
-            **kwargs):
-
-        operator = dmech.MacroscopicStretchSymmetryPenaltyOperator(
-            U_bar=self.macroscopic_stretch_subsol.subfunc,
-            sol=self.sol_func,
-            sol_test=self.dsol_test,
-            measure=self.dV,
-            **kwargs)
-        return self.add_operator(operator)
-
-
-
-    def add_macroscopic_stretch_component_penalty_operator(self,
-            k_step=None,
-            **kwargs):
-
-        operator = dmech.MacroscopicStretchComponentPenaltyOperator(
-            U_bar=self.macroscopic_stretch_subsol.subfunc,
-            U_bar_test=self.macroscopic_stretch_subsol.dsubtest,
-            measure=self.dV,
-            **kwargs)
-        return self.add_operator(operator, k_step=k_step)
-
-
-
-    def add_macroscopic_stress_component_constraint_operator(self,
-            k_step=None,
-            **kwargs):
-
-        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-        #     if hasattr(operator, "material"):
-        #         material = operator.material
-        #         break
-        material = _SigmaAggregatorMaterial(self)
-
-        operator = dmech.MacroscopicStressComponentConstraintOperator(
-            U_bar=self.macroscopic_stretch_subsol.subfunc,
-            U_bar_test=self.macroscopic_stretch_subsol.dsubtest,
-            kinematics=self.kinematics,
-            material=material,
-            V0=self.V0,
-            Vs0=self.Vs0,
-            measure=self.dV,
-            N=self.mesh_normals,
-            **kwargs)
-        return self.add_operator(operator, k_step=k_step)
     
     def add_pressure_liquid_perturbation_zero_mean_operator(self):
         p      = self.pl_perturbation_subsol.subfunc
@@ -578,7 +384,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         lam      = self.lambda_pl_perturbation_zero_mean_subsol.subfunc
         lam_test = self.lambda_pl_perturbation_zero_mean_subsol.dsubtest
 
-        operator = ZeroMeanPressureOperator(
+        operator = dmech.ZeroMeanPressureOperator(
             p=p,
             p_test=p_test,
             lam=lam,
@@ -586,230 +392,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             measure=self.dV
         )
         return self.add_operator(operator)
-
-
-
-
-    def add_surface_pressure_loading_operator(self,
-            k_step=None,
-            **kwargs):
-
-        operator = dmech.SurfacePressureLoadingOperator(
-            U_test=self.displacement_perturbation_subsol.dsubtest,
-            kinematics=self.kinematics,
-            N=self.mesh_normals,
-            **kwargs)
-        return self.add_operator(operator=operator, k_step=k_step)
-    
-
-
-    def add_surface_tension_loading_operator(self,
-            k_step=None,
-            **kwargs):
-
-        operator = dmech.SurfaceTensionLoadingOperator(
-            kinematics=self.kinematics,
-            N=self.mesh_normals,
-            U_test=self.U_tot_test,
-            **kwargs)
-        return self.add_operator(operator=operator, k_step=k_step)
-
-
-
-    def add_deformed_total_volume_operator(self,
-            k_step=None):
-
-        operator = dmech.DeformedTotalVolumeOperator(
-            v=self.deformed_total_volume_subsol.subfunc,
-            v_test=self.deformed_total_volume_subsol.dsubtest,
-            U_bar=self.macroscopic_stretch_subsol.subfunc,
-            V0=self.V0,
-            measure=self.dV)
-        self.add_operator(operator=operator, k_step=k_step)
-
-
-
-    def add_deformed_solid_volume_operator(self,
-            k_step=None):
-
-        operator = dmech.DeformedSolidVolumeOperator(
-            vs=self.deformed_solid_volume_subsol.subfunc,
-            vs_test=self.deformed_solid_volume_subsol.dsubtest,
-            J=self.kinematics.J,
-            Vs0=self.mesh_V0,
-            measure=self.dV)
-        self.add_operator(operator=operator, k_step=k_step)
-
-
-
-    def add_deformed_fluid_volume_operator(self,
-            k_step=None):
-
-        operator = dmech.DeformedFluidVolumeOperator(
-            vf=self.deformed_fluid_volume_subsol.subfunc,
-            vf_test=self.deformed_fluid_volume_subsol.dsubtest,
-            kinematics=self.kinematics,
-            N=self.mesh_normals,
-            dS=self.dS,
-            U_tot=self.U_tot,
-            X=self.X,
-            measure=self.dV)
-        self.add_operator(operator=operator, k_step=k_step)
-
-
-
-    def add_surface_area_operator(self,
-            k_step=None,
-            **kwargs):
-
-        operator = dmech.DeformedSurfaceAreaOperator(
-            S_area = self.surface_area_subsol.subfunc,
-            S_area_test = self.surface_area_subsol.dsubtest,
-            kinematics=self.kinematics,
-            N=self.mesh_normals,
-            **kwargs)
-        return self.add_operator(operator=operator, k_step=k_step)
-
-
-
-    def add_kubc(self,
-            xmin_id=1, xmax_id=2,
-            ymin_id=3, ymax_id=4,
-            zmin_id=5, zmax_id=6):
-
-        self.add_constraint(
-            V=self.displacement_perturbation_subsol.fs.sub(0),
-            sub_domains=self.boundaries,
-            sub_domain_id=xmin_id,
-            val=0.)
-        self.add_constraint(
-            V=self.displacement_perturbation_subsol.fs.sub(0),
-            sub_domains=self.boundaries,
-            sub_domain_id=xmax_id,
-            val=0.)
-        self.add_constraint(
-            V=self.displacement_perturbation_subsol.fs.sub(1),
-            sub_domains=self.boundaries,
-            sub_domain_id=ymin_id,
-            val=0.)
-        self.add_constraint(
-            V=self.displacement_perturbation_subsol.fs.sub(1),
-            sub_domains=self.boundaries,
-            sub_domain_id=ymax_id,
-            val=0.)
-        if (self.dim==3):
-            self.add_constraint(
-                V=self.displacement_perturbation_subsol.fs.sub(2),
-                sub_domains=self.boundaries,
-                sub_domain_id=zmin_id,
-                val=0.)
-            self.add_constraint(
-                V=self.displacement_perturbation_subsol.fs.sub(2),
-                sub_domains=self.boundaries,
-                sub_domain_id=zmax_id,
-                val=0.)
-
-
-
-    def add_deformed_solid_volume_qoi(self):
-
-        self.add_qoi(
-            name="vs",
-            expr=self.kinematics.J * self.dV)
-
-
-
-    def add_deformed_fluid_volume_qoi(self):
-
-        U_bar = self.macroscopic_stretch_subsol.subfunc
-        I_bar = dolfin.Identity(self.dim)
-        F_bar = I_bar + U_bar
-        J_bar = dolfin.det(F_bar)
-        v = J_bar * self.V0
-
-        self.add_qoi(
-            name="vf",
-            expr=(v/self.Vs0 - self.kinematics.J) * self.dV)
-
-
-
-    def add_deformed_volume_qoi(self):
-
-        U_bar = self.macroscopic_stretch_subsol.subfunc
-        I_bar = dolfin.Identity(self.dim)
-        F_bar = I_bar + U_bar
-        J_bar = dolfin.det(F_bar)
-        v = J_bar * self.V0
-
-        self.add_qoi(
-            name="v",
-            expr=(v/self.Vs0) * self.dV)
-
-
-
-    def add_macroscopic_tensor_qois(self,
-            basename,
-            subsol,
-            symmetric=False):
-
-        self.add_qoi(
-            name=basename+"_XX",
-            expr=subsol.subfunc[0,0],
-            point=self.mesh.coordinates()[0],
-            update_type="direct")
-        if (self.dim >= 2):
-            self.add_qoi(
-                name=basename+"_YY",
-                expr=subsol.subfunc[1,1],
-                point=self.mesh.coordinates()[0],
-                update_type="direct")
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name=basename+"_ZZ",
-                    expr=subsol.subfunc[2,2],
-                    point=self.mesh.coordinates()[0],
-                    update_type="direct")
-        if (self.dim >= 2):
-            self.add_qoi(
-                name=basename+"_XY",
-                expr=subsol.subfunc[0,1],
-                point=self.mesh.coordinates()[0],
-                update_type="direct")
-            if not (symmetric): self.add_qoi(
-                name=basename+"_YX",
-                expr=subsol.subfunc[1,0],
-                point=self.mesh.coordinates()[0],
-                update_type="direct")
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name=basename+"_YZ",
-                    expr=subsol.subfunc[1,2],
-                    point=self.mesh.coordinates()[0],
-                    update_type="direct")
-                if not (symmetric): self.add_qoi(
-                    name=basename+"_ZY",
-                    expr=subsol.subfunc[2,1],
-                    point=self.mesh.coordinates()[0],
-                    update_type="direct")
-                self.add_qoi(
-                    name=basename+"_ZX",
-                    expr=subsol.subfunc[2,0],
-                    point=self.mesh.coordinates()[0],
-                    update_type="direct")
-                if not (symmetric): self.add_qoi(
-                    name=basename+"_XZ",
-                    expr=subsol.subfunc[0,2],
-                    point=self.mesh.coordinates()[0],
-                    update_type="direct")
-
-
-
-    def add_macroscopic_stretch_qois(self):
-
-        self.add_macroscopic_tensor_qois(
-            basename="U_bar",
-            subsol=self.macroscopic_stretch_subsol)
-
 
 
     def add_macroscopic_solid_stress_qois(self,
@@ -880,24 +462,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             expr=(material.p_hydro * self.kinematics.J)/v * self.dV)
 
 
-
-    def add_fluid_pressure_qoi(self):
-        expr_lst = []
-        for i in range(len(self.steps)):
-
-            for operator in self.steps[i].operators: 
-                if hasattr(operator, "tv_pf"):
-                    tv_pf = operator.tv_pf
-                    break
-            expr_lst.append((tv_pf.val)/self.Vs0 * self.dV)
-
-        self.add_qoi(
-            name="p_f",
-            expr_lst=expr_lst)
-            # expr=(tv_pf.val)/self.Vs0 * self.dV)
-
-
-
     def add_macroscopic_stress_qois(self,
             symmetric=False):
 
@@ -959,15 +523,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
                     expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
 
 
-
-    def add_interfacial_surface_qois(self):
-            FmTN = dolfin.dot(dolfin.inv(self.kinematics.F).T, self.mesh_normals)
-            T = dolfin.sqrt(dolfin.inner(FmTN, FmTN))
-            expr= T * self.kinematics.J
-            self.add_qoi(
-                name="S_area",
-                expr=expr*self.dS(0))
-            
     def add_Darcy_operator(self,
                         # --- kinematics / fields ---
                         kinematics,
@@ -1002,13 +557,12 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         p_tilde = self.pl_perturbation_subsol.subfunc
         p_test  = self.pl_perturbation_subsol.dsubtest
 
-        # Measures restricted to subdomain and (optional) inlet/outlet regions
+
         dx     = self.get_subdomain_measure(subdomain_id)
         dx_in  = self.get_subdomain_measure(inlet_id)   if inlet_id  is not None else None
         dx_out = self.get_subdomain_measure(outlet_id)  if outlet_id is not None else None
 
-        # Build Darcy operator (reference weak form; outputs q_l/Q_l/k_l_intr/Phis_expr for post-processing)
-        operator = MicroDarcyFlowOperator(
+        operator = dmech.DarcyFlowOperator(
             kinematics=kinematics,
             U=U,
             U_test=U_test,
@@ -1033,10 +587,8 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             Theta_out_fin=Theta_out_fin,
         )
 
-        # Add any additional FOIs/QOIs you already manage centrally
         self.add_darcy_fois(operator)
 
-        # Register operator for this load step
         return self.add_operator(operator=operator, k_step=k_step)
         
     def add_darcy_qois(self, symmetric=False):
@@ -1195,22 +747,6 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
 
 
 
-    def add_global_fluid_pressure_qoi(self):
-
-        # for operator in self.operators:
-        #     print(type(operator))
-        #     print(hasattr(operator, "pf"))
-
-        # for step in self.steps:
-        #     print(step)
-        #     for operator in step.operators:
-        #         print(type(operator))
-        #         print(hasattr(operator, "pf"))
-
-        self.add_qoi(
-            name="pf",
-            expr=sum([operator.pf*operator.measure for step in self.steps for operator in step.operators if hasattr(operator, "pf")]))
-
     def add_Wskel_operators(self,
             skel_behaviors):
 
@@ -1237,7 +773,7 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
             material_scaling,
             subdomain_id=None):
 
-        operator = WskelPoroFlowOperator(
+        operator = dmech.WskelPoroOperator(
             kinematics=self.kinematics,
             U=self.displacement_perturbation_subsol.subfunc,
             U_test=self.displacement_perturbation_subsol.dsubtest,
@@ -1275,15 +811,25 @@ class MicroPoroFlowHyperelasticityProblem(HyperelasticityProblem):
         sigma_total = None
 
         for op in self.operators:
+
+            # 1) first try explicit contribution
             sig = getattr(op, "sigma_contrib", None)
+
+            # 2) if not found, try material.sigma
+            if sig is None:
+                mat = getattr(op, "material", None)
+                if mat is not None:
+                    sig = getattr(mat, "sigma", None)
+
             if sig is None:
                 continue
+
             sigma_total = sig if sigma_total is None else (sigma_total + sig)
 
         if sigma_total is None:
-
-            dim = self.dim  
+            dim = self.dim
             sigma_total = dolfin.Constant(((0.0,) * dim,) * dim)
 
         return sigma_total
+
 
