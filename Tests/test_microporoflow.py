@@ -57,8 +57,8 @@ for dim in dim_lst:
             print("bcs =", bcs)
             print("load =", load)
 
-            #res_basename  = sys.argv[0][:-3]
-            res_basename = "-dim=" + str(dim)
+            res_basename  = sys.argv[0][:-3]
+            res_basename += "-dim=" + str(dim)
             res_basename += "-bcs=" + str(bcs)
             res_basename += "-load=" + str(load)
 
