@@ -96,7 +96,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             degree=foi_degree)
         self.set_foi_function_spaces()
 
-
         self.add_foi(
             expr=self.U_bar,
             fs=self.displacement_perturbation_subsol.fs.collapse(),
@@ -225,7 +224,6 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
         # self.add_deformed_solid_volume_subsol()
         # self.add_deformed_fluid_volume_subsol()
         self.add_surface_area_subsol()
-        
 
 
 

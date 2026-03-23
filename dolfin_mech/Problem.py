@@ -352,11 +352,7 @@ class Problem():
             family="DG",
             cell=self.mesh.ufl_cell(),
             degree=degree)
-        
-        print("[FOI] mfoi_fe type:", type(self.mfoi_fe))
-        print("[FOI] mfoi_fe family:", self.mfoi_fe.family())
-        print("[FOI] mfoi_fe degree:", self.mfoi_fe.degree())
-        print("[FOI] mfoi_fe:", self.mfoi_fe)
+
 
 
     def set_foi_finite_elements_Quad(self,
