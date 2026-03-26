@@ -28,7 +28,8 @@ class HomogenizationProblem():
             mat_params,
             vol,
             bbox,
-            vertices=None):
+            vertices=None,
+            k_l0=None):
 
         self.dim = dim
         if   (self.dim==2):
@@ -50,6 +51,11 @@ class HomogenizationProblem():
         self.vertices = vertices
         self.vol = vol
         self.bbox = bbox
+
+        if k_l0 is None:
+            self.k_l0 = dolfin.Constant(1.0) * dolfin.Identity(self.dim)
+        else:
+            self.k_l0 = k_l0
 
 
 
@@ -145,51 +151,6 @@ class HomogenizationProblem():
         # print("nu_hom: " + str(nu_hom))
 
         return lmbda_hom, mu_hom
-    
-    def extract_isotropic_lame(self, C_hom, tol=1e-6):
-        """
-        Extract isotropic Lamé parameters (lambda_hom, mu_hom) from a homogenized
-        stiffness matrix in Voigt form.
-
-        Assumes Voigt ordering consistent with:
-        2D: [xx, yy, xy]
-        3D: [xx, yy, zz, yz, xz, xy]
-
-        For an isotropic material:
-        lambda ≈ C_xy coupling terms (e.g., C01, and also C02/C12 in 3D)
-        mu     ≈ shear diagonal term (2D: C22, 3D: C33=C44=C55 ideally)
-        """
-        C = numpy.array(C_hom, dtype=float)
-
-        if self.dim == 2:
-            # isotropic 2D (with your Voigt convention)
-            lam = C[0, 1]
-            mu  = C[2, 2]
-
-            # optional consistency checks
-            # C00 should be lam + 2mu, C11 should be lam + 2mu
-            if abs(C[0, 0] - (lam + 2.0*mu)) > tol*max(1.0, abs(C[0,0])):
-                pass
-            if abs(C[1, 1] - (lam + 2.0*mu)) > tol*max(1.0, abs(C[1,1])):
-                pass
-
-            return float(lam), float(mu)
-
-        elif self.dim == 3:
-            # In 3D isotropy:
-            # lambda = C01 = C02 = C12
-            lam_candidates = [C[0, 1], C[0, 2], C[1, 2]]
-            lam = float(sum(lam_candidates) / len(lam_candidates))
-
-            # mu = C33 = C44 = C55 (shear terms yz, xz, xy)
-            mu_candidates = [C[3, 3], C[4, 4], C[5, 5]]
-            mu = float(sum(mu_candidates) / len(mu_candidates))
-
-            return lam, mu
-
-        else:
-            raise ValueError("dim must be 2 or 3")
-
 
 
 
@@ -219,7 +180,6 @@ class HomogenizationProblem():
         assert numpy.linalg.norm(vv[2,:] - vv[1,:] - a2) <= tol # check if UC vertices form indeed a parallelogram
 
         ################################################## Subdomains & Measures ###
-
         class BoundaryX0(dolfin.SubDomain):
             def inside(self,x,on_boundary):
                 return on_boundary and dolfin.near(x[0], vv[0,0]+x[1]*a2[0]/vv[3,1], tol)
@@ -268,6 +228,7 @@ class HomogenizationProblem():
             "exterior_facet",
             domain=self.mesh,
             subdomain_data=boundaries_mf)
+        
 
         ############################################################# Functions #######
 
@@ -322,3 +283,54 @@ class HomogenizationProblem():
         kappa_tilde = Phi_s0**2 * p_f/(Phi_s0 - Phi_s)/2
 
         return kappa_tilde
+    
+
+    ##### For Darcy flow Homogenization ######
+
+    def get_macro_pressure_gradient(self, i):
+
+        gradp = numpy.zeros(self.dim)
+        gradp[i] = 1.0
+        return gradp
+    
+    def solve_pressure_corrector(self, i, degree=1):
+
+        Qe = dolfin.FiniteElement("CG", self.mesh.ufl_cell(), degree)
+        Re = dolfin.FiniteElement("R", self.mesh.ufl_cell(), 0)
+        W = dolfin.FunctionSpace(
+            self.mesh,
+            dolfin.MixedElement([Qe, Re]),
+            constrained_domain=dmech.PeriodicSubDomain(self.dim, self.bbox, self.vertices))
+        p_test, c_test = dolfin.TestFunctions(W)
+        p_tria, c_tria = dolfin.TrialFunctions(W)
+        grad_p_bar = dolfin.Constant(self.get_macro_pressure_gradient(i))
+
+        F = dolfin.inner(
+            self.k_l0 * (dolfin.grad(p_tria) + grad_p_bar),
+            dolfin.grad(p_test)) * self.dV
+
+        a, b = dolfin.lhs(F), dolfin.rhs(F)
+
+        a += c_test * p_tria * self.dV
+        a += c_tria * p_test * self.dV
+
+        w = dolfin.Function(W)
+
+        dolfin.solve(a == b, w, solver_parameters={"linear_solver": "mumps"})
+
+        p, c = w.split(deepcopy=True)
+
+        return p
+    
+    def get_k_hom(self, degree=1):
+
+        K_hom = numpy.zeros((self.dim, self.dim))
+
+        for i in range(self.dim):
+            p = self.solve_pressure_corrector(i=i, degree=degree)
+            grad_p_bar = dolfin.Constant(self.get_macro_pressure_gradient(i))
+            q = - self.k_l0 * (dolfin.grad(p) + grad_p_bar)
+            for j in range(self.dim):
+                K_hom[j, i] = - dolfin.assemble(q[j] * self.dV) / self.vol
+
+        return K_hom
