@@ -17,18 +17,11 @@ import numpy
 
 import dolfin_mech as dmech
 from .Problem                 import Problem
-from .Problem_Hyperelasticity_MicroPoro import MicroPoroHyperelasticityProblem
+from .Problem_Hyperelasticity_MicroPoro import MicroPoroHyperelasticityProblem,_SigmaAggregatorMaterial
+from .Problem_Hyperelasticity_Poro import PoroHyperelasticityProblem
 
 ################################################################################
-class _SigmaAggregatorMaterial:
-    def __init__(self, problem):
-        self._problem = problem
-
-    @property
-    def sigma(self):
-        return self._problem.get_sigma_total()
-
-class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
+class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroHyperelasticityProblem):
 
     def __init__(self,
             w_solid_incompressibility=False,
@@ -110,8 +103,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             self.set_solution_function_space()
         self.set_solution_functions()
 
-
-
         self.U_bar      = dolfin.dot(self.macroscopic_stretch_subsol.subfunc , self.X-self.X_0)
         self.U_bar_old  = dolfin.dot(self.macroscopic_stretch_subsol.func_old, self.X-self.X_0)
         self.U_bar_test = dolfin.dot(self.macroscopic_stretch_subsol.dsubtest, self.X-self.X_0)
@@ -140,11 +131,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
 
         self.set_kinematics()
 
-
-        #self.set_porosity_fields()
-        #self.add_local_porosity_fois()
-
-
         assert (skel_behavior is     None) or (len(skel_behaviors)==0),\
             "Cannot provide both skel_behavior & skel_behaviors. Aborting."
         assert (skel_behavior is not None) or (len(skel_behaviors) >0),\
@@ -161,16 +147,8 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             bulk_behaviors = [bulk_behavior]  
         self.kappa_val = bulk_behaviors[0]["parameters"]["kappa"]   
 
-
-        assert (pore_behavior is None) or (len(pore_behaviors)==0),\
-            "Cannot provide both pore_behavior & pore_behaviors. Aborting."
-        if (pore_behavior is not None):
-            pore_behaviors = [pore_behavior]
-
         # self.add_macroscopic_stretch_symmetry_operator()
         self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
-
-        #self.add_Wpore_operators(pore_behaviors)
 
         self.add_pressure_liquid_perturbation_zero_mean_operator()
 
@@ -184,91 +162,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
                 sub_domain=pinpoint_sd,
                 method='pointwise')
 
-
-    def set_known_and_unknown_porosity(self,
-            porosity_known):
-
-        self.porosity_known = porosity_known
-        if (self.porosity_known == "Phis0"):
-            self.porosity_unknown = "Phis"
-        elif (self.porosity_known == "phis"):
-            self.porosity_unknown = "Phis0"
-
-
-
-    def init_known_porosity(self,
-            porosity_init_val,
-            porosity_init_fun):
-
-        if   (porosity_init_val is not None):
-            setattr(self, self.porosity_known, dolfin.Constant(porosity_init_val))
-        elif (porosity_init_fun is not None):
-            setattr(self, self.porosity_known, porosity_init_fun)
-
-
-
-
-    def add_porosity_subsol(self,
-            degree,
-            init_val=None,
-            init_fun=None):
-
-        if (degree == 0):
-            self.porosity_subsol = self.add_scalar_subsol(
-                name=self.porosity_unknown,
-                family="DG",
-                degree=0,
-                init_val=init_val,
-                init_fun=init_fun)
-        else:
-            self.porosity_subsol = self.add_scalar_subsol(
-                name=self.porosity_unknown,
-                family="CG",
-                degree=degree,
-                init_val=init_val,
-                init_fun=init_fun)
-
-
-
-    def add_pressure_balancing_gravity_subsol(self,
-            degree=1):
-
-        self.pressure_balancing_gravity_subsol = self.add_scalar_subsol(
-            name="pressure_balancing_gravity",
-            family="CG",
-            degree=degree)
-    
-
-
-    def add_lmbda_subsol(self,
-            init_val=None):
-
-        self.lmbda_subsol = self.add_vector_subsol(
-            name="lmbda",
-            family="R",
-            degree=0,
-            init_val=init_val)
-
-
-
-    def add_mu_subsol(self,
-            init_val=None):
-
-        self.mu_subsol = self.add_vector_subsol(
-            name="mu",
-            family="R",
-            degree=0,
-            init_val=init_val)
-    
-
-    
-    def add_gamma_subsol(self):
-
-        self.gamma_subsol = self.add_scalar_subsol(
-            name="gamma",
-            family="R",
-            degree=0)
-    
 
     def set_subsols(self,
             displacement_perturbation_degree=None,
@@ -292,16 +185,7 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
         
         # self.add_macroscopic_stress_lagrange_multiplier_subsol()
 
-
         self.add_surface_area_subsol()
-
-        # if (porosity_degree is None):
-        #     porosity_degree = displacement_perturbation_degree - 1
-        # print("Adding porosity subsolution with degree =", porosity_degree)
-        # self.add_porosity_subsol(
-        #     degree=porosity_degree,
-        #     init_val=porosity_init_val,
-        #     init_fun=porosity_init_fun)
         
         if (liquid_pressure_perturbation_degree is None):
             liquid_pressure_perturbation_degree = displacement_perturbation_degree -1
@@ -325,57 +209,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             degree=0
         )
 
-
-
-
-    def set_porosity_fields(self):
-
-        if (self.porosity_known == "Phis0"):
-            self.Phis = self.porosity_subsol.subfunc
-            self.phis = self.Phis/self.kinematics.J
-        elif (self.porosity_known == "phis"):
-            self.Phis0 = self.porosity_subsol.subfunc
-            self.Phis = self.phis*self.kinematics.J
-
-
-
-    def add_local_porosity_fois(self):
-
-        if (self.porosity_known == "Phis0"): self.add_foi(
-            expr=self.Phis0,
-            fs=self.sfoi_fs,
-            name="Phis0",
-            update_type="project")
-        self.add_foi(
-            expr=1. - self.Phis0,
-            fs=self.sfoi_fs,
-            name="Phif0",
-            update_type="project")
-
-        if (self.porosity_known == "phis"): self.add_foi(
-            expr=self.Phis,
-            fs=self.sfoi_fs,
-            name="Phis",
-            update_type="project")
-        self.add_foi(
-            expr=self.kinematics.J - self.Phis,
-            fs=self.sfoi_fs,
-            name="Phif",
-            update_type="project")
-
-        self.add_foi(
-            expr=self.phis,
-            fs=self.sfoi_fs,
-            name="phis",
-            update_type="project")
-        self.add_foi(
-            expr=1. - self.phis,
-            fs=self.sfoi_fs,
-            name="phif",
-            update_type="project")
-
-
-    
     def add_pressure_liquid_perturbation_zero_mean_operator(self):
         p      = self.pl_perturbation_subsol.subfunc
         p_test = self.pl_perturbation_subsol.dsubtest
@@ -392,136 +225,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             measure=self.dV
         )
         return self.add_operator(operator)
-
-
-    def add_macroscopic_solid_stress_qois(self,
-            symmetric=False):
-
-        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-        #     if hasattr(operator, "material"):
-        #         material = operator.material
-        #         break
-        material = _SigmaAggregatorMaterial(self)
-
-        U_bar = self.macroscopic_stretch_subsol.subfunc
-        I_bar = dolfin.Identity(self.dim)
-        F_bar = I_bar + U_bar
-        J_bar = dolfin.det(F_bar)
-        v = J_bar * self.V0
-
-        self.add_qoi(
-            name="sigma_s_bar_XX",
-            expr=(material.sigma[0,0] * self.kinematics.J)/v * self.dV)
-        if (self.dim >= 2):
-            self.add_qoi(
-                name="sigma_s_bar_YY",
-                expr=(material.sigma[1,1] * self.kinematics.J)/v * self.dV)
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name="sigma_s_bar_ZZ",
-                    expr=(material.sigma[2,2] * self.kinematics.J )/v * self.dV)
-        if (self.dim >= 2):
-            self.add_qoi(
-                name="sigma_s_bar_XY",
-                expr=(material.sigma[0,1] * self.kinematics.J)/v * self.dV)
-            if not (symmetric): self.add_qoi(
-                name="sigma_s_bar_YX",
-                expr=(material.sigma[1,0] * self.kinematics.J)/v * self.dV)
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name="sigma_s_bar_YZ",
-                    expr=(material.sigma[1,2] * self.kinematics.J)/v * self.dV)
-                if not (symmetric): self.add_qoi(
-                    name="sigma_s_bar_ZY",
-                    expr=(material.sigma[2,1] * self.kinematics.J)/v * self.dV)
-                self.add_qoi(
-                    name="sigma_s_bar_ZX",
-                    expr=(material.sigma[2,0] * self.kinematics.J)/v * self.dV)
-                if not (symmetric): self.add_qoi(
-                    name="sigma_s_bar_XZ",
-                    expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
-
-
-
-    def add_macroscopic_solid_hydrostatic_pressure_qoi(self):
-
-        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-        #     if hasattr(operator, "material"):
-        #         material = operator.material
-        #         break
-        material = _SigmaAggregatorMaterial(self)
-
-        U_bar = self.macroscopic_stretch_subsol.subfunc
-        I_bar = dolfin.Identity(self.dim)
-        F_bar = I_bar + U_bar
-        J_bar = dolfin.det(F_bar)
-        v = J_bar * self.V0
-
-        self.add_qoi(
-            name="p_hydro",
-            expr=(material.p_hydro * self.kinematics.J)/v * self.dV)
-
-
-    def add_macroscopic_stress_qois(self,
-            symmetric=False):
-
-        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-        #     if hasattr(operator, "material"):
-        #         material = operator.material
-        #         break
-        material = _SigmaAggregatorMaterial(self)
-
-        # for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
-        #     if hasattr(operator, "tv_pf"):
-        #         tv_pf = operator.tv_pf
-        #         break
-        #tv_pf = None
-        for step in self.steps:
-            for operator in step.operators:
-                if hasattr(operator, "tv_pf"):
-                    tv_pf = operator.tv_pf
-                    break
-            if tv_pf is not None:
-                break
-
-        U_bar = self.macroscopic_stretch_subsol.subfunc
-        I_bar = dolfin.Identity(self.dim)
-        F_bar = I_bar + U_bar
-        J_bar = dolfin.det(F_bar)
-        v = J_bar * self.V0
-
-        self.add_qoi(
-            name="sigma_bar_XX",
-            expr=(material.sigma[0,0] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
-        if (self.dim >= 2):
-            self.add_qoi(
-                name="sigma_bar_YY",
-                expr=(material.sigma[1,1] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name="sigma_bar_ZZ",
-                    expr=(material.sigma[2,2] * self.kinematics.J - (v/self.Vs0 - self.kinematics.J) * tv_pf.val)/v * self.dV)
-        if (self.dim >= 2):
-            self.add_qoi(
-                name="sigma_bar_XY",
-                expr=(material.sigma[0,1] * self.kinematics.J)/v * self.dV)
-            if not (symmetric): self.add_qoi(
-                name="sigma_bar_YX",
-                expr=(material.sigma[1,0] * self.kinematics.J)/v * self.dV)
-            if (self.dim >= 3):
-                self.add_qoi(
-                    name="sigma_bar_YZ",
-                    expr=(material.sigma[1,2] * self.kinematics.J)/v * self.dV)
-                if not (symmetric): self.add_qoi(
-                    name="sigma_bar_ZY",
-                    expr=(material.sigma[2,1] * self.kinematics.J)/v * self.dV)
-                self.add_qoi(
-                    name="sigma_bar_ZX",
-                    expr=(material.sigma[2,0] * self.kinematics.J)/v * self.dV)
-                if not (symmetric): self.add_qoi(
-                    name="sigma_bar_XZ",
-                    expr=(material.sigma[0,2] * self.kinematics.J)/v * self.dV)
-
 
     def add_Darcy_operator(self,
                         # --- kinematics / fields ---
@@ -557,7 +260,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
         p_tilde = self.pl_perturbation_subsol.subfunc
         p_test  = self.pl_perturbation_subsol.dsubtest
 
-
         dx     = self.get_subdomain_measure(subdomain_id)
         dx_in  = self.get_subdomain_measure(inlet_id)   if inlet_id  is not None else None
         dx_out = self.get_subdomain_measure(outlet_id)  if outlet_id is not None else None
@@ -587,29 +289,35 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             Theta_out_fin=Theta_out_fin,
         )
 
-        self.add_darcy_fois(operator)
+        self.add_foi(expr=operator.Phis_expr,   fs=self.sfoi_fs, name="Phis",   update_type="project")
+        self.add_foi(expr=operator.Phif_expr,   fs=self.sfoi_fs, name="Phif",   update_type="project")
+
+        self.add_foi(expr=operator.pl_affine,   fs=self.sfoi_fs, name="pl_affine", update_type="project")
+        self.add_foi(expr=operator.pl_bar,      fs=self.sfoi_fs, name="pl_bar",    update_type="project")
+        self.add_foi(expr=operator.pl_tot,      fs=self.sfoi_fs, name="pl_tot",    update_type="project")
+
+        # --- tensor fields ---
+        # K_l: pull-back permeability used in the reference weak form
+        self.add_foi(expr=operator.K_l,       fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
+
+        # k_l_intr: intrinsic permeability tensor in current configuration
+        self.add_foi(expr=operator.k_l_intr,  fs=self.mfoi_fs, name="k_l_intr",  update_type="project")
+
+        # --- fluxes (vectors) ---
+        # q_l: current Darcy flux, Q_l: Piola/reference flux
+        self.add_foi(expr=operator.q_l,       fs=self.vfoi_fs, name="q_l",       update_type="project")
+        self.add_foi(expr=operator.Q_l,       fs=self.vfoi_fs, name="Q_l",       update_type="project")
 
         return self.add_operator(operator=operator, k_step=k_step)
         
     def add_darcy_qois(self, symmetric=False):
-        """
-        Add Darcy-related QOIs for the current step.
-
-        QOIs are reference-domain averages (normalized by Area_ref = ∫_Ω 1 dX):
-        - pl_bar_avg
-        - Q_l_avg_x, Q_l_avg_y      (Piola/reference flux)
-        - grad_p_bar_avg_x, grad_p_bar_avg_y
-        """
 
         if not self.steps:
             raise RuntimeError("No steps available.")
 
         step = self.steps[-1]
-
-        # ---- find Darcy operator in this step ----
         darcy_op = None
         for op in step.operators:
-            # Prefer the new API: Q_l is explicitly stored by MicroDarcyFlowOperator
             if hasattr(op, "Q_l") and hasattr(op, "grad_p_bar") and hasattr(op, "pl_bar"):
                 darcy_op = op
                 break
@@ -632,142 +340,6 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
         self.add_qoi(name="grad_p_bar_avg_x", expr=darcy_op.grad_p_bar[0] * dx, norm=Area_ref)
         self.add_qoi(name="grad_p_bar_avg_y", expr=darcy_op.grad_p_bar[1] * dx, norm=Area_ref)
 
-    def add_darcy_fois(self, operator):
-        """
-        Register Darcy-related fields of interest (FOIs).
-        This function is idempotent: it adds FOIs only once.
-        """
-
-        if getattr(self, "_darcy_fois_added", False):
-            return
-        self._darcy_fois_added = True
-
-        # --- scalar fields ---
-        # Stored as UFL expressions inside the operator (preferred: no re-definition here).
-        self.add_foi(expr=operator.Phis_expr,   fs=self.sfoi_fs, name="Phis",   update_type="project")
-        self.add_foi(expr=operator.Phif_expr,   fs=self.sfoi_fs, name="Phif",   update_type="project")
-
-        self.add_foi(expr=operator.pl_affine,   fs=self.sfoi_fs, name="pl_affine", update_type="project")
-        self.add_foi(expr=operator.pl_bar,      fs=self.sfoi_fs, name="pl_bar",    update_type="project")
-        self.add_foi(expr=operator.pl_tot,      fs=self.sfoi_fs, name="pl_tot",    update_type="project")
-
-        # Optional: relative permeability factor (scalar) if you store it on the operator
-        if hasattr(operator, "k_rel_expr"):
-            self.add_foi(expr=operator.k_rel_expr, fs=self.sfoi_fs, name="k_rel", update_type="project")
-
-        # --- tensor fields ---
-        # K_l: pull-back permeability used in the reference weak form
-        self.add_foi(expr=operator.K_l,       fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
-
-        # k_l_intr: intrinsic permeability tensor in current configuration
-        self.add_foi(expr=operator.k_l_intr,  fs=self.mfoi_fs, name="k_l_intr",  update_type="project")
-
-        # --- fluxes (vectors) ---
-        # q_l: current Darcy flux, Q_l: Piola/reference flux
-        self.add_foi(expr=operator.q_l,       fs=self.vfoi_fs, name="q_l",       update_type="project")
-        self.add_foi(expr=operator.Q_l,       fs=self.vfoi_fs, name="Q_l",       update_type="project")
-
- 
-    def add_global_porosity_qois(self):
-
-        self.add_qoi(
-            name="Phis0",
-            expr=self.Phis0 * self.dV)
-
-        self.add_qoi(
-            name="Phif0",
-            expr=(1. - self.Phis0) * self.dV)
-
-        self.add_qoi(
-            name="Phis",
-            expr=self.Phis * self.dV)
-
-        self.add_qoi(
-            name="Phif",
-            expr=(self.kinematics.J - self.Phis) * self.dV)
-            
-        self.add_qoi(
-            name="phis",
-            expr=self.phis * self.dV)
-            
-        self.add_qoi(
-            name="phif",
-            expr=(1. - self.phis) * self.dV)
-
-
-
-    def add_global_stress_qois(self,
-            stress_type="cauchy"):
-
-        if (stress_type in ("Cauchy", "cauchy", "sigma")):
-            basename = "s_"
-            stress = "sigma"
-        elif (stress_type in ("Piola", "piola", "PK2", "Sigma")):
-            basename = "S_"
-            stress = "Sigma"
-        elif (stress_type in ("Boussinesq", "boussinesq", "PK1", "P")):
-            assert (0), "ToDo. Aborting."
-
-        compnames = ["XX"]
-        comps     = [(0,0)]
-        if (self.dim >= 2):
-            compnames += ["YY"]
-            comps     += [(1,1)]
-            if (self.dim >= 3):
-                compnames += ["ZZ"]
-                comps     += [(2,2)]
-            compnames += ["XY"]
-            comps     += [(0,1)]
-            if (self.dim >= 3):
-                compnames += ["YZ"]
-                comps     += [(1,2)]
-                compnames += ["ZX"]
-                comps     += [(2,0)]
-        for compname, comp in zip(compnames, comps):
-            if (stress == "Sigma"):
-                self.add_qoi(
-                    name=basename+"skel_"+compname,
-                    expr=sum([getattr(operator.material, stress)[comp]*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, stress))]))
-                self.add_qoi(
-                    name=basename+"bulk_"+compname,
-                    expr=sum([getattr(operator.material, "dWbulkdPhis")*self.kinematics.J*self.kinematics.C_inv[comp]*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, "dWbulkdPhis"))]))
-                self.add_qoi(
-                    name=basename+"tot_"+compname,
-                    expr=sum([getattr(operator.material, stress)[comp]*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, stress))]))+sum([getattr(operator.material, "dWbulkdPhis")[comp]*self.kinematics.J*self.kinematics.C_inv*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, "dWbulkdPhis"))])
-            elif (stress == "sigma"):
-                self.add_qoi(
-                    name=basename+"skel_"+compname,
-                    expr=sum([getattr(operator.material, stress)[comp]*self.kinematics.J*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, stress))]))
-                self.add_qoi(
-                    name=basename+"bulk_"+compname,
-                    expr=sum([getattr(operator.material, "dWbulkdPhis")*self.kinematics.I[comp]*self.kinematics.J*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, "dWbulkdPhis"))]))
-                self.add_qoi(
-                    name=basename+"tot_"+compname,
-                    expr=sum([getattr(operator.material, stress)[comp]*self.kinematics.J*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, stress))])+sum([getattr(operator.material, "dWbulkdPhis")*self.kinematics.I[comp]*self.kinematics.J*operator.measure for operator in self.operators if (hasattr(operator, "material") and hasattr(operator.material, "dWbulkdPhis"))]))
-
-
-
-    def add_Wskel_operators(self,
-            skel_behaviors):
-
-        for skel_behavior in skel_behaviors:
-            operator = self.add_Wskel_operator(
-                material_parameters=skel_behavior["parameters"],
-                material_scaling=skel_behavior["scaling"],
-                subdomain_id=skel_behavior.get("subdomain_id", None))
-            suffix = "_"+skel_behavior["suffix"] if "suffix" in skel_behavior else ""
-            self.add_foi(expr=operator.material.Sigma, fs=self.mfoi_fs, name="Sigma_skel"+suffix)
-            self.add_foi(expr=operator.material.sigma, fs=self.mfoi_fs, name="sigma_skel"+suffix)
-    
-    
-    def get_porosity_subsol(self):
-
-        return self.get_subsol(self.get_porosity_name())
-
-    def get_porosity_function_space(self):
-
-        return self.get_subsol_function_space(name=self.get_porosity_name())
-    
     def add_Wskel_operator(self,
             material_parameters,
             material_scaling,
@@ -782,54 +354,3 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem):
             material_scaling=material_scaling,
             measure=self.get_subdomain_measure(subdomain_id))
         return self.add_operator(operator)
-    
-    def get_porosity_name(self):
-        return "Phis"
-    
-    def add_porosity_subsol(self,
-            degree,
-            init_val=None,
-            init_fun=None):
-
-        if (degree == 0):
-            self.porosity_subsol = self.add_scalar_subsol(
-                name=self.porosity_unknown,
-                family="DG",
-                degree=0,
-                init_val=init_val,
-                init_fun=init_fun)
-        else:
-            self.porosity_subsol = self.add_scalar_subsol(
-                name=self.porosity_unknown,
-                family="CG",
-                degree=degree,
-                init_val=init_val,
-                init_fun=init_fun)
-
-
-    def get_sigma_total(self):
-        sigma_total = None
-
-        for op in self.operators:
-
-            # 1) first try explicit contribution
-            sig = getattr(op, "sigma_contrib", None)
-
-            # 2) if not found, try material.sigma
-            if sig is None:
-                mat = getattr(op, "material", None)
-                if mat is not None:
-                    sig = getattr(mat, "sigma", None)
-
-            if sig is None:
-                continue
-
-            sigma_total = sig if sigma_total is None else (sigma_total + sig)
-
-        if sigma_total is None:
-            dim = self.dim
-            sigma_total = dolfin.Constant(((0.0,) * dim,) * dim)
-
-        return sigma_total
-
-

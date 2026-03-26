@@ -686,5 +686,3 @@ class Problem():
             self.res_form,
             self.sol_func,
             self.dsol_tria)
-
-        # print(self.jac_form)

@@ -15,7 +15,7 @@
 
 import sys
 import dolfin
-
+import numpy
 import myPythonLibrary as mypy
 import dolfin_mech as dmech
 
@@ -24,9 +24,9 @@ import dolfin_mech as dmech
 res_folder = sys.argv[0][:-3]
 test = mypy.Test(
     res_folder=res_folder,
-    perform_tests=0,
+    perform_tests=1,
     stop_at_failure=1,
-    clean_after_tests=0,
+    clean_after_tests=1,
     tester_numpy_tolerance=1e-2)
 
 mat_params = {
@@ -49,8 +49,9 @@ for dim in dim_lst:
 
         load_lst = []
         load_lst += ["internal_air_pressure"]
-        load_lst += ["macroscopic_stretch_with_flow"]
         load_lst += ["liquid_pressure_gradient"]
+        load_lst += ["macroscopic_stretch_with_flow"]
+        
         for load in load_lst:
 
             print("dim =", dim)
@@ -111,12 +112,11 @@ for dim in dim_lst:
                 mesh_params={
                     "dim": dim,
                     "xmin": 0., "ymin": 0.,
-                    "xmax": 1., "ymax": 1.,
+                    "xmax": 1., "ymax": numpy.sqrt(3.0),
                     "r0": 0.3,
                     "l": 0.1,
                     "hole_shape": "hex",
                     "add_center_hole": True,
-                    "use_hex_aspect_ratio": True,
                     "mesh_filebasename": res_folder + "/" + "mesh"
                 },
                 mat_params={

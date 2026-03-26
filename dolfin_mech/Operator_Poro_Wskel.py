@@ -19,12 +19,15 @@ class WskelPoroOperator(Operator):
 
     def __init__(self,
             kinematics,
-            U,
             U_test,
             material_parameters,
             material_scaling,
             Phis0,
-            measure):
+            measure,
+            U=None):
+        
+        if U is None:
+            U = kinematics.U
 
         self.kinematics = kinematics
         self.solid_material = dmech.WskelLungElasticMaterial(
