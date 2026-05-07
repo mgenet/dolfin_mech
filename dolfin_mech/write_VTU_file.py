@@ -23,7 +23,8 @@ def write_VTU_file(
         function,
         time=None,
         zfill=3,
-        preserve_connectivity=False):
+        preserve_connectivity=False,
+        refine_and_interpolate_before_write=0):
 
     if (preserve_connectivity):
         ugrid = dmech.mesh2ugrid(function.function_space().mesh())
@@ -35,6 +36,13 @@ def write_VTU_file(
             filename=filebasename+("_"+str(time).zfill(zfill) if (time is not None) else "")+".vtu")
 
     else:
+        if (refine_and_interpolate_before_write):
+            mesh = function.function_space().mesh()
+            for _ in range(refine_and_interpolate_before_write):
+                mesh = dolfin.refine(mesh)
+            V = dolfin.FunctionSpace(mesh, "CG", 1)
+            function = dolfin.interpolate(function, V)
+
         file_pvd = dolfin.File(filebasename+"__.pvd")
         file_pvd << (function, float(time) if (time is not None) else 0.)
         os.remove(

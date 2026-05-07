@@ -36,7 +36,6 @@ class OgdenCiarletGeymonatElasticMaterial(ElasticMaterial):
                 dolfin.gt(self.kinematics.J, 0.),
                 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.C_inv, # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
                 self.kinematics.C_inv/dolfin.Constant(0.))
-            
         else:
             self.Sigma = 2*self.C0 * (self.kinematics.J**2 - 1) * self.kinematics.C_inv # MG20200206: Cannot differentiate Psi wrt to C because J is not defined as a function of C
 

@@ -8,6 +8,8 @@
 ###                                                                          ###
 ################################################################################
 
+import os
+
 import dolfin
 import gmsh
 import meshio
@@ -24,6 +26,8 @@ def run_HeartSlice_Mesh(
     l  = params.get("l" , 0.1)
 
     mesh_filebasename = params.get("mesh_filebasename", "mesh")
+
+    clean_mesh_files = params.get("clean_mesh_files", False)
 
     ################################################################### Mesh ###
     
@@ -76,6 +80,12 @@ def run_HeartSlice_Mesh(
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
 
     dolfin.File(mesh_filebasename+".xml") << mesh
+
+    if (clean_mesh_files):
+        os.system("rm -rf "+mesh_filebasename+".vtk" )
+        os.system("rm -rf "+mesh_filebasename+".xdmf")
+        os.system("rm -rf "+mesh_filebasename+".h5"  )
+        os.system("rm -rf "+mesh_filebasename+".xml" )
 
     ############################################################# Boundaries ###
 
