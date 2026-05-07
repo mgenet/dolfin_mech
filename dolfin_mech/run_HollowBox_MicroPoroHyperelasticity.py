@@ -21,19 +21,19 @@ import dolfin_mech as dmech
 ################################################################################
 
 def run_HollowBox_MicroPoroHyperelasticity(
-        dim,
-        mesh=None,
-        mesh_params=None,
-        displacement_perturbation_degree=1,
-        quadrature_degree=3,
-        mat_params={},
-        bcs="pbc",
-        step_params={},
-        load_params={},
-        res_basename="run_HollowBox_MicroPoroHyperelasticity",
-        add_p_hydro_and_Sigma_VM_FoI=False,
-        write_qois_limited_precision=True,
-        verbose=0):
+        dim                                                                         ,
+        mesh                             = None                                     ,
+        mesh_params                      = None                                     ,
+        displacement_perturbation_degree = 1                                        ,
+        quadrature_degree                = 3                                        ,
+        mat_params                       = {}                                       ,
+        bcs                              = "pbc"                                    ,
+        step_params                      = {}                                       ,
+        load_params                      = {}                                       ,
+        res_basename                     = "run_HollowBox_MicroPoroHyperelasticity" ,
+        add_p_hydro_and_Sigma_VM_FoI     = False                                    ,
+        write_qois_limited_precision     = True                                     ,
+        verbose                          = 0                                        ):
 
     assert ((mesh is not None) or (mesh_params is not None))
     if (mesh is None):
@@ -43,28 +43,30 @@ def run_HollowBox_MicroPoroHyperelasticity(
     coord = mesh.coordinates()
     xmax = max(coord[:,0]); xmin = min(coord[:,0])
     ymax = max(coord[:,1]); ymin = min(coord[:,1])
-    if (dim==2):    
+    if (dim==2):
         bbox = [xmin, xmax, ymin, ymax]
-        vertices = numpy.array([[xmin, ymin],
-                                [xmax, ymin],
-                                [xmax, ymax],
-                                [xmin, ymax]])
+        vertices = numpy.array(
+            [[xmin, ymin],
+             [xmax, ymin],
+             [xmax, ymax],
+             [xmin, ymax]])
         a1 = vertices[1,:]-vertices[0,:] # first vector generating periodicity
         a2 = vertices[3,:]-vertices[0,:] # second vector generating periodicity
         tol = 1e-8
         assert numpy.linalg.norm(vertices[2,:]-vertices[3,:] - a1) <= tol # check if UC vertices form indeed a parallelogram
         assert numpy.linalg.norm(vertices[2,:]-vertices[1,:] - a2) <= tol # check if UC vertices form indeed a parallelogram
-    elif (dim==3):    
+    elif (dim==3):
         zmax = max(coord[:,2]); zmin = min(coord[:,2])
         bbox = [xmin, xmax, ymin, ymax, zmin, zmax]
-        vertices = numpy.array([[xmin, ymin, zmin],
-                                [xmax, ymin, zmin],
-                                [xmax, ymax, zmin],
-                                [xmin, ymax, zmin],
-                                [xmin, ymin, zmax],
-                                [xmax, ymin, zmax],
-                                [xmax, ymax, zmax],
-                                [xmin, ymax, zmax]])
+        vertices = numpy.array(
+            [[xmin, ymin, zmin],
+             [xmax, ymin, zmin],
+             [xmax, ymax, zmin],
+             [xmin, ymax, zmin],
+             [xmin, ymin, zmax],
+             [xmax, ymin, zmax],
+             [xmax, ymax, zmax],
+             [xmin, ymax, zmax]])
 
     ################################################## Subdomains & Measures ###
 
@@ -108,14 +110,14 @@ def run_HollowBox_MicroPoroHyperelasticity(
     ################################################################ Problem ###
 
     problem = dmech.MicroPoroHyperelasticityProblem(
-        mesh=mesh,
-        mesh_bbox=bbox,
-        vertices=vertices,
-        boundaries_mf=boundaries_mf,
-        displacement_perturbation_degree=displacement_perturbation_degree,
-        quadrature_degree=quadrature_degree,
-        solid_behavior=mat_params,
-        bcs=bcs)
+        mesh                             = mesh                             ,
+        mesh_bbox                        = bbox                             ,
+        vertices                         = vertices                         ,
+        boundaries_mf                    = boundaries_mf                    ,
+        displacement_perturbation_degree = displacement_perturbation_degree ,
+        quadrature_degree                = quadrature_degree                ,
+        solid_behavior                   = mat_params                       ,
+        bcs                              = bcs                              )
 
     ################################################################ Loading ###
 
@@ -125,8 +127,6 @@ def run_HollowBox_MicroPoroHyperelasticity(
     dt_min_lst = step_params.get("dt_min_lst", [step_params.get("dt_min", 1.)/n_steps]*n_steps)
     dt_max_lst = step_params.get("dt_max_lst", [step_params.get("dt_max", 1.)/n_steps]*n_steps)
     
-    # gamma = load_params.get("gamma", 0.0)
-
     U_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
     sigma_bar_ij_lst = [[None for i in range(dim)] for j in range(dim)]
     for i in range(dim):
@@ -145,10 +145,10 @@ def run_HollowBox_MicroPoroHyperelasticity(
         dt_max = dt_max_lst[k_step]
 
         k_step = problem.add_step(
-            Deltat=Deltat,
-            dt_ini=dt_ini,
-            dt_min=dt_min,
-            dt_max=dt_max)
+            Deltat = Deltat,
+            dt_ini = dt_ini,
+            dt_min = dt_min,
+            dt_max = dt_max)
 
         pf = pf_lst[k_step]
         pf_old = pf_lst[k_step-1] if (k_step > 0) else 0.
@@ -163,7 +163,7 @@ def run_HollowBox_MicroPoroHyperelasticity(
             U_bar_ij_old = U_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
             sigma_bar_ij = sigma_bar_ij_lst[i][j][k_step]
             sigma_bar_ij_old = sigma_bar_ij_lst[i][j][k_step-1] if (k_step > 0) else 0.
-            assert ((U_bar_ij is not None) or (sigma_bar_ij is not None))
+            assert ((U_bar_ij is not None) ^ (sigma_bar_ij is not None))
             if (U_bar_ij is not None):
                 problem.add_macroscopic_stretch_component_penalty_operator(
                     i=i, j=j,
