@@ -36,19 +36,19 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
     def __init__(self,
-            w_solid_incompressibility=False,
-            mesh=None,
-            mesh_bbox=None,
-            vertices=None,
-            domains_mf=None,
-            boundaries_mf=None,
-            points_mf=None,
-            displacement_perturbation_degree=None,
-            solid_pressure_degree=None,
-            quadrature_degree=None,
-            foi_degree=0,
-            solid_behavior=None,
-            bcs="kubc"): # "kubc" or "pbc"
+            w_solid_incompressibility        = False ,
+            mesh                             = None  ,
+            mesh_bbox                        = None  ,
+            vertices                         = None  ,
+            domains_mf                       = None  ,
+            boundaries_mf                    = None  ,
+            points_mf                        = None  ,
+            displacement_perturbation_degree = None  ,
+            solid_pressure_degree            = None  ,
+            quadrature_degree                = None  ,
+            foi_degree                       = 0     ,
+            solid_behavior                   = None  ,
+            bcs                              = "kubc"):  # "kubc" or "pbc"
 
         Problem.__init__(self)
 
@@ -610,8 +610,7 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
     def add_fluid_pressure_qoi(self):
         expr_lst = []
         for i in range(len(self.steps)):
-
-            for operator in self.steps[i].operators: 
+            for operator in self.steps[i].operators: # MG20260507: Only works if the first operator with a tv_pf or a tv_P corresponds to the fluid pressure
                 if hasattr(operator, "tv_pf"):
                     tv_pf = operator.tv_pf
                     break
@@ -650,6 +649,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                     tv_pf = operator.tv_P
                     break
             if tv_pf is not None:
+                break
+            if hasattr(operator, "tv_P"):
+                tv_pf = operator.tv_P
                 break
 
         U_bar = self.macroscopic_stretch_subsol.subfunc

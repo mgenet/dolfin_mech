@@ -1,0 +1,12 @@
+fenics-2019-py310 (x86)
+Time: 1838.05 s | User: 1605.42 s | Syst: 365.17 s | CPU: 107% | Max RAM: 828852 KB
+Time: 246.13 s | User: 504.27 s | Syst: 158.42 s | CPU: 269% | Max RAM: 758324 KB
+fenics-2019-py310 (x86) (OMP_NUM_THREADS=1)
+Time: 1806.10 s | User: 1234.48 s | Syst: 190.92 s | CPU: 78% | Max RAM: 806788 KB
+Time: 238.47 s | User: 216.42 s | Syst: 26.33 s | CPU: 101% | Max RAM: 755700 KB
+dolfin_mech_arm (arm)
+Time: 1216.59 s | User: 825.01 s | Syst: 108.11 s | CPU: 76% | Max RAM: 812096 KB
+Time: 170.25 s | User: 167.85 s | Syst: 17.99 s | CPU: 109% | Max RAM: 798192 KB
+fenics (arm)
+Time: 1216.02 s | User: 864.08 s | Syst: 113.13 s | CPU: 80% | Max RAM: 783024 KB
+Time: 177.07 s | User: 175.15 s | Syst: 19.53 s | CPU: 109% | Max RAM: 849792 KB
