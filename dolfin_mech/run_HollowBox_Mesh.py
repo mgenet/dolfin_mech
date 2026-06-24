@@ -118,16 +118,8 @@ def run_HollowBox_Mesh(params: dict = {}):
     hole_shape            = params.get("hole_shape", "round")
     angle0                = params.get("angle0", numpy.pi / 2.0)
     add_center_hole       = params.get("add_center_hole", False)
-    use_hex_aspect_ratio  = params.get("use_hex_aspect_ratio", False)
 
     mesh_filebasename = params.get("mesh_filebasename", "mesh")
-
-    if (dim == 2) and use_hex_aspect_ratio:
-        width = xmax - xmin
-        ycenter = 0.5 * (ymin + ymax)
-        height = numpy.sqrt(3.0) * width
-        ymin = ycenter - 0.5 * height
-        ymax = ycenter + 0.5 * height
 
     gmsh.initialize()
     gmsh.model.add("HollowBox")
@@ -200,9 +192,6 @@ def run_HollowBox_Mesh(params: dict = {}):
             gmsh.finalize()
             raise ValueError("For dim=3, add_center_hole is currently not supported.")
 
-        if use_hex_aspect_ratio:
-            gmsh.finalize()
-            raise ValueError("For dim=3, use_hex_aspect_ratio is only intended for dim=2.")
         box_tag   = 1
         hole1_tag = 2
         hole2_tag = 3
@@ -241,5 +230,15 @@ def run_HollowBox_Mesh(params: dict = {}):
 
     mesh = dolfin.Mesh()
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
-    
-    return mesh
+
+    dV = dolfin.Measure("dx", domain=mesh)
+    skeleton_volume = dolfin.assemble(dolfin.Constant(1.0) * dV)
+
+    if dim == 2:
+        box_volume = (xmax - xmin) * (ymax - ymin)
+    else:
+        box_volume = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
+
+    porosity = 1.0 - skeleton_volume / box_volume
+
+    return mesh, porosity

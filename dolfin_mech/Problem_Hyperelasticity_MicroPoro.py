@@ -615,6 +615,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
                 if hasattr(operator, "tv_pf"):
                     tv_pf = operator.tv_pf
                     break
+                if hasattr(operator, "tv_P"):
+                    tv_pf = operator.tv_P
+                    break
             expr_lst.append((tv_pf.val)/self.Vs0 * self.dV)
 
         self.add_qoi(
@@ -642,6 +645,9 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             for operator in step.operators:
                 if hasattr(operator, "tv_pf"):
                     tv_pf = operator.tv_pf
+                    break
+                if hasattr(operator, "tv_P"):
+                    tv_pf = operator.tv_P
                     break
             if tv_pf is not None:
                 break

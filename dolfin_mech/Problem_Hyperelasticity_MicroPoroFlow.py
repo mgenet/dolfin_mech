@@ -289,24 +289,26 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroH
             Theta_out_fin=Theta_out_fin,
         )
 
-        self.add_foi(expr=operator.Phis_expr,   fs=self.sfoi_fs, name="Phis",   update_type="project")
-        self.add_foi(expr=operator.Phif_expr,   fs=self.sfoi_fs, name="Phif",   update_type="project")
+        operator.dx_measure = dx
+        operator.dx_in_measure = dx_in
+        operator.dx_out_measure = dx_out
+        operator.subdomain_id = subdomain_id
+        operator.inlet_id = inlet_id
+        operator.outlet_id = outlet_id
+        operator.k_l0_input = k_l0
 
-        self.add_foi(expr=operator.pl_affine,   fs=self.sfoi_fs, name="pl_affine", update_type="project")
-        self.add_foi(expr=operator.pl_bar,      fs=self.sfoi_fs, name="pl_bar",    update_type="project")
-        self.add_foi(expr=operator.pl_tot,      fs=self.sfoi_fs, name="pl_tot",    update_type="project")
+        self.add_foi(expr=operator.Phis_expr, fs=self.sfoi_fs, name="Phis", update_type="project")
+        self.add_foi(expr=operator.Phif_expr, fs=self.sfoi_fs, name="Phif", update_type="project")
 
-        # --- tensor fields ---
-        # K_l: pull-back permeability used in the reference weak form
-        self.add_foi(expr=operator.K_l,       fs=self.mfoi_fs, name="K_l_ref",   update_type="project")
+        self.add_foi(expr=operator.pl_affine, fs=self.sfoi_fs, name="pl_affine", update_type="project")
+        self.add_foi(expr=operator.pl_bar, fs=self.sfoi_fs, name="pl_bar", update_type="project")
+        self.add_foi(expr=operator.pl_tot, fs=self.sfoi_fs, name="pl_tot", update_type="project")
 
-        # k_l_intr: intrinsic permeability tensor in current configuration
-        self.add_foi(expr=operator.k_l_intr,  fs=self.mfoi_fs, name="k_l_intr",  update_type="project")
+        self.add_foi(expr=operator.K_l, fs=self.mfoi_fs, name="K_l_ref", update_type="project")
+        self.add_foi(expr=operator.k_l_intr, fs=self.mfoi_fs, name="k_l_intr", update_type="project")
 
-        # --- fluxes (vectors) ---
-        # q_l: current Darcy flux, Q_l: Piola/reference flux
-        self.add_foi(expr=operator.q_l,       fs=self.vfoi_fs, name="q_l",       update_type="project")
-        self.add_foi(expr=operator.Q_l,       fs=self.vfoi_fs, name="Q_l",       update_type="project")
+        self.add_foi(expr=operator.q_l, fs=self.vfoi_fs, name="q_l", update_type="project")
+        self.add_foi(expr=operator.Q_l, fs=self.vfoi_fs, name="Q_l", update_type="project")
 
         return self.add_operator(operator=operator, k_step=k_step)
         
@@ -325,18 +327,18 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroH
             raise RuntimeError("Cannot find Darcy operator in current step.")
 
         dx = getattr(darcy_op, "dx_measure", None)
+        dx_in = getattr(darcy_op, "dx_in_measure", None)
+        dx_out = getattr(darcy_op, "dx_out_measure", None)
+
         if dx is None:
             raise RuntimeError("Darcy operator has no dx_measure.")
 
         Area_ref = dolfin.assemble(1.0 * dx)
 
-        # Reference averages over the Darcy subdomain
-        # Average over RVE box
-        self.add_qoi(name="Q_l_avg_x",        expr=darcy_op.Q_l[0] * dx,       norm=self.V0)
-        self.add_qoi(name="Q_l_avg_y",        expr=darcy_op.Q_l[1] * dx,       norm=self.V0)
+        self.add_qoi(name="Q_l_avg_x", expr=darcy_op.Q_l[0] * dx, norm=self.V0)
+        self.add_qoi(name="Q_l_avg_y", expr=darcy_op.Q_l[1] * dx, norm=self.V0)
 
-        # Average over solid skeleton 
-        self.add_qoi(name="pl_bar_avg",       expr=darcy_op.pl_bar * dx,       norm=Area_ref)
+        self.add_qoi(name="pl_bar_avg", expr=darcy_op.pl_bar * dx, norm=Area_ref)
         self.add_qoi(name="grad_p_bar_avg_x", expr=darcy_op.grad_p_bar[0] * dx, norm=Area_ref)
         self.add_qoi(name="grad_p_bar_avg_y", expr=darcy_op.grad_p_bar[1] * dx, norm=Area_ref)
 
@@ -354,3 +356,4 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroH
             material_scaling=material_scaling,
             measure=self.get_subdomain_measure(subdomain_id))
         return self.add_operator(operator)
+    
