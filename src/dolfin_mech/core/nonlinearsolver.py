@@ -384,10 +384,11 @@ class NonlinearSolver:
 		# 	return False
 		local_is_finite = int(numpy.isfinite(self.res_vec).all())
 		global_is_finite = MPI.COMM_WORLD.allreduce(local_is_finite, op=MPI.MIN)
-		rank = MPI.COMM_WORLD.Get_rank()
-		print(f"[rank {rank}] before allreduce, local_is_finite={local_is_finite}", flush=True)
-		global_is_finite = MPI.COMM_WORLD.allreduce(local_is_finite, op=MPI.MIN)
-		print(f"[rank {rank}] after allreduce, global_is_finite={global_is_finite}", flush=True)
+		# debug
+		# rank = MPI.COMM_WORLD.Get_rank()
+		# print(f"[rank {rank}] before allreduce, local_is_finite={local_is_finite}", flush=True)
+		# global_is_finite = MPI.COMM_WORLD.allreduce(local_is_finite, op=MPI.MIN)
+		# print(f"[rank {rank}] after allreduce, global_is_finite={global_is_finite}", flush=True)
 		if not global_is_finite:
 			self.printer.print_str("Warning! Residual is NaN!")
 			return False
