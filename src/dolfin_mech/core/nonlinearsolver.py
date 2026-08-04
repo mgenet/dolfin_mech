@@ -29,6 +29,7 @@ import numpy
 import petsc4py
 import petsc4py.PETSc
 
+from mpi4py import MPI
 from .compute_error import compute_error
 from .xdmffile import XDMFFile
 
@@ -270,9 +271,14 @@ class NonlinearSolver:
 			self.printer.print_str("Warning! Linear solver failed!", tab=False)
 			return False
 
-		if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
-			# self.problem.dsol_func.vector().zero()
+		# if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
+		# 	# self.problem.dsol_func.vector().zero()
 
+		# 	self.printer.print_str("Warning! Solution increment is NaN!")
+		# 	return False
+		local_dsol_finite = int(numpy.isfinite(self.problem.dsol_func.vector()).all())
+		global_dsol_finite = MPI.COMM_WORLD.allreduce(local_dsol_finite, op=MPI.MIN)
+		if not global_dsol_finite:
 			self.printer.print_str("Warning! Solution increment is NaN!")
 			return False
 
@@ -373,7 +379,16 @@ class NonlinearSolver:
 			# self.printer.print_var("res_vec",self.res_vec.get_local())
 			# self.printer.print_var("jac_mat",self.jac_mat.array())
 
-		if not (numpy.isfinite(self.res_vec).all()):
+		# if not (numpy.isfinite(self.res_vec).all()):
+		# 	self.printer.print_str("Warning! Residual is NaN!")
+		# 	return False
+		local_is_finite = int(numpy.isfinite(self.res_vec).all())
+		global_is_finite = MPI.COMM_WORLD.allreduce(local_is_finite, op=MPI.MIN)
+		rank = MPI.COMM_WORLD.Get_rank()
+		print(f"[rank {rank}] before allreduce, local_is_finite={local_is_finite}", flush=True)
+		global_is_finite = MPI.COMM_WORLD.allreduce(local_is_finite, op=MPI.MIN)
+		print(f"[rank {rank}] after allreduce, global_is_finite={global_is_finite}", flush=True)
+		if not global_is_finite:
 			self.printer.print_str("Warning! Residual is NaN!")
 			return False
 
@@ -575,7 +590,9 @@ class NonlinearSolver:
 			relax = 1.0 / self.relax_backtracking_factor ** (k_relax - 1)
 			self.problem.sol_func.vector().axpy(relax, self.problem.dsol_func.vector())
 			self.assemble_linear_system()
-			res_is_finite = numpy.isfinite(self.res_vec).all()
+			# res_is_finite = numpy.isfinite(self.res_vec).all()
+			res_is_finite_local = int(numpy.isfinite(self.res_vec).all())
+			res_is_finite = bool(MPI.COMM_WORLD.allreduce(res_is_finite_local, op=MPI.MIN))
 			# print("numpy.isfinite(self.res_vec).all()", res_is_finite)
 			self.problem.sol_func.vector().axpy(-relax, self.problem.dsol_func.vector())
 			if res_is_finite:
