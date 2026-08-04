@@ -15,6 +15,7 @@ import sys
 import dolfin
 import myPythonLibrary as mypy
 
+from mpi4py import MPI
 from .write_vtu_file import write_VTU_file
 from .xdmffile import XDMFFile
 
@@ -242,6 +243,10 @@ class TimeIntegrator:
 				if len(self.problem.subsols) > 1:
 					dolfin.assign(self.problem.get_subsols_func_old_lst(), self.problem.sol_old_func)
 				solver_success, n_iter = self.solver.solve(k_step, k_t, dt, t)
+
+				local_success = 1 if solver_success else 0
+				global_success = MPI.COMM_WORLD.allreduce(local_success, op=MPI.MIN)
+				solver_success = bool(global_success)
 
 				self.table_printer.write_line([k_step, k_t, dt, t, t_step, n_iter, solver_success])
 
