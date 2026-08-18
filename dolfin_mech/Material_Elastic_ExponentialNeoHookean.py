@@ -31,7 +31,6 @@ class ExponentialNeoHookeanElasticMaterial(ElasticMaterial):
         self.beta4 = dolfin.Constant(parameters["beta4"])
         self.alpha = dolfin.Constant(parameters["alpha"])
 
-
         if   (self.kinematics.dim == 2):
                 self.Psi   =  self.beta1/self.beta2/self.alpha/2 * (dolfin.exp(self.beta2*(self.kinematics.IC - 2 - 2*dolfin.ln(self.kinematics.J))**self.alpha) - 1) \
                            +  self.beta3 * (self.kinematics.IC - 2 - 2*dolfin.ln(self.kinematics.J))\
