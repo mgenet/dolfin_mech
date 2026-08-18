@@ -4,4 +4,16 @@
 build
 dist
 *.egg-info
-.vscode
+*.vscode
+*.h5
+__pycache__/
+*.swp
+*.vtk
+*.sta
+*.xdmf
+*.h5
+*.png
+*.dat
+*.msh
+*.pkl
+*.csv

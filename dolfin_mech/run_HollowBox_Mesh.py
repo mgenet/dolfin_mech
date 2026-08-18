@@ -11,12 +11,18 @@
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
+###                                                                          ###
+### And Haotian XIAO, 2024-2027                                              ###
+###                                                                          ###
+### École Polytechnique, Palaiseau, France                                   ###
+###                                                                          ###
 ################################################################################
 
 import dolfin
 import gmsh
 import meshio
 import numpy
+import math
 
 import dolfin_mech as dmech
 
@@ -60,8 +66,41 @@ def setPeriodic(dim, coord, xmin, ymin, zmin, xmax, ymax, zmax, e=1e-6):
 
 ################################################################################
 
-def run_HollowBox_Mesh(
-        params:dict={}):
+def add_regular_hex_surface(occ, cx, cy, R, angle0=0., tag_base=None):
+    pt_tags = []
+    for k in range(6):
+        theta = angle0 + k * math.pi / 3.
+        x = cx + R * math.cos(theta)
+        y = cy + R * math.sin(theta)
+        if tag_base is None:
+            pt = occ.addPoint(x, y, 0.)
+        else:
+            pt = occ.addPoint(x, y, 0., tag=tag_base + k)
+        pt_tags.append(pt)
+
+    line_tags = []
+    for k in range(6):
+        p1 = pt_tags[k]
+        p2 = pt_tags[(k + 1) % 6]
+        if tag_base is None:
+            line = occ.addLine(p1, p2)
+        else:
+            line = occ.addLine(p1, p2, tag=tag_base + 100 + k)
+        line_tags.append(line)
+
+    if tag_base is None:
+        loop = occ.addCurveLoop(line_tags)
+        surf = occ.addPlaneSurface([loop])
+    else:
+        loop = occ.addCurveLoop(line_tags, tag=tag_base + 200)
+        surf = occ.addPlaneSurface([loop], tag=tag_base + 300)
+
+    return surf
+
+################################################################################
+
+
+def run_HollowBox_Mesh(params: dict = {}):
 
     dim    = params.get("dim"); assert (dim in (2,3))
     xmin   = params.get("xmin", 0.)
@@ -76,33 +115,83 @@ def run_HollowBox_Mesh(
     r0     = params.get("r0", 0.2)
     l      = params.get("l", 0.1)
 
+    hole_shape            = params.get("hole_shape", "round")
+    angle0                = params.get("angle0", numpy.pi / 2.0)
+    add_center_hole       = params.get("add_center_hole", False)
+
     mesh_filebasename = params.get("mesh_filebasename", "mesh")
 
-    ################################################################### Mesh ###
-
     gmsh.initialize()
+    gmsh.model.add("HollowBox")
 
-    if (dim==2):
-        box_tag   = 1
-        hole1_tag = 2
-        hole2_tag = 3
-        hole3_tag = 4
-        hole4_tag = 5
-        rve_tag   = 6
+    if (dim == 2):
+        box_tag = 1
+        rve_tag = 100
 
         gmsh.model.occ.addRectangle(x=xmin+xshift, y=ymin+yshift, z=0., dx=xmax-xmin, dy=ymax-ymin, tag=box_tag)
-        gmsh.model.occ.addDisk(xc=xmin, yc=ymin, zc=0., rx=r0, ry=r0, tag=hole1_tag)
-        gmsh.model.occ.addDisk(xc=xmax, yc=ymin, zc=0., rx=r0, ry=r0, tag=hole2_tag)
-        gmsh.model.occ.addDisk(xc=xmax, yc=ymax, zc=0., rx=r0, ry=r0, tag=hole3_tag)
-        gmsh.model.occ.addDisk(xc=xmin, yc=ymax, zc=0., rx=r0, ry=r0, tag=hole4_tag)
-        gmsh.model.occ.cut(objectDimTags=[(2, box_tag)], toolDimTags=[(2, hole1_tag), (2, hole2_tag), (2, hole3_tag), (2, hole4_tag)], tag=rve_tag)
+
+        corner_centers = [
+            (xmin, ymin),
+            (xmax, ymin),
+            (xmax, ymax),
+            (xmin, ymax),
+        ]
+
+        centers = list(corner_centers)
+
+        if add_center_hole:
+            xcenter = 0.5 * (xmin + xmax)
+            ycenter = 0.5 * (ymin + ymax)
+            centers.append((xcenter, ycenter))
+
+        tool_tags = []
+
+        if (hole_shape == "round"):
+            for ihole, (cx, cy) in enumerate(centers):
+                hole_tag = 2 + ihole
+                gmsh.model.occ.addDisk(
+                    xc=cx, yc=cy, zc=0.,
+                    rx=r0, ry=r0,
+                    tag=hole_tag)
+                tool_tags.append((2, hole_tag))
+
+        elif (hole_shape == "hex"):
+            for ihole, (cx, cy) in enumerate(centers):
+                hole_tag = add_regular_hex_surface(
+                    gmsh.model.occ,
+                    cx=cx,
+                    cy=cy,
+                    R=r0,
+                    angle0=angle0,
+                    tag_base=1000 + 100 * ihole)
+                tool_tags.append((2, hole_tag))
+
+        else:
+            gmsh.finalize()
+            raise ValueError("Unsupported hole_shape for dim=2. Use 'round' or 'hex'.")
+
+        gmsh.model.occ.cut(
+            objectDimTags=[(2, box_tag)],
+            toolDimTags=tool_tags,
+            tag=rve_tag)
+
         gmsh.model.occ.synchronize()
+        #rve_tag = box_tag
         gmsh.model.addPhysicalGroup(dim=2, tags=[rve_tag])
         dmech.setPeriodic(dim=2, coord=0, xmin=xmin+xshift, ymin=ymin+yshift, zmin=0., xmax=xmax+xshift, ymax=ymax+yshift, zmax=0.)
         dmech.setPeriodic(dim=2, coord=1, xmin=xmin+xshift, ymin=ymin+yshift, zmin=0., xmax=xmax+xshift, ymax=ymax+yshift, zmax=0.)
         gmsh.model.mesh.setSize(dimTags=gmsh.model.getEntities(0), size=l)
         gmsh.model.mesh.generate(dim=2)
+
     if (dim==3):
+        if (hole_shape != "round"):
+            gmsh.finalize()
+            raise ValueError("For dim=3, only hole_shape='round' is currently supported.")
+
+        if add_center_hole:
+            gmsh.finalize()
+            raise ValueError("For dim=3, add_center_hole is currently not supported.")
+
         box_tag   = 1
         hole1_tag = 2
         hole2_tag = 3
@@ -141,5 +230,15 @@ def run_HollowBox_Mesh(
 
     mesh = dolfin.Mesh()
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
-    
-    return mesh
+
+    dV = dolfin.Measure("dx", domain=mesh)
+    skeleton_volume = dolfin.assemble(dolfin.Constant(1.0) * dV)
+
+    if dim == 2:
+        box_volume = (xmax - xmin) * (ymax - ymin)
+    else:
+        box_volume = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
+
+    porosity = 1.0 - skeleton_volume / box_volume
+
+    return mesh, porosity

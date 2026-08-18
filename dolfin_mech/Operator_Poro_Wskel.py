@@ -23,7 +23,11 @@ class WskelPoroOperator(Operator):
             material_parameters,
             material_scaling,
             Phis0,
-            measure):
+            measure,
+            U=None):
+        
+        if U is None:
+            U = kinematics.U
 
         self.kinematics = kinematics
         self.solid_material = dmech.WskelLungElasticMaterial(
@@ -36,7 +40,7 @@ class WskelPoroOperator(Operator):
         self.measure = measure
 
         dE_test = dolfin.derivative(
-            self.kinematics.E, self.kinematics.U, U_test)
+            self.kinematics.E, U, U_test)
         self.res_form = dolfin.inner(self.material.Sigma, dE_test) * self.measure
 
 ################################################################################

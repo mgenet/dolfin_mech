@@ -22,6 +22,15 @@ from .Problem_Hyperelasticity import HyperelasticityProblem
 
 ################################################################################
 
+class _SigmaAggregatorMaterial:
+    def __init__(self, problem):
+        self._problem = problem
+
+    @property
+    def sigma(self):
+        return self._problem.get_sigma_total()
+
+
 class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
 
 
@@ -533,10 +542,11 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
     def add_macroscopic_solid_stress_qois(self,
             symmetric=False):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
         U_bar = self.macroscopic_stretch_subsol.subfunc
         I_bar = dolfin.Identity(self.dim)
@@ -619,14 +629,26 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
     def add_macroscopic_stress_qois(self,
             symmetric=False):
 
-        for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
-            if hasattr(operator, "material"):
-                material = operator.material
-                break
+        # for operator in self.operators: # MG20221110: Warning! Only works if there is a single operator with a material law!!
+        #     if hasattr(operator, "material"):
+        #         material = operator.material
+        #         break
+        material = _SigmaAggregatorMaterial(self)
 
-        for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!! # MG20260507: Only works if the first operator with a tv_pf or a tv_P corresponds to the fluid pressure
-            if hasattr(operator, "tv_pf"):
-                tv_pf = operator.tv_pf
+        # for operator in self.steps[0].operators: # MG20231124: Warning! Only works if there is a single step!!
+        #     if hasattr(operator, "tv_pf"):
+        #         tv_pf = operator.tv_pf
+        #         break
+
+        for step in self.steps:
+            for operator in step.operators:
+                if hasattr(operator, "tv_pf"):
+                    tv_pf = operator.tv_pf
+                    break
+                if hasattr(operator, "tv_P"):
+                    tv_pf = operator.tv_P
+                    break
+            if tv_pf is not None:
                 break
             if hasattr(operator, "tv_P"):
                 tv_pf = operator.tv_P
@@ -679,3 +701,32 @@ class MicroPoroHyperelasticityProblem(HyperelasticityProblem):
             self.add_qoi(
                 name="S_area",
                 expr=expr*self.dS(0))
+            
+
+    def get_sigma_total(self):
+        sigma_total = None
+
+        for op in self.operators:
+
+            # 1) first try explicit contribution
+            sig = getattr(op, "sigma_contrib", None)
+
+            # 2) if not found, try material.sigma
+            if sig is None:
+                mat = getattr(op, "material", None)
+                if mat is not None:
+                    sig = getattr(mat, "sigma", None)
+
+            if sig is None:
+                continue
+
+            sigma_total = sig if sigma_total is None else (sigma_total + sig)
+
+        if sigma_total is None:
+            dim = self.dim
+            sigma_total = dolfin.Constant(((0.0,) * dim,) * dim)
+
+        return sigma_total
+
+
+     

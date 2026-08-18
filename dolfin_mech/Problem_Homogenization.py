@@ -28,7 +28,8 @@ class HomogenizationProblem():
             mat_params,
             vol,
             bbox,
-            vertices=None):
+            vertices=None,
+            k_l0=None):
 
         self.dim = dim
         if   (self.dim==2):
@@ -50,6 +51,11 @@ class HomogenizationProblem():
         self.vertices = vertices
         self.vol = vol
         self.bbox = bbox
+
+        if k_l0 is None:
+            self.k_l0 = dolfin.Constant(1.0) * dolfin.Identity(self.dim)
+        else:
+            self.k_l0 = k_l0
 
 
 
@@ -174,7 +180,6 @@ class HomogenizationProblem():
         assert numpy.linalg.norm(vv[2,:] - vv[1,:] - a2) <= tol # check if UC vertices form indeed a parallelogram
 
         ################################################## Subdomains & Measures ###
-
         class BoundaryX0(dolfin.SubDomain):
             def inside(self,x,on_boundary):
                 return on_boundary and dolfin.near(x[0], vv[0,0]+x[1]*a2[0]/vv[3,1], tol)
@@ -223,6 +228,7 @@ class HomogenizationProblem():
             "exterior_facet",
             domain=self.mesh,
             subdomain_data=boundaries_mf)
+        
 
         ############################################################# Functions #######
 
@@ -277,3 +283,54 @@ class HomogenizationProblem():
         kappa_tilde = Phi_s0**2 * p_f/(Phi_s0 - Phi_s)/2
 
         return kappa_tilde
+    
+
+    ##### For Darcy flow Homogenization ######
+
+    def get_macro_pressure_gradient(self, i):
+
+        gradp = numpy.zeros(self.dim)
+        gradp[i] = 1.0
+        return gradp
+    
+    def solve_pressure_corrector(self, i, degree=1):
+
+        Qe = dolfin.FiniteElement("CG", self.mesh.ufl_cell(), degree)
+        Re = dolfin.FiniteElement("R", self.mesh.ufl_cell(), 0)
+        W = dolfin.FunctionSpace(
+            self.mesh,
+            dolfin.MixedElement([Qe, Re]),
+            constrained_domain=dmech.PeriodicSubDomain(self.dim, self.bbox, self.vertices))
+        p_test, c_test = dolfin.TestFunctions(W)
+        p_tria, c_tria = dolfin.TrialFunctions(W)
+        grad_p_bar = dolfin.Constant(self.get_macro_pressure_gradient(i))
+
+        F = dolfin.inner(
+            self.k_l0 * (dolfin.grad(p_tria) + grad_p_bar),
+            dolfin.grad(p_test)) * self.dV
+
+        a, b = dolfin.lhs(F), dolfin.rhs(F)
+
+        a += c_test * p_tria * self.dV
+        a += c_tria * p_test * self.dV
+
+        w = dolfin.Function(W)
+
+        dolfin.solve(a == b, w, solver_parameters={"linear_solver": "mumps"})
+
+        p, c = w.split(deepcopy=True)
+
+        return p
+    
+    def get_k_hom(self, degree=1):
+
+        K_hom = numpy.zeros((self.dim, self.dim))
+
+        for i in range(self.dim):
+            p = self.solve_pressure_corrector(i=i, degree=degree)
+            grad_p_bar = dolfin.Constant(self.get_macro_pressure_gradient(i))
+            q = - self.k_l0 * (dolfin.grad(p) + grad_p_bar)
+            for j in range(self.dim):
+                K_hom[j, i] = - dolfin.assemble(q[j] * self.dV) / self.vol
+
+        return K_hom
