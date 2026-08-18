@@ -374,6 +374,8 @@ class NonlinearSolver():
                 ref=self.res_old_norm)
             self.printer.print_sci("res_err_rel",self.res_err_rel)
 
+        return True
+
 
 
     def eigen_solve(self):
