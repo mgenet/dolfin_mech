@@ -212,9 +212,9 @@ class NonlinearSolver():
             k_step=None,
             k_t=None):
 
-        assemble_linear_system = self.assemble_linear_system()   
+        assemble_success = self.assemble_linear_system()   
 
-        if assemble_linear_system==False:
+        if not (assemble_success):
             return False 
         
         # eigen problem

@@ -23,6 +23,9 @@ authors:
   - family-names: Peyraut
     given-names: Alice
     orcid: 0009-0000-9445-8060
+  - family-names: Xiao
+    given-names: Haotian
+    orcid: 0009-0008-6186-524X
 title: "dolfin_mech"
 url: https://github.com/mgenet/dolfin_mech
 doi: 10.5281/zenodo.8010870
