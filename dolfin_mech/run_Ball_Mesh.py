@@ -60,7 +60,7 @@ def run_Ball_Mesh(
     boundaries_mf = dolfin.MeshFunction(
         value_type="size_t",
         mesh=mesh,
-        dim=1)
+        dim=2)
 
     boundaries_mf.set_all(0)
 
