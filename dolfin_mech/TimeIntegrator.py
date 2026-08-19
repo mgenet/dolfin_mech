@@ -16,8 +16,8 @@ import dolfin
 import myPythonLibrary as mypy
 
 from mpi4py import MPI
-from .write_vtu_file import write_VTU_file
-from .xdmffile import XDMFFile
+from .write_VTU_file import write_VTU_file
+from .XDMFFile import XDMFFile
 
 ################################################################################
 

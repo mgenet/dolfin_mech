@@ -31,7 +31,7 @@ import petsc4py.PETSc
 
 from mpi4py import MPI
 from .compute_error import compute_error
-from .xdmffile import XDMFFile
+from .XDMFFile import XDMFFile
 
 ################################################################################
 
