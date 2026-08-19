@@ -1,4 +1,4 @@
-#coding=utf8
+# coding=utf8
 
 ################################################################################
 ###                                                                          ###
@@ -8,243 +8,311 @@
 ###                                                                          ###
 ################################################################################
 
-import dolfin
+"""Main driver for time-dependent FEA simulations with adaptive time-stepping."""
+
 import sys
 
+import dolfin
 import myPythonLibrary as mypy
 
-import dolfin_mech as dmech
+from mpi4py import MPI
+from .write_vtu_file import write_VTU_file
+from .xdmffile import XDMFFile
 
 ################################################################################
 
-class TimeIntegrator():
 
-    def __init__(self,
-            problem,
-            solver,
-            parameters,
-            print_out=True,
-            print_sta=True,
-            write_qois=True,
-            write_qois_limited_precision=False,
-            write_sol=True,
-            write_vtus=False,
-            write_vtus_with_preserved_connectivity=False,
-            write_xmls=False):
+class TimeIntegrator:
+	r"""Main driver class for time-dependent finite element simulations.
 
-        self.problem = problem
-
-        self.solver = solver
-
-        self.n_iter_for_accel = parameters.get("n_iter_for_accel",  4)
-        self.n_iter_for_decel = parameters.get("n_iter_for_decel", 16)
-        self.accel_coeff      = parameters.get("accel_coeff"     ,  2)
-        self.decel_coeff      = parameters.get("decel_coeff"     ,  2)
-
-        if (type(print_out) is str):
-            if (print_out=="stdout"):
-                self.printer_filename = None
-            elif (print_out=="argv"):
-                self.printer_filename = sys.argv[0][:-3]+".out"
-            else:
-                self.printer_filename = print_out+".out"
-        else:
-            self.printer_filename = None
-        self.printer = mypy.Printer(
-            filename=self.printer_filename,
-            silent=not(print_out))
-        self.solver.printer = self.printer
-
-        if (type(print_sta) is str):
-            if (print_sta=="stdout"):
-                self.table_printer_filename = None
-            elif (print_sta=="argv"):
-                self.table_printer_filename = sys.argv[0][:-3]+".sta"
-            else:
-                self.table_printer_filename = print_sta+".sta"
-        else:
-            self.table_printer_filename = sys.argv[0][:-3]+".sta"
-        self.table_printer = mypy.TablePrinter(
-            titles=["k_step", "k_t", "dt", "t", "t_step", "n_iter", "success"],
-            filename=self.table_printer_filename,
-            silent=not(print_sta))
-
-        self.write_qois = bool(write_qois) and (len(self.problem.qois)>0)
-        if (self.write_qois):
-            self.write_qois_filebasename = write_qois if (type(write_qois) is str) else sys.argv[0][:-3]+"-qois"
-
-            self.qoi_printer = mypy.DataPrinter(
-                names=["t"]+[qoi.name for qoi in self.problem.qois],
-                filename=self.write_qois_filebasename+".dat",
-                limited_precision=write_qois_limited_precision)
-
-            self.problem.update_qois(dt=1)
-            self.qoi_printer.write_line([0.]+[qoi.value for qoi in self.problem.qois])
-
-        self.problem.update_fois()
-        self.write_sol = bool(write_sol)
-        if (self.write_sol):
-            self.write_sol_filebasename = write_sol if (type(write_sol) is str) else sys.argv[0][:-3]+"-sol"
-
-            self.functions_to_write  = []
-            self.functions_to_write += self.problem.get_subsols_func_lst()
-            self.functions_to_write += self.problem.get_subsols_func_old_lst()
-            self.functions_to_write += self.problem.get_fois_func_lst()
-
-            self.xdmf_file_sol = dmech.XDMFFile(
-                filename=self.write_sol_filebasename+".xdmf",
-                functions=self.functions_to_write)
-            self.xdmf_file_sol.write(0.)
-
-            self.write_vtus                             = bool(write_vtus)
-            self.write_vtus_with_preserved_connectivity = bool(write_vtus_with_preserved_connectivity)
-            if (self.write_vtus):
-                dmech.write_VTU_file(
-                    filebasename=self.write_sol_filebasename,
-                    function=self.problem.displacement_subsol.subfunc,
-                    time=0,
-                    preserve_connectivity=self.write_vtus_with_preserved_connectivity)
-
-            self.write_xmls = bool(write_xmls)
-            if (self.write_xmls):
-                dolfin.File(self.write_sol_filebasename+"_"+str(0).zfill(3)+".xml") << self.problem.displacement_subsol.subfunc
+	The ``TimeIntegrator`` orchestrates the entire simulation workflow. It iterates
+	through the sequence of defined **Steps**, and within each step, it advances
+	time :math:`t` from :math:`t_{ini}` to :math:`t_{fin}`.
 
 
 
-    def close(self):
+	**Core Responsibilities:**
 
-        self.printer.close()
-        self.table_printer.close()
+	1.  **Adaptive Time Stepping**: Dynamically adjusts the time increment :math:`\Delta t`
+	    based on solver performance.
 
-        if (self.write_qois):
-            self.qoi_printer.close()
+	    - **Success**: Increases :math:`\Delta t` (acceleration) if convergence is fast.
+	    - **Failure**: Decreases :math:`\Delta t` (deceleration/cutting) if convergence fails, retrying the step.
 
-        if (self.write_sol):
-            self.xdmf_file_sol.close()
+	2.  **State Management**: Updates time-dependent operators and constraints before each solve.
+	3.  **Output Management**: Writes results to disk (VTU/XDMF for fields, DAT for QOIs, log files for monitoring).
 
+	**Algorithm:**
 
+	.. code-block:: none
 
-    def integrate(self):
+	    For each Step:
+	        t = t_ini
+	        While t < t_fin:
+	            Try solving for t + dt
+	            If Converged:
+	                Update solution and history variables
+	                Write output
+	                Increase dt (if iterations low)
+	                t = t + dt
+	            Else:
+	                Restore previous solution
+	                Decrease dt (cut time step)
+	                Retry
 
-        k_t_tot = 0
-        n_iter_tot = 0
-        self.printer.inc()
-        for k_step in range(1,len(self.problem.steps)+1):
-            self.printer.print_var("k_step",k_step,-1)
+	:param problem: The problem instance containing physics and mesh.
+	:type problem: Problem
+	:param solver: The nonlinear solver instance.
+	:type solver: NonlinearSolver
+	:param parameters: Dictionary controlling time stepping behavior:
+	    - ``n_iter_for_accel`` (int): Max iterations to trigger time step increase.
+	    - ``n_iter_for_decel`` (int): Min iterations to trigger time step decrease.
+	    - ``accel_coeff`` (float): Factor to increase ``dt`` by.
+	    - ``decel_coeff`` (float): Factor to decrease ``dt`` by.
+	:type parameters: dict
+	:param print_out: Enable/disable main log file output.
+	:param print_sta: Enable/disable statistics table output (.sta file).
+	:param write_qois: Enable/disable writing Quantity of Interest data (.dat file).
+	:param write_sol: Enable/disable writing full field solution (.xdmf file).
+	:param write_vtus: Enable/disable writing VTU files for ParaView.
+	"""
 
-            self.step = self.problem.steps[k_step-1]
+	def __init__(
+		self,
+		problem,
+		solver,
+		parameters,
+		print_out=True,
+		print_sta=True,
+		write_qois=True,
+		write_qois_limited_precision=False,
+		write_sol=True,
+		write_vtus=False,
+		write_vtus_with_preserved_connectivity=False,
+		write_xmls=False,
+	):
+		"""Initializes the TimeIntegrator."""
+		self.problem = problem
 
-            t = self.step.t_ini
-            dt = self.step.dt_ini
+		self.solver = solver
 
-            self.problem.set_variational_formulation(
-                k_step=k_step-1)
+		self.n_iter_for_accel = parameters.get("n_iter_for_accel", 4)
+		self.n_iter_for_decel = parameters.get("n_iter_for_decel", 16)
+		self.accel_coeff = parameters.get("accel_coeff", 2)
+		self.decel_coeff = parameters.get("decel_coeff", 2)
 
-            self.solver.constraints  = []
-            self.solver.constraints += self.problem.constraints
-            self.solver.constraints += self.step.constraints
+		if type(print_out) is str:
+			if print_out == "stdout":
+				self.printer_filename = None
+			elif print_out == "argv":
+				self.printer_filename = sys.argv[0][:-3] + ".out"
+			else:
+				self.printer_filename = print_out + ".out"
+		else:
+			self.printer_filename = None
+		self.printer = mypy.Printer(filename=self.printer_filename, silent=not (print_out))
+		self.solver.printer = self.printer
 
-            k_t = 0
-            self.printer.inc()
-            while (True):
-                k_t += 1
-                k_t_tot += 1
-                self.printer.print_var("k_t",k_t,-1)
+		if type(print_sta) is str:
+			if print_sta == "stdout":
+				self.table_printer_filename = None
+			elif print_sta == "argv":
+				self.table_printer_filename = sys.argv[0][:-3] + ".sta"
+			else:
+				self.table_printer_filename = print_sta + ".sta"
+		else:
+			self.table_printer_filename = sys.argv[0][:-3] + ".sta"
+		self.table_printer = mypy.TablePrinter(
+			titles=["k_step", "k_t", "dt", "t", "t_step", "n_iter", "success"],
+			filename=self.table_printer_filename,
+			silent=not (print_sta),
+		)
 
-                if (t+dt > self.step.t_fin):
-                    dt = self.step.t_fin - t
-                self.printer.print_var("dt",dt)
+		self.write_qois = bool(write_qois) and (len(self.problem.qois) > 0)
+		if self.write_qois:
+			self.write_qois_filebasename = write_qois if (type(write_qois) is str) else sys.argv[0][:-3] + "-qois"
 
-                # self.problem.set_variational_formulation(
-                #     k_step=k_step-1,
-                #     dt=dt)
+			self.qoi_printer = mypy.DataPrinter(
+				names=["t"] + [qoi.name for qoi in self.problem.qois],
+				filename=self.write_qois_filebasename + ".dat",
+				limited_precision=write_qois_limited_precision,
+			)
 
-                t += dt
-                self.printer.print_var("t",t)
+			self.problem.update_qois(dt=1)
+			self.qoi_printer.write_line([0.0] + [qoi.value for qoi in self.problem.qois])
 
-                t_step = (t - self.step.t_ini)/(self.step.t_fin - self.step.t_ini)
-                self.printer.print_var("t_step",t_step)
+		self.problem.update_fois()
+		self.write_sol = bool(write_sol)
+		if self.write_sol:
+			self.write_sol_filebasename = write_sol if (type(write_sol) is str) else sys.argv[0][:-3] + "-sol"
 
-                for operator in self.step.operators:
-                    operator.set_value_at_t_step(t_step)
-                    operator.set_dt(dt)
+			self.functions_to_write = []
+			self.functions_to_write += self.problem.get_subsols_func_lst()
+			self.functions_to_write += self.problem.get_subsols_func_old_lst()
+			self.functions_to_write += self.problem.get_fois_func_lst()
 
-                for constraint in self.step.constraints:
-                    constraint.set_value_at_t_step(t_step)
+			self.xdmf_file_sol = XDMFFile(
+				filename=self.write_sol_filebasename + ".xdmf", functions=self.functions_to_write
+			)
+			self.xdmf_file_sol.write(0.0)
 
-                for inelastic_behavior in self.problem.inelastic_behaviors_internal:
-                    inelastic_behavior.update_internal_variables_at_t(t)
+			self.write_vtus = bool(write_vtus)
+			self.write_vtus_with_preserved_connectivity = bool(write_vtus_with_preserved_connectivity)
+			if self.write_vtus:
+				write_VTU_file(
+					filebasename=self.write_sol_filebasename,
+					function=self.problem.displacement_subsol.subfunc,
+					time=0,
+					preserve_connectivity=self.write_vtus_with_preserved_connectivity,
+				)
 
-                self.problem.sol_old_func.vector()[:] = self.problem.sol_func.vector()[:]
-                if (len(self.problem.subsols) > 1):
-                    dolfin.assign(
-                        self.problem.get_subsols_func_old_lst(),
-                        self.problem.sol_old_func)
-                solver_success, n_iter = self.solver.solve(k_step, k_t, dt, t)
+			self.write_xmls = bool(write_xmls)
+			if self.write_xmls:
+				(
+					dolfin.File(self.write_sol_filebasename + "_" + str(0).zfill(3) + ".xml")
+					<< self.problem.displacement_subsol.subfunc
+				)
 
-                self.table_printer.write_line([k_step, k_t, dt, t, t_step, n_iter, solver_success])
+	def close(self):
+		"""Closes all open file handles (logs, tables, QOI data, XDMF)."""
+		self.printer.close()
+		self.table_printer.close()
 
-                if (solver_success):
-                    n_iter_tot += n_iter
+		if self.write_qois:
+			self.qoi_printer.close()
 
-                    self.problem.update_fois()
-                    if (self.write_sol):
-                        self.xdmf_file_sol.write(t)
+		if self.write_sol:
+			self.xdmf_file_sol.close()
 
-                        if (self.write_vtus):
-                            dmech.write_VTU_file(
-                                filebasename=self.write_sol_filebasename,
-                                function=self.problem.displacement_subsol.subfunc,
-                                time=k_t_tot,
-                                preserve_connectivity=self.write_vtus_with_preserved_connectivity)
+	def integrate(self):
+		"""Executes the time integration loop.
 
-                        if (self.write_xmls):
-                            dolfin.File(self.write_sol_filebasename+"_"+str(k_t_tot).zfill(3)+".xml") << self.problem.displacement_subsol.subfunc
+		This is the main entry point to run the simulation after setup.
 
-                    if (self.write_qois):
-                        self.problem.update_qois(dt, k_step)
-                        self.qoi_printer.write_line([t]+[qoi.value for qoi in self.problem.qois])
+		:return: True if the simulation completed successfully, False otherwise.
+		"""
+		k_t_tot = 0
+		n_iter_tot = 0
+		self.printer.inc()
+		for k_step in range(1, len(self.problem.steps) + 1):
+			self.printer.print_var("k_step", k_step, -1)
 
-                    if dolfin.near(t, self.step.t_fin, eps=1e-9):
-                        self.success = True
-                        break
-                    else:
-                        if (n_iter <= self.n_iter_for_accel):
-                            dt *= self.accel_coeff
-                            if (dt > self.step.dt_max):
-                                dt = self.step.dt_max
-                        elif (n_iter >= self.n_iter_for_decel):
-                            dt /= self.decel_coeff
-                            if (dt < self.step.dt_min):
-                                dt = self.step.dt_min
-                else:
-                    self.problem.sol_func.vector()[:] = self.problem.sol_old_func.vector()[:]
-                    if (len(self.problem.subsols) > 1):
-                        dolfin.assign(
-                            self.problem.get_subsols_func_lst(),
-                            self.problem.sol_func)
+			self.step = self.problem.steps[k_step - 1]
 
-                    for inelastic_behavior in self.problem.inelastic_behaviors_internal:
-                        inelastic_behavior.restore_old_value()
+			t = self.step.t_ini
+			dt = self.step.dt_ini
 
-                    for constraint in self.step.constraints:
-                        constraint.restore_old_value()
+			self.problem.set_variational_formulation(k_step=k_step - 1)
 
-                    k_t -= 1
-                    k_t_tot -= 1
-                    t -= dt
+			self.solver.constraints = []
+			self.solver.constraints += self.problem.constraints
+			self.solver.constraints += self.step.constraints
 
-                    dt /= self.decel_coeff
-                    if (dt < self.step.dt_min):
-                        self.printer.print_str("Warning! Time integrator failed to move forward!")
-                        self.success = False
-                        break
+			k_t = 0
+			self.printer.inc()
+			while True:
+				k_t += 1
+				k_t_tot += 1
+				self.printer.print_var("k_t", k_t, -1)
 
-            self.printer.dec()
+				if t + dt > self.step.t_fin:
+					dt = self.step.t_fin - t
+				self.printer.print_var("dt", dt)
 
-            if not (self.success):
-                break
+				# self.problem.set_variational_formulation(
+				#     k_step=k_step-1,
+				#     dt=dt)
 
-        self.printer.dec()
+				t += dt
+				self.printer.print_var("t", t)
 
-        return self.success
+				t_step = (t - self.step.t_ini) / (self.step.t_fin - self.step.t_ini)
+				self.printer.print_var("t_step", t_step)
+
+				for operator in self.step.operators:
+					operator.set_value_at_t_step(t_step)
+					operator.set_dt(dt)
+
+				for constraint in self.step.constraints:
+					constraint.set_value_at_t_step(t_step)
+
+				for inelastic_behavior in self.problem.inelastic_behaviors_internal:
+					inelastic_behavior.update_internal_variables_at_t(t)
+
+				self.problem.sol_old_func.vector()[:] = self.problem.sol_func.vector()[:]
+				if len(self.problem.subsols) > 1:
+					dolfin.assign(self.problem.get_subsols_func_old_lst(), self.problem.sol_old_func)
+				solver_success, n_iter = self.solver.solve(k_step, k_t, dt, t)
+
+				local_success = 1 if solver_success else 0
+				global_success = MPI.COMM_WORLD.allreduce(local_success, op=MPI.MIN)
+				solver_success = bool(global_success)
+
+				self.table_printer.write_line([k_step, k_t, dt, t, t_step, n_iter, solver_success])
+
+				if solver_success:
+					n_iter_tot += n_iter
+
+					self.problem.update_fois()
+					if self.write_sol:
+						self.xdmf_file_sol.write(t)
+
+						if self.write_vtus:
+							write_VTU_file(
+								filebasename=self.write_sol_filebasename,
+								function=self.problem.displacement_subsol.subfunc,
+								time=k_t_tot,
+								preserve_connectivity=self.write_vtus_with_preserved_connectivity,
+							)
+
+						if self.write_xmls:
+							(
+								dolfin.File(self.write_sol_filebasename + "_" + str(k_t_tot).zfill(3) + ".xml")
+								<< self.problem.displacement_subsol.subfunc
+							)
+
+					if self.write_qois:
+						self.problem.update_qois(dt, k_step)
+						self.qoi_printer.write_line([t] + [qoi.value for qoi in self.problem.qois])
+
+					if dolfin.near(t, self.step.t_fin, eps=1e-9):
+						self.success = True
+						break
+					else:
+						if n_iter <= self.n_iter_for_accel:
+							dt *= self.accel_coeff
+							if dt > self.step.dt_max:
+								dt = self.step.dt_max
+						elif n_iter >= self.n_iter_for_decel:
+							dt /= self.decel_coeff
+							if dt < self.step.dt_min:
+								dt = self.step.dt_min
+				else:
+					self.problem.sol_func.vector()[:] = self.problem.sol_old_func.vector()[:]
+					if len(self.problem.subsols) > 1:
+						dolfin.assign(self.problem.get_subsols_func_lst(), self.problem.sol_func)
+
+					for inelastic_behavior in self.problem.inelastic_behaviors_internal:
+						inelastic_behavior.restore_old_value()
+
+					for constraint in self.step.constraints:
+						constraint.restore_old_value()
+
+					k_t -= 1
+					k_t_tot -= 1
+					t -= dt
+
+					dt /= self.decel_coeff
+					if dt < self.step.dt_min:
+						self.printer.print_str("Warning! Time integrator failed to move forward!")
+						self.success = False
+						break
+
+			self.printer.dec()
+
+			if not (self.success):
+				break
+
+		self.printer.dec()
+
+		return self.success
