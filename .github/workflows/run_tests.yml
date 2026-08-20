@@ -12,6 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04]
 
+    env:
+      UCX_TLS: "shm,tcp,self"
+      UCX_NET_DEVICES: "none"
+
     defaults:
       run:
         shell: bash -el {0}
