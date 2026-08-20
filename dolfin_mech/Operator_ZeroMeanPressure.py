@@ -2,7 +2,7 @@
 
 ################################################################################
 ###                                                                          ###
-### Created by Haotian XIAO, 2024-2027                                       ###
+### Created by Haotian Xiao, 2024-2027                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
