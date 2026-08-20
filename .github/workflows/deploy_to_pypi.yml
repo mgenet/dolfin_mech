@@ -5,6 +5,8 @@ on:
 
 jobs:
   deploy_to_pypi:
+    if: github.repository == 'mgenet/dolfin_mech'
+
     runs-on: ubuntu-latest
 
     steps:
