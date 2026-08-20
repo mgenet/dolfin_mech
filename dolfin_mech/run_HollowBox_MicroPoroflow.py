@@ -1,6 +1,6 @@
 ################################################################################
 ###                                                                          ###
-### Created by Haotian XIAO, 2024-2027                                       ###
+### Created by Haotian Xiao, 2024-2027                                       ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -31,7 +31,7 @@ def run_HollowBox_MicroPoroflow(
         verbose=1):
 
     # ------------------------- Mesh ------------------------- #
-    mesh, mesh_porosity = dmech.run_HollowBox_Mesh(params=mesh_params)
+    mesh, mesh_porosity = dmech.run_HollowBox_Mesh(params=mesh_params,return_porosity=True)
 
     metadata = {
         "mesh_porosity": float(mesh_porosity),

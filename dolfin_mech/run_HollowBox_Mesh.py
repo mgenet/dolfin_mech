@@ -12,7 +12,7 @@
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Haotian XIAO, 2024-2027                                              ###
+### And Haotian Xiao, 2024-2027                                              ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
@@ -100,7 +100,7 @@ def add_regular_hex_surface(occ, cx, cy, R, angle0=0., tag_base=None):
 ################################################################################
 
 
-def run_HollowBox_Mesh(params: dict = {}):
+def run_HollowBox_Mesh(params: dict = {}, return_porosity=False):
 
     dim    = params.get("dim"); assert (dim in (2,3))
     xmin   = params.get("xmin", 0.)
@@ -231,14 +231,25 @@ def run_HollowBox_Mesh(params: dict = {}):
     mesh = dolfin.Mesh()
     dolfin.XDMFFile(mesh_filebasename+".xdmf").read(mesh)
 
-    dV = dolfin.Measure("dx", domain=mesh)
-    skeleton_volume = dolfin.assemble(dolfin.Constant(1.0) * dV)
+    if return_porosity:
+        dV = dolfin.Measure("dx", domain=mesh)
+        skeleton_volume = dolfin.assemble(
+            dolfin.Constant(1.0) * dV)
 
-    if dim == 2:
-        box_volume = (xmax - xmin) * (ymax - ymin)
-    else:
-        box_volume = (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
+        if dim == 2:
+            box_volume = (
+                (xmax - xmin)
+                * (ymax - ymin)
+            )
+        else:
+            box_volume = (
+                (xmax - xmin)
+                * (ymax - ymin)
+                * (zmax - zmin)
+            )
 
-    porosity = 1.0 - skeleton_volume / box_volume
+        porosity = 1.0 - skeleton_volume / box_volume
 
-    return mesh, porosity
+        return mesh, porosity
+
+    return mesh
