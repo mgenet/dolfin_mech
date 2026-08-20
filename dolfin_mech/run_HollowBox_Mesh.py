@@ -12,7 +12,7 @@
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
 ###                                                                          ###
-### And Haotian XIAO, 2024-2027                                              ###
+### And Haotian Xiao, 2024-2027                                              ###
 ###                                                                          ###
 ### École Polytechnique, Palaiseau, France                                   ###
 ###                                                                          ###
