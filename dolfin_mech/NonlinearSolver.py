@@ -19,6 +19,8 @@ import petsc4py.PETSc
 import sys
 import time
 
+from mpi4py import MPI
+
 import myPythonLibrary as mypy
 
 import dolfin_mech as dmech
@@ -235,7 +237,9 @@ class NonlinearSolver():
             self.printer.print_str("Warning! Linear solver failed!",tab=False)
             return False
 
-        if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
+        local_dsol_finite = int(numpy.isfinite(self.problem.dsol_func.vector()).all())
+        global_dsol_finite = MPI.COMM_WORLD.allreduce(local_dsol_finite, op=MPI.MIN)
+        if not (global_dsol_finite):
             # self.problem.dsol_func.vector().zero()
 
             self.printer.print_str("Warning! Solution increment is NaN!")
@@ -333,7 +337,9 @@ class NonlinearSolver():
             # self.printer.print_var("res_vec",self.res_vec.get_local())
             # self.printer.print_var("jac_mat",self.jac_mat.array())
 
-        if not (numpy.isfinite(self.res_vec).all()):
+        local_res_finite = int(numpy.isfinite(self.res_vec).all())
+        global_res_finite = MPI.COMM_WORLD.allreduce(local_res_finite, op=MPI.MIN)
+        if not (global_res_finite):
             self.printer.print_str("Warning! Residual is NaN!")
             return False
 
@@ -562,7 +568,8 @@ class NonlinearSolver():
             relax = 1./self.relax_backtracking_factor**(k_relax-1)
             self.problem.sol_func.vector().axpy(relax, self.problem.dsol_func.vector())
             self.assemble_linear_system()
-            res_is_finite = numpy.isfinite(self.res_vec).all()
+            res_is_finite_local = int(numpy.isfinite(self.res_vec).all())
+            res_is_finite = bool(MPI.COMM_WORLD.allreduce(res_is_finite_local, op=MPI.MIN))
             # print("numpy.isfinite(self.res_vec).all()", res_is_finite)
             self.problem.sol_func.vector().axpy(-relax, self.problem.dsol_func.vector())
             if (res_is_finite):

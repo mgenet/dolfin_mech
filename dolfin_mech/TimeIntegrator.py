@@ -11,6 +11,8 @@
 import dolfin
 import sys
 
+from mpi4py import MPI
+
 import myPythonLibrary as mypy
 
 import dolfin_mech as dmech
@@ -181,6 +183,7 @@ class TimeIntegrator():
                         self.problem.get_subsols_func_old_lst(),
                         self.problem.sol_old_func)
                 solver_success, n_iter = self.solver.solve(k_step, k_t, dt, t)
+                solver_success = bool(MPI.COMM_WORLD.allreduce(int(solver_success), op=MPI.MIN))
 
                 self.table_printer.write_line([k_step, k_t, dt, t, t_step, n_iter, solver_success])
 
