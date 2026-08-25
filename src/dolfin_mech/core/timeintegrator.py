@@ -248,6 +248,9 @@ class TimeIntegrator:
 				global_success = MPI.COMM_WORLD.allreduce(local_success, op=MPI.MIN)
 				solver_success = bool(global_success)
 
+				# Synchronize n_iter to prevent dt divergence across ranks
+				n_iter = MPI.COMM_WORLD.allreduce(n_iter, op=MPI.MAX)
+
 				self.table_printer.write_line([k_step, k_t, dt, t, t_step, n_iter, solver_success])
 
 				if solver_success:
