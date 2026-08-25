@@ -278,7 +278,9 @@ class TimeIntegrator:
 						self.problem.update_qois(dt, k_step)
 						self.qoi_printer.write_line([t] + [qoi.value for qoi in self.problem.qois])
 
-					if dolfin.near(t, self.step.t_fin, eps=1e-9):
+					local_end = 1 if dolfin.near(t, self.step.t_fin, eps=1e-9) else 0
+					global_end = MPI.COMM_WORLD.allreduce(local_end, op=MPI.MAX)
+					if global_end:
 						self.success = True
 						break
 					else:
@@ -304,9 +306,12 @@ class TimeIntegrator:
 					k_t -= 1
 					k_t_tot -= 1
 					t -= dt
-
 					dt /= self.decel_coeff
-					if dt < self.step.dt_min:
+
+					local_fail = 1 if (dt < self.step.dt_min) else 0
+					global_fail = MPI.COMM_WORLD.allreduce(local_fail, op=MPI.MAX)
+
+					if global_fail:
 						self.printer.print_str("Warning! Time integrator failed to move forward!")
 						self.success = False
 						break
