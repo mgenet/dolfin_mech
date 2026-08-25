@@ -260,6 +260,7 @@ class NonlinearSolver:
 			self.eigen_solve()
 
 		# linear system: solve
+		linear_solve_local_success = 1
 		try:
 			self.printer.print_str("Solve…", newline=False)
 			timer = time.time()
@@ -267,8 +268,12 @@ class NonlinearSolver:
 			timer = time.time() - timer
 			self.printer.print_str(" " + str(timer) + " s", tab=False)
 			# self.printer.print_var("dsol_func",self.problem.dsol_func.vector().get_local())
-		except:
-			self.printer.print_str("Warning! Linear solver failed!", tab=False)
+		except Exception as e:
+			self.printer.print_str("Warning! Linear solver failed! (" + str(e) + ")", tab=False)
+			linear_solve_local_success = 0
+
+		linear_solve_global_success = MPI.COMM_WORLD.allreduce(linear_solve_local_success, op=MPI.MIN)
+		if not linear_solve_global_success:
 			return False
 
 		# if not (numpy.isfinite(self.problem.dsol_func.vector()).all()):
