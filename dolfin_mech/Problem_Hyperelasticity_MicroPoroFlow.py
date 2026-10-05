@@ -47,7 +47,8 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroH
             bulk_behaviors=[],
             pore_behavior=None,
             pore_behaviors=[],
-            w_pressure_balancing_gravity=0):
+            w_pressure_balancing_gravity=0,
+            macroscopic_stretch_symmetry=True):
 
         Problem.__init__(self)
 
@@ -148,7 +149,8 @@ class MicroPoroFlowHyperelasticityProblem(MicroPoroHyperelasticityProblem, PoroH
         self.kappa_val = bulk_behaviors[0]["parameters"]["kappa"]   
 
         # self.add_macroscopic_stretch_symmetry_operator()
-        self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
+        if (macroscopic_stretch_symmetry):
+            self.add_macroscopic_stretch_symmetry_penalty_operator(pen_val=1e6)
 
         self.add_pressure_liquid_perturbation_zero_mean_operator()
 
